@@ -249,7 +249,7 @@ export class ApiDocumentationController {
           <div class="container">
             <div class="header">
               <h1>🚀 API Documentation</h1>
-              <p>Comprehensive overview of Semua available API endpoints</p>
+              <p>API endpoints</p>
             </div>
 
             <div class="filter-section">
