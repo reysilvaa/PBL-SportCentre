@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(255)
+  phone     String?  @db.VarChar(15)
+  role      Role
+  createdAt DateTime @default(now())
+
+  Bookings      Booking[]
+  Payments      Payment[]
+  ActivityLogs  ActivityLog[]
+  Reviews       FieldReview[]
+  PromoUsages   PromotionUsage[]
+  ownedBranches Branch[]
+}
+
+enum Role {
+  super_admin
+  admin_cabang
+  owner_cabang
+  user
+}
+
+model Branch {
+  id        Int          @id @default(autoincrement())
+  name      String       @db.VarChar(100)
+  location  String       @db.Text
+  owner     User         @relation(fields: [ownerId], references: [id])
+  ownerId   Int
+  status    BranchStatus @default(active)
+  createdAt DateTime     @default(now())
+
+  Fields Field[]
+}
+
+enum BranchStatus {
+  active
+  inactive
+}
+
+model FieldType {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(50)
+
+  Fields Field[]
+}
+
+model Field {
+  id         Int         @id @default(autoincrement())
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  branchId   Int
+  type       FieldType   @relation(fields: [typeId], references: [id])
+  typeId     Int
+  name       String      @db.VarChar(100)
+  priceDay   Decimal     @db.Decimal(10, 2)
+  priceNight Decimal     @db.Decimal(10, 2)
+  status     FieldStatus @default(available)
+  createdAt  DateTime    @default(now())
+
+  Bookings Booking[]
+  Reviews  FieldReview[]
+}
+
+enum FieldStatus {
+  available
+  booked
+  maintenance
+  closed
+}
+
+model Booking {
+  id            Int           @id @default(autoincrement())
+  user          User          @relation(fields: [userId], references: [id])
+  userId        Int
+  field         Field         @relation(fields: [fieldId], references: [id])
+  fieldId       Int
+  bookingDate   DateTime
+  startTime     DateTime
+  endTime       DateTime
+  status        BookingStatus @default(pending)
+  paymentStatus PaymentStatus @default(pending)
+  createdAt     DateTime      @default(now())
+
+  Payments    Payment[]
+  PromoUsages PromotionUsage[]
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  canceled
+  completed
+  no_show
+  refunded
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  dp_paid
+  failed
+  refunded
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+  bookingId     Int
+  user          User          @relation(fields: [userId], references: [id])
+  userId        Int
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  status        PaymentStatus @default(pending)
+  createdAt     DateTime      @default(now())
+}
+
+enum PaymentMethod {
+  midtrans
+  cash
+  transfer
+  credit_card
+  ewallet
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  action    String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model FieldReview {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  field     Field    @relation(fields: [fieldId], references: [id])
+  fieldId   Int
+  rating    Int
+  review    String?  @db.Text
+  createdAt DateTime @default(now())
+}
+
+model Promotion {
+  id              Int             @id @default(autoincrement())
+  code            String          @unique @db.VarChar(50)
+  description     String?         @db.Text
+  discountPercent Decimal         @db.Decimal(5, 2)
+  maxDiscount     Decimal?        @db.Decimal(10, 2)
+  validFrom       DateTime
+  validUntil      DateTime
+  status          PromotionStatus @default(active)
+  createdAt       DateTime        @default(now())
+
+  PromoUsages PromotionUsage[]
+}
+
+enum PromotionStatus {
+  active
+  expired
+  disabled
+}
+
+model PromotionUsage {
+  id        Int       @id @default(autoincrement())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  booking   Booking   @relation(fields: [bookingId], references: [id])
+  bookingId Int
+  promo     Promotion @relation(fields: [promoId], references: [id])
+  promoId   Int
+  createdAt DateTime  @default(now())
+}
