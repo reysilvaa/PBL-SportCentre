@@ -1,9 +1,11 @@
-// src/routes/authRoutes.ts
 import express from 'express';
 import { login, logout, register } from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = express.Router();
+
+// Middleware untuk menangani x-www-form-urlencoded
+router.use(express.urlencoded({ extended: true }));
 
 router.post('/login', login);
 router.post('/register', register);

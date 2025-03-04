@@ -4,11 +4,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
 
 export interface CustomRequest extends Request {
-  user?: {
-    id: number;
-    email: string;
-    role: 'super_admin' | 'admin_cabang' | 'owner_cabang' | 'user';
-  };
+  user?: any;
 }
 
 export const authMiddleware = (req: CustomRequest, res: Response, next: NextFunction): void => {
@@ -20,7 +16,7 @@ export const authMiddleware = (req: CustomRequest, res: Response, next: NextFunc
   }
 
   try {
-    const decoded = jwt.verify(token, config.jwtSecret) as CustomRequest['user'];
+    const decoded = jwt.verify(token, config.jwtSecret);
     req.user = decoded;
     next();
   } catch (error) {

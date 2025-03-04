@@ -8,7 +8,7 @@ import { config } from '../config/env';
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     // Log entire request body for debugging
-    console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
+    // console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
 
     // Extract values with optional chaining and provide default empty strings
     const email = req.body?.email ?? '';
@@ -78,7 +78,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 // Similar modifications for login method...
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log('Full Login Request Body:', JSON.stringify(req.body, null, 2));
+    // console.log('Full Login Request Body:', JSON.stringify(req.body, null, 2));
 
     const email = req.body?.email ?? '';
     const password = req.body?.password ?? '';
