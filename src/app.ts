@@ -9,8 +9,11 @@ import router from './routes/index.routes';
 import { initSocket } from './socket/socketServer';
 import { errorMiddleware } from './middlewares/errorMiddleware';
 import apiDocumentationRoutes from './documentation/api-documentation.routes';
+import { requestLogger } from './middlewares/requestLogger';
 
 const app: Application = express();
+
+app.use(requestLogger);
 const upload = multer(); 
 const server: http.Server = http.createServer(app);
 const io: Server = new Server(server, { 
