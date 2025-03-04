@@ -1,95 +1,45 @@
 // src/controllers/authController.ts
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import prisma from '../config/database';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/env';
 
-export interface LoginRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-  };
-}
-
-export interface RegisterRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-    name: string;
-    role?: 'super_admin' | 'admin_cabang' | 'owner_cabang' | 'user';
-  };
-}
-
-export const login = async (req: LoginRequest, res: Response, next: NextFunction): Promise<void> => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    // Log entire request body for debugging
+    console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
 
-    // Validate input
-    if (!email || !password) {
-      res.status(400).json({ error: 'Email and password are required' });
+    // Extract values with optional chaining and provide default empty strings
+    const email = req.body?.email ?? '';
+    const password = req.body?.password ?? '';
+    const name = req.body?.name ?? '';
+    const role = req.body?.role ?? 'user';
+
+    // Validate input with more detailed logging
+    const validationErrors: Record<string, boolean> = {
+      email: email.trim().length > 0,
+      password: password.trim().length > 0,
+      name: name.trim().length > 0
+    };
+
+    const hasErrors = Object.values(validationErrors).some(value => !value);
+
+    if (hasErrors) {
+      console.error('Registration Validation Failed', {
+        email: validationErrors.email,
+        password: validationErrors.password,
+        name: validationErrors.name
+      });
+
+      res.status(400).json({ 
+        error: 'Email, password, and name are required',
+        details: validationErrors
+      });
       return;
     }
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    // Check if user exists
-    if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email,
-        role: user.role
-      }, 
-      config.jwtSecret, 
-      { expiresIn: '1h' }
-    );
-
-    // Exclude password from response
-    const { password: _, ...userWithoutPassword } = user;
-
-    res.json({
-      token,
-      user: userWithoutPassword
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-export const logout = (req: Request, res: Response): void => {
-  // In a JWT-based authentication system, logout is typically handled client-side
-  // by removing the token. However, we can add some additional logic if needed.
-  res.json({ message: 'Logout successful' });
-};
-
-export const register = async (req: RegisterRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { email, password, name, role } = req.body;
-
-    // Validate input
-    if (!email || !password || !name) {
-      res.status(400).json({ error: 'Email, password, and name are required' });
-      return;
-    }
-
-    // Check if user already exists
+    // Rest of the registration logic remains the same...
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -108,7 +58,7 @@ export const register = async (req: RegisterRequest, res: Response, next: NextFu
         email,
         password: hashedPassword,
         name,
-        role: role || 'user' // Default to 'user' role if not specified
+        role: role as 'user' | 'admin_cabang' | 'owner_cabang' | 'super_admin'
       }
     });
 
@@ -117,7 +67,79 @@ export const register = async (req: RegisterRequest, res: Response, next: NextFu
 
     res.status(201).json({ user: userWithoutPassword });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Registration Error:', error);
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
+};
+
+// Similar modifications for login method...
+export const login = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('Full Login Request Body:', JSON.stringify(req.body, null, 2));
+
+    const email = req.body?.email ?? '';
+    const password = req.body?.password ?? '';
+
+    const validationErrors: Record<string, boolean> = {
+      email: email.trim().length > 0,
+      password: password.trim().length > 0
+    };
+
+    const hasErrors = Object.values(validationErrors).some(value => !value);
+
+    if (hasErrors) {
+      console.error('Login Validation Failed', validationErrors);
+      res.status(400).json({ 
+        error: 'Email and password are required',
+        details: validationErrors
+      });
+      return;
+    }
+
+    // Rest of login logic remains the same...
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email,
+        role: user.role
+      }, 
+      config.jwtSecret, 
+      { expiresIn: '1h' }
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    res.json({
+      token,
+      user: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('Login Error:', error);
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+export const logout = (req: Request, res: Response): void => {
+  res.json({ message: 'Logout successful' });
 };

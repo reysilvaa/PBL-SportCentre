@@ -13,8 +13,8 @@ import authRoutes from './auth.routes';
 
 const router = express.Router();
 
-router.use('/api/users', userRoutes);
-router.use('/api/auth', authRoutes);
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
 router.use('/branches', branchRoutes);
 router.use('/fields', fieldRoutes);
 router.use('/bookings', bookingRoutes);
