@@ -9,10 +9,12 @@ import activityLogRoutes from './activityLog.routes';
 import fieldReviewRoutes from './fieldReview.routes';
 import promotionRoutes from './promotion.routes';
 import promotionUsageRoutes from './promotionUsage.routes';
+import authRoutes from './auth.routes';
 
 const router = express.Router();
 
-router.use('/users', userRoutes);
+router.use('/api/users', userRoutes);
+router.use('/api/auth', authRoutes);
 router.use('/branches', branchRoutes);
 router.use('/fields', fieldRoutes);
 router.use('/bookings', bookingRoutes);
