@@ -7,7 +7,7 @@ import { logger } from './config/logger';
 import router from './routes/index.routes';
 import { initSocket } from './socket/socketServer';
 import { errorMiddleware } from './middlewares/errorMiddleware';
-import { apiDocumentation } from './documentation/api.documentation';
+import  apiDocumentationRoutes from './documentation/api-documentation.routes';
 
 const app: Application = express();
 const server: http.Server = http.createServer(app);
@@ -24,7 +24,7 @@ app.use(express.json());
 app.use(logger);
 
 // Root endpoint for API documentation
-app.get('/', apiDocumentation);
+app.use(apiDocumentationRoutes);
 
 // Routes
 app.use('/api', router);
