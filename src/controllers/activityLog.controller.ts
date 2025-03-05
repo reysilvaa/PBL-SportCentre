@@ -56,8 +56,13 @@ export const createActivityLog = async (req: Request, res: Response): Promise<vo
 export const deleteActivityLog = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await prisma.activityLog.delete({
+    
+    const data = await prisma.activityLog.delete({
       where: { id: parseInt(id) }
+    });
+    res.status(200).json({
+      message: 'Berhasil dihapus',
+      data: data
     });
     res.status(204).send();
   } catch (error) {
