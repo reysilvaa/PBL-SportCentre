@@ -1,45 +1,33 @@
-// src/controllers/authController.ts
 import { Request, Response } from 'express';
+import { validate } from 'class-validator';
+import { plainToClass } from 'class-transformer';
 import prisma from '../config/database';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/env';
+import { RegisterDto } from '../dto/auth/register.dto';
+import { LoginDto } from '../dto/auth/login.dto';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Log entire request body for debugging
-    // console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
+    const registerDto = plainToClass(RegisterDto, req.body);
+    const validationErrors = await validate(registerDto);
 
-    // Extract values with optional chaining and provide default empty strings
-    const email = req.body?.email ?? '';
-    const password = req.body?.password ?? '';
-    const name = req.body?.name ?? '';
-    const role = req.body?.role ?? 'user';
-
-    // Validate input with more detailed logging
-    const validationErrors: Record<string, boolean> = {
-      email: email.trim().length > 0,
-      password: password.trim().length > 0,
-      name: name.trim().length > 0
-    };
-
-    const hasErrors = Object.values(validationErrors).some(value => !value);
-
-    if (hasErrors) {
-      console.error('Registration Validation Failed', {
-        email: validationErrors.email,
-        password: validationErrors.password,
-        name: validationErrors.name
-      });
+    if (validationErrors.length > 0) {
+      const errors = validationErrors.map(error => ({
+        property: error.property,
+        constraints: error.constraints
+      }));
 
       res.status(400).json({ 
-        error: 'Email, password, and name are required',
-        details: validationErrors
+        error: 'Validation Failed',
+        details: errors 
       });
       return;
     }
 
-    // Rest of the registration logic remains the same...
+    const { email, password, name, role } = registerDto;
+
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -49,20 +37,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        role: role as 'user' | 'admin_cabang' | 'owner_cabang' | 'super_admin'
+        role: role ?? 'user'
       }
     });
 
-    // Exclude password from response
     const { password: _, ...userWithoutPassword } = user;
 
     res.status(201).json({ user: userWithoutPassword });
@@ -75,31 +61,26 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// Similar modifications for login method...
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    // console.log('Full Login Request Body:', JSON.stringify(req.body, null, 2));
+    const loginDto = plainToClass(LoginDto, req.body);
+    const validationErrors = await validate(loginDto);
 
-    const email = req.body?.email ?? '';
-    const password = req.body?.password ?? '';
+    if (validationErrors.length > 0) {
+      const errors = validationErrors.map(error => ({
+        property: error.property,
+        constraints: error.constraints
+      }));
 
-    const validationErrors: Record<string, boolean> = {
-      email: email.trim().length > 0,
-      password: password.trim().length > 0
-    };
-
-    const hasErrors = Object.values(validationErrors).some(value => !value);
-
-    if (hasErrors) {
-      console.error('Login Validation Failed', validationErrors);
       res.status(400).json({ 
-        error: 'Email and password are required',
-        details: validationErrors
+        error: 'Validation Failed',
+        details: errors 
       });
       return;
     }
 
-    // Rest of login logic remains the same...
+    const { email, password } = loginDto;
+
     const user = await prisma.user.findUnique({
       where: { email }
     });
