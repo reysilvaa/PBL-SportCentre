@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import { validate } from 'class-validator';
 import prisma from '../config/database';
+import { CreateActivityLogDto } from '../dto/activityLog/create-activity-log.dto';
 
 export const getActivityLogs = async (req: Request, res: Response) => {
   try {
@@ -25,20 +27,31 @@ export const getActivityLogs = async (req: Request, res: Response) => {
   }
 };
 
-export const createActivityLog = async (req: Request, res: Response) => {
+export const createActivityLog = async (req: Request, res: Response): Promise<void> => { 
   try {
-    const { userId, action } = req.body;
+    const dto = new CreateActivityLogDto();
+    Object.assign(dto, req.body);
+    
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      res.status(400).json({ error: 'Validation failed', details: errors });
+      return;
+    }
+
     const newLog = await prisma.activityLog.create({
       data: {
-        userId,
-        action
+        userId: dto.userId,
+        action: dto.action
       }
     });
-    res.status(201).json(newLog);
+
+    res.status(201).json(newLog); 
   } catch (error) {
+    console.error(error);
     res.status(400).json({ error: 'Failed to create activity log' });
   }
 };
+
 
 export const deleteActivityLog = async (req: Request, res: Response) => {
   try {

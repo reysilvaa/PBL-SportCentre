@@ -6,7 +6,7 @@ import { config } from './config/env';
 import { logger } from './config/logger';
 import router from './routes/index.routes';
 import { initSocket } from './socket/socketServer';
-import errorMiddleware from './middlewares/errorMiddleware';
+import errorMiddleware from './middlewares/error.middleware';
 import apiDocumentationRoutes from './documentation/api-documentation.routes';
 // import { requestLogger } from './middlewares/requestLogger';
 
