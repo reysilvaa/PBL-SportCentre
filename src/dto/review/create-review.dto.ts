@@ -1,19 +1,21 @@
-import { IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsInt, Min, Max, IsString } from 'class-validator';
 
-// src/dto/review/create-review.dto.ts
-export class CreateReviewDto {
+export class CreateFieldReviewDto {
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
   userId!: number;
 
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
   fieldId!: number;
 
   @IsNotEmpty()
   @IsNumber()
+  @Min(1)
+  @Max(5)
   rating!: number;
 
-  @IsOptional()
-  review?: string;
+  @IsNotEmpty()
+  @IsString()
+  review!: string;
 }

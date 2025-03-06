@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
+import { CreateFieldTypeDto } from '../dto/field/create-field-type.dto';
+import { validate } from 'class-validator';
 
 export const getFieldTypes = async (req: Request, res: Response) => {
   try {
@@ -24,18 +26,29 @@ export const getFieldTypes = async (req: Request, res: Response) => {
   }
 };
 
-export const createFieldType = async (req: Request, res: Response) => {
+export const createFieldType = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name } = req.body;
+  const createFieldTypeDto = new CreateFieldTypeDto();
+    Object.assign(createFieldTypeDto, req.body);
+
+    const errors = await validate(createFieldTypeDto);
+    if (errors.length > 0) {
+      res.status(400).json({ errors });
+      return 
+    }
+
+    // Simpan ke database
     const newFieldType = await prisma.fieldType.create({
-      data: { name }
+      data: {
+        name: createFieldTypeDto.name
+      }
     });
+
     res.status(201).json(newFieldType);
   } catch (error) {
     res.status(400).json({ error: 'Failed to create field type' });
   }
 };
-
 export const updateFieldType = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

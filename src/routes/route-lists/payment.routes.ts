@@ -4,7 +4,7 @@ import {
   createPayment, 
   updatePaymentStatus, 
   deletePayment 
-} from '../controllers/payment.controller';
+} from '../../controllers/payment.controller';
 
 const router = express.Router();
 

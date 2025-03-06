@@ -3,7 +3,7 @@ import {
   getPromotionUsages, 
   createPromotionUsage, 
   deletePromotionUsage 
-} from '../controllers/promotionUsage.controller';
+} from '../../controllers/promotionUsage.controller';
 
 const router = express.Router();
 

@@ -1,15 +1,15 @@
 import express from 'express';
-import userRoutes from './user.routes';
-import branchRoutes from './branch.routes';
-import fieldRoutes from './field.routes';
-import bookingRoutes from './booking.routes';
-import fieldTypeRoutes from './fieldTypes.routes';
-import paymentRoutes from './payment.routes';
-import activityLogRoutes from './activityLog.routes';
-import fieldReviewRoutes from './fieldReview.routes';
-import promotionRoutes from './promotion.routes';
-import promotionUsageRoutes from './promotionUsage.routes';
-import authRoutes from './auth.routes';
+import userRoutes from './route-lists/user.routes';
+import branchRoutes from './route-lists/branch.routes';
+import fieldRoutes from './route-lists/field.routes';
+import bookingRoutes from './route-lists/booking.routes';
+import fieldTypeRoutes from './route-lists/fieldTypes.routes';
+import paymentRoutes from './route-lists/payment.routes';
+import activityLogRoutes from './route-lists/activityLog.routes';
+import fieldReviewRoutes from './route-lists/fieldReview.routes';
+import promotionRoutes from './route-lists/promotion.routes';
+import promotionUsageRoutes from './route-lists/promotionUsage.routes';
+import authRoutes from './route-lists/auth.routes';
 
 const router = express.Router();
 

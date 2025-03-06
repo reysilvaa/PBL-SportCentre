@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
+import { plainToInstance } from 'class-transformer';
+import { CreateFieldReviewDto } from '../dto/review/create-review.dto';
+import { validate } from 'class-validator';
 
 export const getFieldReviews = async (req: Request, res: Response) => {
   try {
@@ -38,9 +41,18 @@ export const getFieldReviews = async (req: Request, res: Response) => {
   }
 };
 
-export const createFieldReview = async (req: Request, res: Response) => {
+
+export const createFieldReview = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId, fieldId, rating, review } = req.body;
+    const createFieldReviewDto = new CreateFieldReviewDto();
+    Object.assign(createFieldReviewDto, req.body);
+
+    const errors = await validate(createFieldReviewDto);
+    if (errors.length > 0) {
+      res.status(400).json({ errors });
+      return; 
+    }
+    const { userId, fieldId, rating, review } = createFieldReviewDto;
     const newReview = await prisma.fieldReview.create({
       data: {
         userId,
@@ -49,6 +61,7 @@ export const createFieldReview = async (req: Request, res: Response) => {
         review
       }
     });
+
     res.status(201).json(newReview);
   } catch (error) {
     res.status(400).json({ error: 'Failed to create field review' });

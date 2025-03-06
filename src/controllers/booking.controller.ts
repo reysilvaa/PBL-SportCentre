@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import { validate } from 'class-validator';
 import prisma from '../config/database';
+import { CreateBookingDto } from '../dto/booking/create-booking.dto';
 
 export const getBookings = async (req: Request, res: Response) => {
   try {
@@ -25,9 +27,17 @@ export const getBookings = async (req: Request, res: Response) => {
   }
 };
 
-export const createBooking = async (req: Request, res: Response) => {
+export const createBooking = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId, fieldId, bookingDate, startTime, endTime } = req.body;
+    const bookingDto = new CreateBookingDto();
+    Object.assign(bookingDto, req.body);
+    const errors = await validate(bookingDto);
+    if (errors.length > 0) {
+      res.status(400).json({ errors });
+      return;
+    }
+    
+    const { userId, fieldId, bookingDate, startTime, endTime } = bookingDto;
     const newBooking = await prisma.booking.create({
       data: {
         userId,
@@ -39,6 +49,7 @@ export const createBooking = async (req: Request, res: Response) => {
         paymentStatus: 'pending'
       }
     });
+    
     res.status(201).json(newBooking);
   } catch (error) {
     res.status(400).json({ error: 'Failed to create booking' });
@@ -60,6 +71,7 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(400).json({ error: 'Failed to update booking' });
   }
+  return;
 };
 
 export const deleteBooking = async (req: Request, res: Response) => {

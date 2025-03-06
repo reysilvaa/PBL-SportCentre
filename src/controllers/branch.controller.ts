@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import { validate } from 'class-validator';
 import prisma from '../config/database';
+import { CreateBranchDto } from '../dto/branch/create-branch.dto';
 
 export const getBranches = async (req: Request, res: Response) => {
   try {
@@ -9,10 +11,10 @@ export const getBranches = async (req: Request, res: Response) => {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
     res.json(branches);
   } catch (error) {
@@ -20,16 +22,25 @@ export const getBranches = async (req: Request, res: Response) => {
   }
 };
 
-export const createBranch = async (req: Request, res: Response) => {
+export const createBranch = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, location, ownerId, status } = req.body;
+    const createBranchDto = new CreateBranchDto();
+    Object.assign(createBranchDto, req.body);
+
+    const errors = await validate(createBranchDto);
+    if (errors.length > 0) {
+      res.status(400).json({ error: 'Validation failed', details: errors });
+      return; 
+    }
+
+    const { name, location, ownerId } = createBranchDto;
     const newBranch = await prisma.branch.create({
       data: {
         name,
         location,
         ownerId,
-        status: status || 'active'
-      }
+        status: req.body.status || 'active',
+      },
     });
     res.status(201).json(newBranch);
   } catch (error) {
@@ -46,8 +57,8 @@ export const updateBranch = async (req: Request, res: Response) => {
       data: {
         name,
         location,
-        status
-      }
+        status,
+      },
     });
     res.json(updatedBranch);
   } catch (error) {
@@ -59,7 +70,7 @@ export const deleteBranch = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await prisma.branch.delete({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
     });
     res.status(204).send();
   } catch (error) {

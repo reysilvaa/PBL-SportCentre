@@ -4,12 +4,13 @@ import {
   createFieldReview, 
   updateFieldReview, 
   deleteFieldReview 
-} from '../controllers/fieldReview.controller';
+} from '../../controllers/fieldReview.controller';
+import { parseIds } from '../../middlewares/parseId.middleware';
 
 const router = express.Router();
 
 router.get('/', getFieldReviews);
-router.post('/', createFieldReview);
+router.post('/', parseIds, createFieldReview);
 router.put('/:id', updateFieldReview);
 router.delete('/:id', deleteFieldReview);
 

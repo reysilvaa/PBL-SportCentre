@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import { validate } from 'class-validator';
 import prisma from '../config/database';
+import { CreateFieldDto } from '../dto/field/create-field.dto';
 
 export const getFields = async (req: Request, res: Response) => {
   try {
@@ -20,9 +22,24 @@ export const getFields = async (req: Request, res: Response) => {
   }
 };
 
-export const createField = async (req: Request, res: Response) => {
+export const createField = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { branchId, typeId, name, priceDay, priceNight, status } = req.body;
+    // Konversi request body ke DTO dengan data yang sesuai
+    const fieldDto = new CreateFieldDto();
+    Object.assign(fieldDto, req.body);
+
+    // Validasi input
+    const errors = await validate(fieldDto);
+    if (errors.length > 0) {
+      res.status(400).json({ errors });
+      return;
+    }
+
+    // Ambil data setelah validasi
+    const { branchId, typeId, name, priceDay, priceNight } = fieldDto;
+    const status = req.body.status || 'available'; // Tetapkan default jika tidak ada status
+
+    // Simpan data ke database
     const newField = await prisma.field.create({
       data: {
         branchId,
@@ -30,15 +47,17 @@ export const createField = async (req: Request, res: Response) => {
         name,
         priceDay,
         priceNight,
-        status: status || 'available'
+        status,
       }
     });
+
     res.status(201).json(newField);
   } catch (error) {
     res.status(400).json({ error: 'Failed to create field' });
   }
 };
 
+// dto update blom
 export const updateField = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

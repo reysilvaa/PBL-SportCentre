@@ -4,12 +4,13 @@ import {
   createFieldType, 
   updateFieldType, 
   deleteFieldType 
-} from '../controllers/fieldType.controller';
+} from '../../controllers/fieldType.controller';
+import { parseIds } from '../../middlewares/parseId.middleware';
 
 const router = express.Router();
 
 router.get('/', getFieldTypes);
-router.post('/', createFieldType);
+router.post('/', parseIds, createFieldType);
 router.put('/:id', updateFieldType);
 router.delete('/:id', deleteFieldType);
 
