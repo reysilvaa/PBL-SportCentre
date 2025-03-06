@@ -79,29 +79,20 @@ enum FieldStatus {
 }
 
 model Booking {
-  id            Int           @id @default(autoincrement())
-  user          User          @relation(fields: [userId], references: [id])
-  userId        Int
-  field         Field         @relation(fields: [fieldId], references: [id])
-  fieldId       Int
-  bookingDate   DateTime
-  startTime     DateTime
-  endTime       DateTime
-  status        BookingStatus @default(pending)
-  paymentStatus PaymentStatus @default(pending)
-  createdAt     DateTime      @default(now())
+  id          Int       @id @default(autoincrement())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      Int
+  field       Field     @relation(fields: [fieldId], references: [id])
+  fieldId     Int
+  bookingDate DateTime
+  startTime   DateTime
+  endTime     DateTime
+  createdAt   DateTime  @default(now())
 
-  Payments    Payment[]
+  // Payment relation - this booking has one payment
+  payment     Payment?  // No fields/references here because Payment holds the foreign key
+
   PromoUsages PromotionUsage[]
-}
-
-enum BookingStatus {
-  pending
-  confirmed
-  canceled
-  completed
-  no_show
-  refunded
 }
 
 enum PaymentStatus {
@@ -114,8 +105,10 @@ enum PaymentStatus {
 
 model Payment {
   id            Int           @id @default(autoincrement())
+  // Booking relation - this payment belongs to one booking
   booking       Booking       @relation(fields: [bookingId], references: [id])
-  bookingId     Int
+  bookingId     Int           @unique // This makes it a true one-to-one relationship
+  
   user          User          @relation(fields: [userId], references: [id])
   userId        Int
   amount        Decimal       @db.Decimal(10, 2)
@@ -137,6 +130,7 @@ model ActivityLog {
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
   action    String   @db.Text
+  details   String?  @db.Text
   createdAt DateTime @default(now())
 }
 

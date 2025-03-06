@@ -57,7 +57,7 @@ export const createField = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-// dto update blom
+// dto update blom ini buat verifikasi
 export const updateField = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

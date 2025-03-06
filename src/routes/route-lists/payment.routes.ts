@@ -1,23 +1,20 @@
 import express from 'express';
-import { 
-  getPayments, 
-  createPayment, 
-  updatePaymentStatus, 
-  deletePayment,
-  // createMidtransTransaction,
-  // midtransWebhook
-} from '../../controllers/payment.controller';
+import * as paymentController from '../../controllers/payment.controller';
+import * as midtransController from '../../controllers/midtrans.controller';
+import { authMiddleware } from '../../middlewares/auth.middleware';
 
 const router = express.Router();
 
-// Standard payment routes
-router.get('/', getPayments);
-router.post('/', createPayment);
-router.patch('/:id', updatePaymentStatus);
-router.delete('/:id', deletePayment);
+router.get('/', authMiddleware(), paymentController.getPayments);
+router.get('/:id', authMiddleware(), paymentController.getPaymentById);
+router.get('/user/:userId', authMiddleware(), paymentController.getUserPayments);
+router.get('/:id/status', authMiddleware(), midtransController.getPaymentStatus);
+router.post('/', authMiddleware(), paymentController.createPayment);
+router.put('/:id/status', authMiddleware(), paymentController.updatePaymentStatus);
+router.post('/:id/retry', authMiddleware(), paymentController.retryPayment);
+router.delete('/:id', authMiddleware(), paymentController.deletePayment);
 
-// Midtrans payment routes
-// router.post('/midtrans', createMidtransTransaction);
-// router.post('/midtrans/webhook', midtransWebhook);
+// Midtrans notification webhook (no auth required as it's called by Midtrans)
+router.post('/notification', midtransController.handleMidtransNotification);
 
 export default router;

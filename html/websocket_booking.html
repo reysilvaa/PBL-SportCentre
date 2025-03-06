@@ -1,735 +1,366 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Socket Testing Interface</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <style>
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .result-panel {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking System WebSocket Tester</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background-color: #f9f9f9;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #status {
+      font-weight: bold;
+      color: #777;
+    }
+    .status-connected {
+      color: green;
+    }
+    .status-disconnected {
+      color: red;
+    }
+    #messages {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      background-color: #fff;
+    }
+    .message {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .incoming {
+      color: blue;
+    }
+    .outgoing {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+    .bookings-list {
+      margin-top: 20px;
+    }
+    .booking-item {
+      padding: 10px;
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      background-color: #fff;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-700">Socket Testing Interface</h1>
-        
-        <!-- Connection Status -->
-        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-            <h2 class="text-xl font-semibold mb-2">Connection Status</h2>
-            <div class="flex space-x-4">
-                <div class="flex items-center">
-                    <span class="mr-2">Main:</span>
-                    <span id="main-status" class="px-3 py-1 rounded-full bg-red-100 text-red-800">Disconnected</span>
-                </div>
-                <div class="flex items-center">
-                    <span class="mr-2">Activity:</span>
-                    <span id="activity-status" class="px-3 py-1 rounded-full bg-red-100 text-red-800">Disconnected</span>
-                </div>
-                <div class="flex items-center">
-                    <span class="mr-2">Booking:</span>
-                    <span id="booking-status" class="px-3 py-1 rounded-full bg-red-100 text-red-800">Disconnected</span>
-                </div>
-                <button id="connect-btn" class="ml-auto bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Connect All</button>
-                <button id="disconnect-btn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Disconnect All</button>
-            </div>
-        </div>
-        
-        <!-- Tab Navigation -->
-        <div class="bg-white rounded-lg shadow-md mb-6">
-            <div class="flex border-b">
-                <button class="tab-btn flex-1 py-3 px-4 font-medium text-center hover:bg-gray-100 focus:outline-none active" data-tab="activity">Activity Log</button>
-                <button class="tab-btn flex-1 py-3 px-4 font-medium text-center hover:bg-gray-100 focus:outline-none" data-tab="booking">Booking</button>
-                <button class="tab-btn flex-1 py-3 px-4 font-medium text-center hover:bg-gray-100 focus:outline-none" data-tab="events">Event Log</button>
-            </div>
-        </div>
-        
-        <!-- Tab Content -->
-        <div class="tab-content active" id="activity-tab">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- Create Activity Log -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Create Activity Log</h3>
-                    <form id="create-activity-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">User ID</label>
-                            <input type="number" id="activity-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Action</label>
-                            <input type="text" id="activity-action" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Create Activity Log</button>
-                    </form>
-                </div>
-                
-                <!-- Get Activity Logs -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Get Activity Logs</h3>
-                    <form id="get-logs-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Filter by User ID (Optional)</label>
-                            <input type="number" id="logs-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Get Logs</button>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Activity Results -->
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Activity Logs</h3>
-                    <button id="clear-activity-results" class="text-red-600 hover:text-red-800">Clear Results</button>
-                </div>
-                <div id="activity-results" class="result-panel">
-                    <p class="text-gray-500 italic">No results yet. Use the forms above to see activity logs.</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="tab-content" id="booking-tab">
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-                <!-- Create Booking -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Create Booking</h3>
-                    <form id="create-booking-form" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">User ID</label>
-                                <input type="number" id="booking-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Field ID</label>
-                                <input type="number" id="booking-field-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Booking Date</label>
-                            <input type="date" id="booking-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Start Time</label>
-                                <input type="time" id="booking-start-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">End Time</label>
-                                <input type="time" id="booking-end-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Create Booking</button>
-                    </form>
-                </div>
-                
-                <!-- Check Availability -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Check Availability</h3>
-                    <form id="check-availability-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Field ID</label>
-                            <input type="number" id="availability-field-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Booking Date</label>
-                            <input type="date" id="availability-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Start Time</label>
-                                <input type="time" id="availability-start-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">End Time</label>
-                                <input type="time" id="availability-end-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Check Availability</button>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-                <!-- Get Available Slots -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Get Available Slots</h3>
-                    <form id="available-slots-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Field ID</label>
-                            <input type="number" id="slots-field-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" id="slots-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Get Available Slots</button>
-                    </form>
-                </div>
-                
-                <!-- Get Bookings -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Get Bookings</h3>
-                    <form id="get-bookings-form" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">User ID (Optional)</label>
-                                <input type="number" id="filter-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Field ID (Optional)</label>
-                                <input type="number" id="filter-field-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Date (Optional)</label>
-                                <input type="date" id="filter-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Get Bookings</button>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-                <!-- Update Booking Status -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Update Booking Status</h3>
-                    <form id="update-booking-form" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Booking ID</label>
-                                <input type="number" id="update-booking-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">User ID</label>
-                                <input type="number" id="update-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Status</label>
-                                <select id="update-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                                    <option value="">Select Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="confirmed">Confirmed</option>
-                                    <option value="canceled">Canceled</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Payment Status (Optional)</label>
-                                <select id="update-payment-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                                    <option value="">Select Payment Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="paid">Paid</option>
-                                    <option value="refunded">Refunded</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Update Status</button>
-                    </form>
-                </div>
-                
-                <!-- Cancel Booking -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h3 class="text-lg font-semibold mb-4">Cancel Booking</h3>
-                    <form id="cancel-booking-form" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Booking ID</label>
-                                <input type="number" id="cancel-booking-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">User ID</label>
-                                <input type="number" id="cancel-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Reason</label>
-                            <textarea id="cancel-reason" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" rows="2" required></textarea>
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Cancel Booking</button>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Booking Results -->
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Booking Results</h3>
-                    <button id="clear-booking-results" class="text-red-600 hover:text-red-800">Clear Results</button>
-                </div>
-                <div id="booking-results" class="result-panel">
-                    <p class="text-gray-500 italic">No results yet. Use the forms above to see booking results.</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="tab-content" id="events-tab">
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Event Log</h3>
-                    <button id="clear-event-log" class="text-red-600 hover:text-red-800">Clear Log</button>
-                </div>
-                <div id="event-log" class="result-panel">
-                    <p class="text-gray-500 italic">No events logged yet. Connect to socket servers and perform actions to see events.</p>
-                </div>
-            </div>
-        </div>
+<body>
+  <h1>Booking System WebSocket Tester</h1>
+  
+  <div class="card">
+    <div id="status" class="status-disconnected">Disconnected</div>
+    <button id="connect">Connect</button>
+    <button id="disconnect" disabled>Disconnect</button>
+  </div>
+
+  <div class="card">
+    <h2>Check Availability</h2>
+    <div class="form-group">
+      <label for="fieldId">Field ID:</label>
+      <input type="number" id="fieldId" required>
     </div>
-    
-    <script>
-        // Socket connections
-        let mainSocket = null;
-        let activitySocket = null;
-        let bookingSocket = null;
-        
-        // DOM Elements
-        const mainStatus = document.getElementById('main-status');
-        const activityStatus = document.getElementById('activity-status');
-        const bookingStatus = document.getElementById('booking-status');
-        const connectBtn = document.getElementById('connect-btn');
-        const disconnectBtn = document.getElementById('disconnect-btn');
-        
-        const activityResults = document.getElementById('activity-results');
-        const bookingResults = document.getElementById('booking-results');
-        const eventLog = document.getElementById('event-log');
-        
-        // Tab Navigation
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabId = btn.getAttribute('data-tab');
-                
-                // Remove active class from all tabs
-                tabBtns.forEach(b => b.classList.remove('active', 'bg-indigo-50', 'text-indigo-700', 'border-b-2', 'border-indigo-500'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                
-                // Add active class to selected tab
-                btn.classList.add('active', 'bg-indigo-50', 'text-indigo-700', 'border-b-2', 'border-indigo-500');
-                document.getElementById(`${tabId}-tab`).classList.add('active');
-            });
-        });
-        
-        // Connect/Disconnect
-        connectBtn.addEventListener('click', () => {
-            if (!mainSocket) {
-                // Use your actual server URL here
-                mainSocket = io('http://localhost:3000');
-                activitySocket = io('http://localhost:3000/activity');
-                bookingSocket = io('http://localhost:3000/booking');
-                
-                setupSocketListeners();
-                
-                mainStatus.textContent = 'Connected';
-                mainStatus.classList.remove('bg-red-100', 'text-red-800');
-                mainStatus.classList.add('bg-green-100', 'text-green-800');
-                
-                activityStatus.textContent = 'Connected';
-                activityStatus.classList.remove('bg-red-100', 'text-red-800');
-                activityStatus.classList.add('bg-green-100', 'text-green-800');
-                
-                bookingStatus.textContent = 'Connected';
-                bookingStatus.classList.remove('bg-red-100', 'text-red-800');
-                bookingStatus.classList.add('bg-green-100', 'text-green-800');
-                
-                logEvent('All connections established');
-            }
-        });
-        
-        disconnectBtn.addEventListener('click', () => {
-            if (mainSocket) {
-                mainSocket.disconnect();
-                activitySocket.disconnect();
-                bookingSocket.disconnect();
-                
-                mainSocket = null;
-                activitySocket = null;
-                bookingSocket = null;
-                
-                mainStatus.textContent = 'Disconnected';
-                mainStatus.classList.remove('bg-green-100', 'text-green-800');
-                mainStatus.classList.add('bg-red-100', 'text-red-800');
-                
-                activityStatus.textContent = 'Disconnected';
-                activityStatus.classList.remove('bg-green-100', 'text-green-800');
-                activityStatus.classList.add('bg-red-100', 'text-red-800');
-                
-                bookingStatus.textContent = 'Disconnected';
-                bookingStatus.classList.remove('bg-green-100', 'text-green-800');
-                bookingStatus.classList.add('bg-red-100', 'text-red-800');
-                
-                logEvent('All connections closed');
-            }
-        });
-        
-        // Setup Socket Listeners
-        function setupSocketListeners() {
-            // Activity Socket Listeners
-            activitySocket.on('connect', () => {
-                logEvent('Activity namespace connected');
-            });
-            
-            activitySocket.on('disconnect', () => {
-                logEvent('Activity namespace disconnected');
-            });
-            
-            activitySocket.on('created', (data) => {
-                logEvent('Activity log created');
-                displayActivityResult('Activity Log Created', data);
-            });
-            
-            activitySocket.on('logsList', (data) => {
-                logEvent(`Received ${data.length} activity logs`);
-                displayActivityResult('Activity Logs Retrieved', data);
-            });
-            
-            activitySocket.on('deleteConfirmed', (data) => {
-                logEvent(`Activity log #${data.id} deleted`);
-                displayActivityResult('Activity Log Deleted', data);
-            });
-            
-            activitySocket.on('newLog', (data) => {
-                logEvent(`New activity log broadcast received`);
-                displayActivityResult('New Activity Log (Broadcast)', data);
-            });
-            
-            activitySocket.on('logDeleted', (logId) => {
-                logEvent(`Activity log deletion broadcast received: #${logId}`);
-            });
-            
-            activitySocket.on('error', (error) => {
-                logEvent(`Activity error: ${error.error}`);
-                displayActivityResult('Error', error);
-            });
-            
-            // Booking Socket Listeners
-            bookingSocket.on('connect', () => {
-                logEvent('Booking namespace connected');
-            });
-            
-            bookingSocket.on('disconnect', () => {
-                logEvent('Booking namespace disconnected');
-            });
-            
-            bookingSocket.on('bookingsList', (data) => {
-                logEvent(`Received ${data.length} bookings`);
-                displayBookingResult('Bookings Retrieved', data);
-            });
-            
-            bookingSocket.on('availabilityResult', (data) => {
-                logEvent(`Field availability check result: ${data.isAvailable ? 'Available' : 'Not Available'}`);
-                displayBookingResult('Availability Check Result', data);
-            });
-            
-            bookingSocket.on('availableSlots', (data) => {
-                logEvent(`Received ${data.slots.length} available time slots for field #${data.fieldId}`);
-                displayBookingResult('Available Time Slots', data);
-            });
-            
-            bookingSocket.on('bookingCreated', (data) => {
-                logEvent(`Booking #${data.id} created successfully`);
-                displayBookingResult('Booking Created', data);
-            });
-            
-            bookingSocket.on('statusUpdated', (data) => {
-                logEvent(`Booking #${data.id} status updated`);
-                displayBookingResult('Booking Status Updated', data);
-            });
-            
-            bookingSocket.on('cancellationConfirmed', (data) => {
-                logEvent(`Booking #${data.id} canceled`);
-                displayBookingResult('Booking Canceled', data);
-            });
-            
-            bookingSocket.on('newBooking', (data) => {
-                logEvent(`New booking broadcast received: #${data.id}`);
-                displayBookingResult('New Booking (Broadcast)', data);
-            });
-            
-            bookingSocket.on('bookingUpdated', (data) => {
-                logEvent(`Booking update broadcast received: #${data.id}`);
-                displayBookingResult('Booking Updated (Broadcast)', data);
-            });
-            
-            bookingSocket.on('bookingCancelled', (data) => {
-                logEvent(`Booking cancellation broadcast received: #${data.id}`);
-                displayBookingResult('Booking Canceled (Broadcast)', data);
-            });
-            
-            bookingSocket.on('error', (error) => {
-                logEvent(`Booking error (${error.type}): ${error.error}`);
-                displayBookingResult('Error', error);
-            });
+    <div class="form-group">
+      <label for="bookingDate">Booking Date:</label>
+      <input type="date" id="bookingDate" required>
+    </div>
+    <div class="form-group">
+      <label for="startTime">Start Time:</label>
+      <input type="datetime-local" id="startTime" required>
+    </div>
+    <div class="form-group">
+      <label for="endTime">End Time:</label>
+      <input type="datetime-local" id="endTime" required>
+    </div>
+    <button id="checkAvailability">Check Availability</button>
+  </div>
+
+  <div class="card">
+    <h2>Create Booking</h2>
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="number" id="userId" required>
+    </div>
+    <div class="form-group">
+      <label for="createFieldId">Field ID:</label>
+      <input type="number" id="createFieldId" required>
+    </div>
+    <div class="form-group">
+      <label for="createBookingDate">Booking Date:</label>
+      <input type="date" id="createBookingDate" required>
+    </div>
+    <div class="form-group">
+      <label for="createStartTime">Start Time:</label>
+      <input type="datetime-local" id="createStartTime" required>
+    </div>
+    <div class="form-group">
+      <label for="createEndTime">End Time:</label>
+      <input type="datetime-local" id="createEndTime" required>
+    </div>
+    <button id="createBooking">Create Booking</button>
+  </div>
+
+  <div class="card">
+    <h2>Cancel Booking</h2>
+    <div class="form-group">
+      <label for="cancelId">Booking ID:</label>
+      <input type="number" id="cancelId" required>
+    </div>
+    <div class="form-group">
+      <label for="cancelUserId">User ID:</label>
+      <input type="number" id="cancelUserId" required>
+    </div>
+    <div class="form-group">
+      <label for="cancelReason">Reason:</label>
+      <input type="text" id="cancelReason" required>
+    </div>
+    <button id="cancelBooking">Cancel Booking</button>
+  </div>
+
+  <div class="card">
+    <h2>Messages</h2>
+    <div id="messages"></div>
+    <button id="clearMessages" style="margin-top: 10px;">Clear Messages</button>
+  </div>
+
+  <div class="card bookings-list">
+    <h2>Bookings</h2>
+    <div id="bookingsList"></div>
+  </div>
+
+  <script>
+    // Socket.io client
+    let socket;
+    const bookings = [];
+
+    // DOM elements
+    const statusEl = document.getElementById('status');
+    const messagesEl = document.getElementById('messages');
+    const bookingsListEl = document.getElementById('bookingsList');
+
+    // Connect to socket
+    document.getElementById('connect').addEventListener('click', () => {
+      socket = io('http://localhost:3000/booking');
+      
+      socket.on('connect', () => {
+        statusEl.textContent = 'Connected';
+        statusEl.className = 'status-connected';
+        document.getElementById('connect').disabled = true;
+        document.getElementById('disconnect').disabled = false;
+        addMessage('Connected to server', 'incoming');
+      });
+
+      socket.on('disconnect', () => {
+        statusEl.textContent = 'Disconnected';
+        statusEl.className = 'status-disconnected';
+        document.getElementById('connect').disabled = false;
+        document.getElementById('disconnect').disabled = true;
+        addMessage('Disconnected from server', 'incoming');
+      });
+
+      // Handle events from server
+      socket.on('availabilityResult', (data) => {
+        const result = data.isAvailable ? 'Available' : 'Not Available';
+        addMessage(`Field availability: ${result}`, 'incoming');
+      });
+
+      socket.on('bookingCreated', (booking) => {
+        addMessage(`Booking created: ID ${booking.id}`, 'incoming');
+        addBooking(booking);
+      });
+
+      socket.on('newBooking', (booking) => {
+        addMessage(`New booking from another client: ID ${booking.id}`, 'incoming');
+        addBooking(booking);
+      });
+
+      socket.on('bookingCancelled', (booking) => {
+        addMessage(`Booking cancelled: ID ${booking.id}`, 'incoming');
+        updateBooking(booking);
+      });
+
+      socket.on('cancellationConfirmed', (booking) => {
+        addMessage(`Cancellation confirmed: ID ${booking.id}`, 'incoming');
+        updateBooking(booking);
+      });
+
+      socket.on('error', (errorData) => {
+        addMessage(`Error (${errorData.type}): ${errorData.error}`, 'error');
+        if (errorData.details) {
+          addMessage(`Details: ${JSON.stringify(errorData.details)}`, 'error');
         }
-        
-        // Activity Log Form Handlers
-        document.getElementById('create-activity-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!activitySocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const userId = parseInt(document.getElementById('activity-user-id').value);
-            const action = document.getElementById('activity-action').value;
-            
-            activitySocket.emit('createActivityLog', { userId, action });
-            logEvent(`Emitted createActivityLog: ${action} for user #${userId}`);
-        });
-        
-        document.getElementById('get-logs-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!activitySocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const userIdInput = document.getElementById('logs-user-id').value;
-            const filters = userIdInput ? { userId: parseInt(userIdInput) } : {};
-            
-            activitySocket.emit('getLogs', filters);
-            logEvent(`Emitted getLogs ${userIdInput ? `for user #${userIdInput}` : 'for all users'}`);
-        });
-        
-        // Booking Form Handlers
-        document.getElementById('create-booking-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!bookingSocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const userId = parseInt(document.getElementById('booking-user-id').value);
-            const fieldId = parseInt(document.getElementById('booking-field-id').value);
-            const bookingDate = document.getElementById('booking-date').value;
-            const startTimeInput = document.getElementById('booking-start-time').value;
-            const endTimeInput = document.getElementById('booking-end-time').value;
-            
-            // Combine date and time for proper ISO string
-            const startTime = new Date(`${bookingDate}T${startTimeInput}`).toISOString();
-            const endTime = new Date(`${bookingDate}T${endTimeInput}`).toISOString();
-            
-            bookingSocket.emit('createBooking', { 
-                userId, 
-                fieldId, 
-                bookingDate, 
-                startTime, 
-                endTime 
-            });
-            
-            logEvent(`Emitted createBooking: field #${fieldId} on ${bookingDate}`);
-        });
-        
-        document.getElementById('check-availability-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!bookingSocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const fieldId = parseInt(document.getElementById('availability-field-id').value);
-            const bookingDate = document.getElementById('availability-date').value;
-            const startTimeInput = document.getElementById('availability-start-time').value;
-            const endTimeInput = document.getElementById('availability-end-time').value;
-            
-            // Combine date and time for proper ISO string
-            const startTime = new Date(`${bookingDate}T${startTimeInput}`).toISOString();
-            const endTime = new Date(`${bookingDate}T${endTimeInput}`).toISOString();
-            
-            bookingSocket.emit('checkAvailability', { 
-                fieldId, 
-                bookingDate, 
-                startTime, 
-                endTime 
-            });
-            
-            logEvent(`Emitted checkAvailability: field #${fieldId} on ${bookingDate}`);
-        });
-        
-        document.getElementById('available-slots-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!bookingSocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const fieldId = parseInt(document.getElementById('slots-field-id').value);
-            const date = document.getElementById('slots-date').value;
-            
-            bookingSocket.emit('getAvailableSlots', { fieldId, date });
-            logEvent(`Emitted getAvailableSlots: field #${fieldId} on ${date}`);
-        });
-        
-        document.getElementById('get-bookings-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!bookingSocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const filters = {};
-            
-            const userIdInput = document.getElementById('filter-user-id').value;
-            if (userIdInput) filters.userId = parseInt(userIdInput);
-            
-            const fieldIdInput = document.getElementById('filter-field-id').value;
-            if (fieldIdInput) filters.fieldId = parseInt(fieldIdInput);
-            
-            const dateInput = document.getElementById('filter-date').value;
-            if (dateInput) filters.date = dateInput;
-            
-            bookingSocket.emit('getBookings', filters);
-            logEvent(`Emitted getBookings with filters: ${JSON.stringify(filters)}`);
-        });
-        
-        document.getElementById('update-booking-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!bookingSocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const bookingId = parseInt(document.getElementById('update-booking-id').value);
-            const userId = parseInt(document.getElementById('update-user-id').value);
-            const status = document.getElementById('update-status').value;
-            const paymentStatus = document.getElementById('update-payment-status').value;
-            
-            const updateData = { bookingId, userId, status };
-            if (paymentStatus) updateData.paymentStatus = paymentStatus;
-            
-            bookingSocket.emit('updateBookingStatus', updateData);
-            logEvent(`Emitted updateBookingStatus: booking #${bookingId} to ${status}`);
-        });
-        
-        document.getElementById('cancel-booking-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!bookingSocket) {
-                alert('Please connect to sockets first');
-                return;
-            }
-            
-            const bookingId = parseInt(document.getElementById('cancel-booking-id').value);
-            const userId = parseInt(document.getElementById('cancel-user-id').value);
-            const reason = document.getElementById('cancel-reason').value;
-            
-            bookingSocket.emit('cancelBooking', { bookingId, userId, reason });
-            logEvent(`Emitted cancelBooking: booking #${bookingId}`);
-        });
-        
-        // Helper Functions
-        function displayActivityResult(title, data) {
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'mb-4 p-3 border rounded bg-gray-50';
-            
-            const titleElement = document.createElement('h4');
-            titleElement.className = 'font-semibold mb-2';
-            titleElement.textContent = title;
-            
-            const timestamp = document.createElement('div');
-            timestamp.className = 'text-xs text-gray-500 mb-2';
-            timestamp.textContent = moment().format('YYYY-MM-DD HH:mm:ss');
-            
-            const content = document.createElement('pre');
-            content.className = 'bg-gray-100 p-2 rounded text-sm overflow-auto';
-            content.textContent = JSON.stringify(data, null, 2);
-            
-            resultDiv.appendChild(titleElement);
-            resultDiv.appendChild(timestamp);
-            resultDiv.appendChild(content);
-            
-            // Clear "no results" message if it exists
-            if (activityResults.querySelector('.text-gray-500')) {
-                activityResults.innerHTML = '';
-            }
-            
-            // Insert at the top
-            activityResults.insertBefore(resultDiv, activityResults.firstChild);
-        }
-        
-        function displayBookingResult(title, data) {
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'mb-4 p-3 border rounded bg-gray-50';
-            
-            const titleElement = document.createElement('h4');
-            titleElement.className = 'font-semibold mb-2';
-            titleElement.textContent = title;
-            
-            const timestamp = document.createElement('div');
-            timestamp.className = 'text-xs text-gray-500 mb-2';
-            timestamp.textContent = moment().format('YYYY-MM-DD HH:mm:ss');
-            
-            const content = document.createElement('pre');
-            content.className = 'bg-gray-100 p-2 rounded text-sm overflow-auto';
-            content.textContent = JSON.stringify(data, null, 2);
-            
-            resultDiv.appendChild(titleElement);
-            resultDiv.appendChild(timestamp);
-            resultDiv.appendChild(content);
-            
-            // Clear "no results" message if it exists
-            if (bookingResults.querySelector('.text-gray-500')) {
-                bookingResults.innerHTML = '';
-            }
-            
-            // Insert at the top
-            bookingResults.insertBefore(resultDiv, bookingResults.firstChild);
-        }
-        
-        function logEvent(message) {
-            const logEntry = document.createElement('div');
-            logEntry.className = 'mb-2 text-sm';
-            
-            const timestamp = document.createElement('span');
-            timestamp.className = 'text-gray-500 mr-2';
-            timestamp.textContent = moment().format('HH:mm:ss');
-            
-            const content = document.createElement('span');
-            content.textContent = message;
-            
-            logEntry.appendChild(timestamp);
-            logEntry.appendChild(content);
-            
-            // Clear "no events" message if it exists
-            if (eventLog.querySelector('.text-gray-500')) {
-                eventLog.innerHTML = '';
-            }
-            
-            // Insert at the top
-            eventLog.insertBefore(logEntry, eventLog.firstChild);
-        }
-        
-        // Clear buttons
-        document.getElementById('clear-activity-results').addEventListener('click', () => {
-            activityResults.innerHTML = '<p class="text-gray-500 italic">No results yet. Use the forms above to see activity logs.</p>';
-        });
-        
-        document.getElementById('clear-booking-results').addEventListener('click', () => {
-            bookingResults.innerHTML = '<p class="text-gray-500 italic">No results yet. Use the forms above to see booking results.</p>';
-        });
-        
-        document.getElementById('clear-event-log').addEventListener('click', () => {
-            eventLog.innerHTML = '<p class="text-gray-500 italic">No events logged yet. Connect to socket servers and perform actions to see events.</p>';
-        });
-    </script>
+      });
+    });
+
+    // Disconnect
+    document.getElementById('disconnect').addEventListener('click', () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    });
+
+    // Check availability
+    document.getElementById('checkAvailability').addEventListener('click', () => {
+      if (!socket || !socket.connected) {
+        addMessage('Not connected to server', 'error');
+        return;
+      }
+
+      const data = {
+        fieldId: parseInt(document.getElementById('fieldId').value),
+        bookingDate: document.getElementById('bookingDate').value,
+        startTime: document.getElementById('startTime').value,
+        endTime: document.getElementById('endTime').value
+      };
+
+      socket.emit('checkAvailability', data);
+      addMessage(`Checking availability: ${JSON.stringify(data)}`, 'outgoing');
+    });
+
+    // Create booking
+    document.getElementById('createBooking').addEventListener('click', () => {
+      if (!socket || !socket.connected) {
+        addMessage('Not connected to server', 'error');
+        return;
+      }
+
+      const data = {
+        userId: parseInt(document.getElementById('userId').value),
+        fieldId: parseInt(document.getElementById('createFieldId').value),
+        bookingDate: document.getElementById('createBookingDate').value,
+        startTime: document.getElementById('createStartTime').value,
+        endTime: document.getElementById('createEndTime').value
+      };
+
+      socket.emit('createBooking', data);
+      addMessage(`Creating booking: ${JSON.stringify(data)}`, 'outgoing');
+    });
+
+    // Cancel booking
+    document.getElementById('cancelBooking').addEventListener('click', () => {
+      if (!socket || !socket.connected) {
+        addMessage('Not connected to server', 'error');
+        return;
+      }
+
+      const data = {
+        id: parseInt(document.getElementById('cancelId').value),
+        userId: parseInt(document.getElementById('cancelUserId').value),
+        reason: document.getElementById('cancelReason').value
+      };
+
+      socket.emit('cancelBooking', data);
+      addMessage(`Cancelling booking: ${JSON.stringify(data)}`, 'outgoing');
+    });
+
+    // Clear messages
+    document.getElementById('clearMessages').addEventListener('click', () => {
+      messagesEl.innerHTML = '';
+    });
+
+    // Helper to add message to the messages div
+    function addMessage(message, type) {
+      const messageEl = document.createElement('div');
+      messageEl.className = `message ${type}`;
+      messageEl.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      messagesEl.appendChild(messageEl);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // Helper to add booking to the list
+    function addBooking(booking) {
+      const index = bookings.findIndex(b => b.id === booking.id);
+      if (index !== -1) {
+        bookings[index] = booking;
+      } else {
+        bookings.push(booking);
+      }
+      renderBookings();
+    }
+
+    // Helper to update booking in list
+    function updateBooking(booking) {
+      const index = bookings.findIndex(b => b.id === booking.id);
+      if (index !== -1) {
+        bookings[index] = booking;
+        renderBookings();
+      }
+    }
+
+    // Render bookings list
+    function renderBookings() {
+      bookingsListEl.innerHTML = '';
+      if (bookings.length === 0) {
+        bookingsListEl.textContent = 'No bookings yet';
+        return;
+      }
+
+      bookings.forEach(booking => {
+        const bookingEl = document.createElement('div');
+        bookingEl.className = 'booking-item';
+
+        const startTime = new Date(booking.startTime).toLocaleString();
+        const endTime = new Date(booking.endTime).toLocaleString();
+
+        bookingEl.innerHTML = `
+          <strong>ID:</strong> ${booking.id}<br>
+          <strong>User:</strong> ${booking.user?.name || 'Unknown'}<br>
+          <strong>Field:</strong> ${booking.field?.name || 'Unknown'}<br>
+          <strong>Date:</strong> ${new Date(booking.bookingDate).toLocaleDateString()}<br>
+          <strong>Time:</strong> ${startTime} - ${endTime}<br>
+          <strong>Status:</strong> ${booking.status}<br>
+          <strong>Payment:</strong> ${booking.paymentStatus}
+        `;
+        bookingsListEl.appendChild(bookingEl);
+      });
+    }
+  </script>
 </body>
 </html>

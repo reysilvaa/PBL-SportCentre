@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { initBookingSocket } from './ws/booking.ws';
+// import { initBookingSocket } from './ws/booking.ws';
 import { initActivityLogSocket } from './ws/activityLog.ws';
 
 export const initSocket = (io: Server) => {
@@ -13,5 +13,5 @@ export const initSocket = (io: Server) => {
 
   // namespaces
   initActivityLogSocket(io);
-  initBookingSocket(io);
+  // initBookingSocket(io);
 };

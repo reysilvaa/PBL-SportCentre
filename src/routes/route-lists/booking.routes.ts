@@ -1,28 +1,14 @@
 import express from 'express';
-import { 
-  getBookings, 
-  createBooking, 
-  updateBookingStatus, 
-  deleteBooking
-} from '../../controllers/booking.controller';
-
-import { 
-  checkFieldAvailability,
-  getAvailableTimeSlots
-} from '../../controllers/availability.controller';
-
-import { validateDateMiddleware } from '../../middlewares/validateDate.middleware';
+import * as bookingController from '../../controllers/booking.controller';
+import { authMiddleware } from '../../middlewares/auth.middleware';
 
 const router = express.Router();
 
-// Booking CRUD routes
-router.get('/', getBookings);
-router.post('/', validateDateMiddleware, createBooking);
-router.put('/:id/status', updateBookingStatus);
-router.delete('/:id', deleteBooking);
-
-// Availability routes
-router.get('/availability', checkFieldAvailability);
-router.get('/available-slots', getAvailableTimeSlots);
+router.get('/', authMiddleware(['super_admin']), bookingController.getBookings);
+router.get('/:id', authMiddleware(), bookingController.getBookingById);
+router.get('/user/:userId', authMiddleware(), bookingController.getUserBookings);
+router.post('/', authMiddleware(), bookingController.createBooking);
+router.put('/:id/status', authMiddleware(), bookingController.updateBookingStatus);
+router.delete('/:id', authMiddleware(), bookingController.deleteBooking);
 
 export default router;

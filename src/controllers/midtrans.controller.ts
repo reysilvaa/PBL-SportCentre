@@ -1,78 +1,129 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
-import midtrans from '../config/midtrans';
 import { PaymentStatus } from '@prisma/client';
 
-export const createMidtransTransaction = async (req: Request, res: Response): Promise<void> => {
+export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { bookingId, userId, amount } = req.body;
+    console.log("Midtrans Webhook Received:", req.body);
 
-    if (!bookingId || !userId || !amount) {
-      res.status(400).json({ error: 'Missing required fields' });
-      return;
-    }
+    const { order_id, transaction_status, gross_amount, signature_key } = req.body;
+    
+    // Extract payment ID from order_id (removes the PAY- prefix if present)
+    const paymentIdStr = order_id.startsWith('PAY-') ? order_id.substring(4).split('-')[0] : order_id;
+    const paymentId = parseInt(paymentIdStr);
 
-    const user = await prisma.user.findUnique({ 
-      where: { id: userId }, 
-      select: { name: true, email: true } 
-    });
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    const newPayment = await prisma.payment.create({
-      data: { bookingId, userId, amount, paymentMethod: 'midtrans', status: 'pending' }
-    });
-
-    const transaction = await midtrans.createTransaction({
-      transaction_details: { order_id: newPayment.id.toString(), gross_amount: amount },
-      customer_details: { first_name: user.name, email: user.email }
-    });
-
-    res.status(201).json({
-      message: 'Transaction created',
-      payment: newPayment,
-      redirect_url: transaction.redirect_url
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create transaction' });
-  }
-};
-
-export const midtransWebhook = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { order_id, transaction_status } = req.body;
-    const paymentId = Number(order_id);
-
-    if (!paymentId) {
+    if (!paymentId || isNaN(paymentId)) {
+      console.error("Invalid Payment ID:", order_id);
       res.status(400).json({ error: 'Invalid payment ID' });
       return;
     }
 
-    const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        booking: { include: { field: true } }
+      },
+    });
+
+    if (!payment) {
+      console.error("Payment Not Found:", paymentId);
+      res.status(404).json({ error: 'Payment not found' });
+      return;
+    }
+
+    let paymentStatus: PaymentStatus = PaymentStatus.pending;
+
+    if (transaction_status === 'capture' || transaction_status === 'settlement') {
+      const fieldPrice = payment.booking.field.priceNight;
+      const paymentAmount = Number(gross_amount);
+
+      if (paymentAmount < Number(fieldPrice)) {
+        paymentStatus = PaymentStatus.dp_paid;
+        console.log(`Down payment received: ${paymentAmount} out of ${fieldPrice}`);
+      } else {
+        paymentStatus = PaymentStatus.paid;
+        console.log(`Full payment received: ${paymentAmount}`);
+      }
+    } else if (transaction_status === 'pending') {
+      paymentStatus = PaymentStatus.pending;
+    } else if (['expire', 'cancel', 'deny', 'failure'].includes(transaction_status)) {
+      paymentStatus = PaymentStatus.failed;
+    }
+
+    // Update payment record
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: { 
+        status: paymentStatus,
+      },
+    });
+
+    // Create activity log
+    await prisma.activityLog.create({
+      data: {
+        userId: payment.booking.userId,
+        action: `Payment ${paymentStatus} for booking ${payment.booking.id}`,
+        details: JSON.stringify({
+          bookingId: payment.booking.id,
+          paymentId: payment.id,
+          transactionStatus: transaction_status,
+          amount: gross_amount
+        })
+      }
+    });
+    
+    console.log(`Payment ${paymentId} updated to ${paymentStatus}`);
+
+    res.status(200).json({ 
+      message: 'Payment status updated successfully', 
+      paymentId,
+      paymentStatus
+    });
+  } catch (error) {
+    console.error('Midtrans Webhook Error:', error);
+    res.status(500).json({ error: 'Failed to process Midtrans webhook' });
+  }
+};
+
+export const getPaymentStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const paymentId = parseInt(id);
+
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        booking: { 
+          include: { 
+            field: { include: { branch: true } },
+            user: { select: { name: true, email: true } }
+          }
+        }
+      }
+    });
+
     if (!payment) {
       res.status(404).json({ error: 'Payment not found' });
       return;
     }
 
-    const statusMap: Record<string, PaymentStatus> = {
-      settlement: PaymentStatus.paid,
-      capture: PaymentStatus.paid,
-      expire: PaymentStatus.failed,
-      cancel: PaymentStatus.failed,
-      deny: PaymentStatus.failed,
-      refund: PaymentStatus.refunded
-    };
-
-    const status = statusMap[transaction_status] || PaymentStatus.pending;
-    await prisma.payment.update({ where: { id: paymentId }, data: { status } });
-
-    res.status(200).json({ message: 'Payment status updated successfully', status });
+    res.json({
+      id: payment.id,
+      status: payment.status,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      createdAt: payment.createdAt,
+      booking: {
+        id: payment.booking.id,
+        field: {
+          name: payment.booking.field.name,
+          branch: payment.booking.field.branch.name
+        },
+        user: payment.booking.user
+      }
+    });
   } catch (error) {
-    console.error('Webhook Error:', error);
-    res.status(500).json({ error: 'Failed to process webhook' });
+    console.error('Get Payment Status Error:', error);
+    res.status(500).json({ error: 'Failed to get payment status' });
   }
 };
