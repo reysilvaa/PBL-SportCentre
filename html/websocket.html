@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket Testing Interface</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <style>
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .result-panel {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-700">Socket Testing Interface</h1>
+        
+        <!-- Connection Status -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 class="text-xl font-semibold mb-2">Connection Status</h2>
+            <div class="flex space-x-4">
+                <div class="flex items-center">
+                    <span class="mr-2">Main:</span>
+                    <span id="main-status" class="px-3 py-1 rounded-full bg-red-100 text-red-800">Disconnected</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="mr-2">Activity:</span>
+                    <span id="activity-status" class="px-3 py-1 rounded-full bg-red-100 text-red-800">Disconnected</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="mr-2">Booking:</span>
+                    <span id="booking-status" class="px-3 py-1 rounded-full bg-red-100 text-red-800">Disconnected</span>
+                </div>
+                <button id="connect-btn" class="ml-auto bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Connect All</button>
+                <button id="disconnect-btn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Disconnect All</button>
+            </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="bg-white rounded-lg shadow-md mb-6">
+            <div class="flex border-b">
+                <button class="tab-btn flex-1 py-3 px-4 font-medium text-center hover:bg-gray-100 focus:outline-none active" data-tab="activity">Activity Log</button>
+                <button class="tab-btn flex-1 py-3 px-4 font-medium text-center hover:bg-gray-100 focus:outline-none" data-tab="booking">Booking</button>
+                <button class="tab-btn flex-1 py-3 px-4 font-medium text-center hover:bg-gray-100 focus:outline-none" data-tab="events">Event Log</button>
+            </div>
+        </div>
+        
+        <!-- Tab Content -->
+        <div class="tab-content active" id="activity-tab">
+            <!-- Activity tab content will be loaded from activity.js -->
+        </div>
+        
+        <div class="tab-content" id="booking-tab">
+            <!-- Booking tab content will be loaded from booking.js -->
+        </div>
+        
+        <div class="tab-content" id="events-tab">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Event Log</h3>
+                    <button id="clear-event-log" class="text-red-600 hover:text-red-800">Clear Log</button>
+                </div>
+                <div id="event-log" class="result-panel">
+                    <p class="text-gray-500 italic">No events logged yet. Connect to socket servers and perform actions to see events.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="main.js"></script>
+    <script src="activityLog.js"></script>
+    <script src="booking.js"></script>
+</body>
+</html>
