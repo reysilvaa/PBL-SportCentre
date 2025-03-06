@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { PaymentStatus } from '@prisma/client';
+import midtrans from '../config/midtrans';
 
+// Di midtrans.controller.ts
 export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log("Midtrans Webhook Received:", req.body);
