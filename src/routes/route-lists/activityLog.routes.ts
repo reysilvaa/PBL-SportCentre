@@ -5,10 +5,12 @@ import {
   deleteActivityLog 
 } from '../../controllers/activityLog.controller';
 import { parseIds } from '../../middlewares/parseId.middleware'; // parse into integer karena dto kirimkan string untuk userId (dto minta number)
+import { authMiddleware } from '../../middlewares/auth.middleware';
 
 const router = express.Router();
 
-router.get('/', getActivityLogs);
+// router.get('/', authMiddleware(['super_admin', 'admin_cabang']), getActivityLogs);
+router.get('/', authMiddleware(), getActivityLogs);
 router.post('/', parseIds, createActivityLog);
 router.delete('/:id', deleteActivityLog);
 
