@@ -1,9 +1,18 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { PaymentStatus } from '@prisma/client';
+import { createMidtransWebhookHandler } from '../handler/socket/midtrans.webhook';
 import midtrans from '../config/midtrans';
 
-// Di midtrans.controller.ts
+// Create a variable to store the socket.io instance
+let io: any = null;
+
+// Function to set the io instance
+export const setSocketIo = (socketIo: any) => {
+  io = socketIo;
+};
+
+// Single implementation of handleMidtransNotification
 export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log("Midtrans Webhook Received:", req.body);
@@ -23,7 +32,12 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
       include: {
-        booking: { include: { field: true } }
+        booking: { 
+          include: { 
+            field: true,
+            user: { select: { id: true, name: true, email: true } }
+          }
+        }
       },
     });
 
@@ -74,6 +88,44 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       }
     });
     
+    // Create notification for the user
+    await prisma.notification.create({
+      data: {
+        userId: payment.booking.userId,
+        title: `Payment Status Updated`,
+        message: `Your payment for booking #${payment.booking.id} status is now ${paymentStatus}.`,
+        isRead: false,
+        type: 'PAYMENT',
+        linkId: payment.id.toString(),
+      },
+    });
+    
+    // If socket.io is available, emit event to notify client
+    if (io) {
+      const roomId = `user_${payment.booking.userId}`;
+      io.to(roomId).emit('payment_update', {
+        paymentId: payment.id,
+        bookingId: payment.booking.id,
+        status: paymentStatus,
+        message: `Your payment status is now ${paymentStatus}`,
+      });
+      
+      // Update booking status if payment is completed
+      if (paymentStatus === PaymentStatus.paid) {
+        await prisma.booking.update({
+          where: { id: payment.bookingId },
+          data: {}, //status berarubah
+        });
+        
+        // Emit booking confirmation event
+        io.to(roomId).emit('booking_confirmed', {
+          bookingId: payment.bookingId,
+          fieldName: payment.booking.field.name,
+          date: payment.booking.bookingDate,
+        });
+      }
+    }
+    
     console.log(`Payment ${paymentId} updated to ${paymentStatus}`);
 
     res.status(200).json({ 
@@ -86,6 +138,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     res.status(500).json({ error: 'Failed to process Midtrans webhook' });
   }
 };
+
 
 export const getPaymentStatus = async (req: Request, res: Response): Promise<void> => {
   try {

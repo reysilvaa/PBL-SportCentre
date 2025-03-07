@@ -48,9 +48,11 @@ export const getAvailableTimeSlots = async (req: Request, res: Response): Promis
         bookingDate: {
           equals: new Date(dateString)
         },
+        payment:{
         status: {
-          notIn: ['canceled', 'refunded']
+          notIn: ['paid', 'dp_paid']
         }
+      }
       },
       select: {
         startTime: true,

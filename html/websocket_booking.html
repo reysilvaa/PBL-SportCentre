@@ -1,366 +1,556 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Booking System WebSocket Tester</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    h1, h2 {
-      color: #333;
-    }
-    .card {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 20px;
-      background-color: #f9f9f9;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-    input, select {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-sizing: border-box;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    #status {
-      font-weight: bold;
-      color: #777;
-    }
-    .status-connected {
-      color: green;
-    }
-    .status-disconnected {
-      color: red;
-    }
-    #messages {
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      padding: 10px;
-      height: 200px;
-      overflow-y: auto;
-      background-color: #fff;
-    }
-    .message {
-      margin-bottom: 5px;
-      padding: 5px;
-      border-bottom: 1px solid #eee;
-    }
-    .incoming {
-      color: blue;
-    }
-    .outgoing {
-      color: green;
-    }
-    .error {
-      color: red;
-    }
-    .bookings-list {
-      margin-top: 20px;
-    }
-    .booking-item {
-      padding: 10px;
-      border: 1px solid #ddd;
-      margin-bottom: 10px;
-      border-radius: 4px;
-      background-color: #fff;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Testing Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        pre {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .logs {
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        .event {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .time {
+            color: #999;
+            font-size: 0.8em;
+        }
+        .notification-card {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+        }
+        .status {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-connected {
+            background: #4CAF50;
+            color: white;
+        }
+        .status-disconnected {
+            background: #f44336;
+            color: white;
+        }
+        .tab-container {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab-button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 10px 16px;
+            transition: 0.3s;
+            color: black;
+        }
+        .tab-button:hover {
+            background-color: #ddd;
+        }
+        .tab-button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            background-color: white;
+        }
+    </style>
 </head>
 <body>
-  <h1>Booking System WebSocket Tester</h1>
-  
-  <div class="card">
-    <div id="status" class="status-disconnected">Disconnected</div>
-    <button id="connect">Connect</button>
-    <button id="disconnect" disabled>Disconnect</button>
-  </div>
+    <div class="container">
+        <div class="card">
+            <h1>WebSocket Testing Dashboard</h1>
+            <div id="connection-status">
+                Status: <span class="status status-disconnected">Disconnected</span>
+            </div>
+            <div class="form-group">
+                <label for="token">Auth Token</label>
+                <input type="text" id="token" placeholder="Enter your JWT token">
+            </div>
+            <div class="form-group">
+                <label for="serverUrl">Server URL</label>
+                <input type="text" id="serverUrl" value="http://localhost:3000" placeholder="Enter server URL">
+            </div>
+            <div class="form-group">
+                <button id="connect-btn">Connect</button>
+                <button id="disconnect-btn" disabled>Disconnect</button>
+            </div>
+        </div>
 
-  <div class="card">
-    <h2>Check Availability</h2>
-    <div class="form-group">
-      <label for="fieldId">Field ID:</label>
-      <input type="number" id="fieldId" required>
+        <div class="card">
+            <h2>Event Logs</h2>
+            <div class="logs" id="event-logs"></div>
+            <button id="clear-logs-btn">Clear Logs</button>
+        </div>
+
+        <div class="card">
+            <div class="tab-container">
+                <button class="tab-button active" onclick="openTab(event, 'notifications-tab')">Notifications</button>
+                <button class="tab-button" onclick="openTab(event, 'bookings-tab')">Bookings</button>
+                <button class="tab-button" onclick="openTab(event, 'payments-tab')">Payments</button>
+            </div>
+            
+            <div id="notifications-tab" class="tab-content" style="display: block;">
+                <h3>Notifications</h3>
+                <div class="form-group">
+                    <button id="get-notifications-btn">Get Notifications</button>
+                    <button id="mark-all-read-btn">Mark All as Read</button>
+                </div>
+                <div id="notifications-container">
+                    <!-- Notifications will be displayed here -->
+                </div>
+            </div>
+            
+            <div id="bookings-tab" class="tab-content">
+                <h3>Bookings</h3>
+                <p>Bookings functionality will be displayed here</p>
+            </div>
+            
+            <div id="payments-tab" class="tab-content">
+                <h3>Payments</h3>
+                <div class="form-group">
+                    <label for="order-id">Simulate Midtrans Webhook</label>
+                    <input type="text" id="order-id" placeholder="Order ID (PAY-123-XYZ)">
+                </div>
+                <div class="form-group">
+                    <select id="transaction-status">
+                        <option value="settlement">Settlement (Paid)</option>
+                        <option value="pending">Pending</option>
+                        <option value="deny">Denied</option>
+                        <option value="expire">Expired</option>
+                        <option value="cancel">Canceled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="gross-amount" placeholder="Amount (e.g. 50000)">
+                </div>
+                <button id="simulate-webhook-btn">Simulate Webhook</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Midtrans Webhook Simulation</h2>
+            <div class="form-group">
+                <label for="webhook-url">Webhook URL</label>
+                <input type="text" id="webhook-url" value="/api/payments/webhook/midtrans" readonly>
+            </div>
+            <div class="form-group">
+                <label for="webhook-method">Method</label>
+                <select id="webhook-method">
+                    <option value="POST">POST</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="webhook-payload">Request Body</label>
+                <pre id="webhook-payload">{
+    "order_id": "PAY-123-XYZ",
+    "transaction_status": "settlement",
+    "gross_amount": "50000.00",
+    "signature_key": "test-signature"
+}</pre>
+            </div>
+            <button id="copy-curl-btn">Copy as cURL</button>
+        </div>
     </div>
-    <div class="form-group">
-      <label for="bookingDate">Booking Date:</label>
-      <input type="date" id="bookingDate" required>
-    </div>
-    <div class="form-group">
-      <label for="startTime">Start Time:</label>
-      <input type="datetime-local" id="startTime" required>
-    </div>
-    <div class="form-group">
-      <label for="endTime">End Time:</label>
-      <input type="datetime-local" id="endTime" required>
-    </div>
-    <button id="checkAvailability">Check Availability</button>
-  </div>
 
-  <div class="card">
-    <h2>Create Booking</h2>
-    <div class="form-group">
-      <label for="userId">User ID:</label>
-      <input type="number" id="userId" required>
-    </div>
-    <div class="form-group">
-      <label for="createFieldId">Field ID:</label>
-      <input type="number" id="createFieldId" required>
-    </div>
-    <div class="form-group">
-      <label for="createBookingDate">Booking Date:</label>
-      <input type="date" id="createBookingDate" required>
-    </div>
-    <div class="form-group">
-      <label for="createStartTime">Start Time:</label>
-      <input type="datetime-local" id="createStartTime" required>
-    </div>
-    <div class="form-group">
-      <label for="createEndTime">End Time:</label>
-      <input type="datetime-local" id="createEndTime" required>
-    </div>
-    <button id="createBooking">Create Booking</button>
-  </div>
+    <script>
+        let socket = null;
+        let namespaces = {
+            notifications: null,
+            bookings: null,
+            payments: null
+        };
 
-  <div class="card">
-    <h2>Cancel Booking</h2>
-    <div class="form-group">
-      <label for="cancelId">Booking ID:</label>
-      <input type="number" id="cancelId" required>
-    </div>
-    <div class="form-group">
-      <label for="cancelUserId">User ID:</label>
-      <input type="number" id="cancelUserId" required>
-    </div>
-    <div class="form-group">
-      <label for="cancelReason">Reason:</label>
-      <input type="text" id="cancelReason" required>
-    </div>
-    <button id="cancelBooking">Cancel Booking</button>
-  </div>
+        // DOM Elements
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const tokenInput = document.getElementById('token');
+        const serverUrlInput = document.getElementById('serverUrl');
+        const connectionStatus = document.getElementById('connection-status').querySelector('span');
+        const eventLogs = document.getElementById('event-logs');
+        const clearLogsBtn = document.getElementById('clear-logs-btn');
+        
+        const getNotificationsBtn = document.getElementById('get-notifications-btn');
+        const markAllReadBtn = document.getElementById('mark-all-read-btn');
+        const notificationsContainer = document.getElementById('notifications-container');
+        
+        const simulateWebhookBtn = document.getElementById('simulate-webhook-btn');
+        const orderIdInput = document.getElementById('order-id');
+        const transactionStatusSelect = document.getElementById('transaction-status');
+        const grossAmountInput = document.getElementById('gross-amount');
+        const webhookPayload = document.getElementById('webhook-payload');
+        const copyCurlBtn = document.getElementById('copy-curl-btn');
 
-  <div class="card">
-    <h2>Messages</h2>
-    <div id="messages"></div>
-    <button id="clearMessages" style="margin-top: 10px;">Clear Messages</button>
-  </div>
-
-  <div class="card bookings-list">
-    <h2>Bookings</h2>
-    <div id="bookingsList"></div>
-  </div>
-
-  <script>
-    // Socket.io client
-    let socket;
-    const bookings = [];
-
-    // DOM elements
-    const statusEl = document.getElementById('status');
-    const messagesEl = document.getElementById('messages');
-    const bookingsListEl = document.getElementById('bookingsList');
-
-    // Connect to socket
-    document.getElementById('connect').addEventListener('click', () => {
-      socket = io('http://localhost:3000/booking');
-      
-      socket.on('connect', () => {
-        statusEl.textContent = 'Connected';
-        statusEl.className = 'status-connected';
-        document.getElementById('connect').disabled = true;
-        document.getElementById('disconnect').disabled = false;
-        addMessage('Connected to server', 'incoming');
-      });
-
-      socket.on('disconnect', () => {
-        statusEl.textContent = 'Disconnected';
-        statusEl.className = 'status-disconnected';
-        document.getElementById('connect').disabled = false;
-        document.getElementById('disconnect').disabled = true;
-        addMessage('Disconnected from server', 'incoming');
-      });
-
-      // Handle events from server
-      socket.on('availabilityResult', (data) => {
-        const result = data.isAvailable ? 'Available' : 'Not Available';
-        addMessage(`Field availability: ${result}`, 'incoming');
-      });
-
-      socket.on('bookingCreated', (booking) => {
-        addMessage(`Booking created: ID ${booking.id}`, 'incoming');
-        addBooking(booking);
-      });
-
-      socket.on('newBooking', (booking) => {
-        addMessage(`New booking from another client: ID ${booking.id}`, 'incoming');
-        addBooking(booking);
-      });
-
-      socket.on('bookingCancelled', (booking) => {
-        addMessage(`Booking cancelled: ID ${booking.id}`, 'incoming');
-        updateBooking(booking);
-      });
-
-      socket.on('cancellationConfirmed', (booking) => {
-        addMessage(`Cancellation confirmed: ID ${booking.id}`, 'incoming');
-        updateBooking(booking);
-      });
-
-      socket.on('error', (errorData) => {
-        addMessage(`Error (${errorData.type}): ${errorData.error}`, 'error');
-        if (errorData.details) {
-          addMessage(`Details: ${JSON.stringify(errorData.details)}`, 'error');
+        // Helper Functions
+        function logEvent(event, data, isError = false) {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            const time = new Date().toLocaleTimeString();
+            const formattedData = data ? JSON.stringify(data, null, 2) : '';
+            
+            logEntry.innerHTML = `
+                <span class="time">[${time}]</span> 
+                <span class="${isError ? 'error' : 'event'}">${event}</span>
+                ${formattedData ? `<pre>${formattedData}</pre>` : ''}
+            `;
+            
+            eventLogs.appendChild(logEntry);
+            eventLogs.scrollTop = eventLogs.scrollHeight;
         }
-      });
-    });
 
-    // Disconnect
-    document.getElementById('disconnect').addEventListener('click', () => {
-      if (socket) {
-        socket.disconnect();
-      }
-    });
+        function updateConnectionStatus(isConnected) {
+            connectionStatus.className = isConnected 
+                ? 'status status-connected' 
+                : 'status status-disconnected';
+            connectionStatus.textContent = isConnected ? 'Connected' : 'Disconnected';
+            
+            connectBtn.disabled = isConnected;
+            disconnectBtn.disabled = !isConnected;
+            
+            getNotificationsBtn.disabled = !isConnected;
+            markAllReadBtn.disabled = !isConnected;
+        }
 
-    // Check availability
-    document.getElementById('checkAvailability').addEventListener('click', () => {
-      if (!socket || !socket.connected) {
-        addMessage('Not connected to server', 'error');
-        return;
-      }
+        function displayNotifications(notifications = []) {
+            notificationsContainer.innerHTML = '';
+            
+            if (notifications.length === 0) {
+                notificationsContainer.innerHTML = '<p>No notifications found</p>';
+                return;
+            }
+            
+            notifications.forEach(notification => {
+                const notificationElement = document.createElement('div');
+                notificationElement.className = 'notification-card';
+                notificationElement.innerHTML = `
+                    <h4>${notification.title}</h4>
+                    <p>${notification.message}</p>
+                    <p><small>Type: ${notification.type} | Read: ${notification.isRead ? 'Yes' : 'No'}</small></p>
+                    ${!notification.isRead 
+                        ? `<button class="mark-read-btn" data-id="${notification.id}">Mark as Read</button>` 
+                        : ''}
+                `;
+                notificationsContainer.appendChild(notificationElement);
+            });
+            
+            // Add event listeners to mark as read buttons
+            document.querySelectorAll('.mark-read-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const notificationId = this.getAttribute('data-id');
+                    namespaces.notifications.emit('mark-notification-read', { notificationId }, response => {
+                        logEvent('mark-notification-read response', response);
+                        if (response.status === 'success') {
+                            getNotifications();
+                        }
+                    });
+                });
+            });
+        }
 
-      const data = {
-        fieldId: parseInt(document.getElementById('fieldId').value),
-        bookingDate: document.getElementById('bookingDate').value,
-        startTime: document.getElementById('startTime').value,
-        endTime: document.getElementById('endTime').value
-      };
+        function getNotifications() {
+            if (!namespaces.notifications) return;
+            
+            namespaces.notifications.emit('get-notifications', { page: 1, limit: 10 }, response => {
+                logEvent('get-notifications response', response);
+                if (response.status === 'success') {
+                    displayNotifications(response.data.notifications);
+                }
+            });
+        }
 
-      socket.emit('checkAvailability', data);
-      addMessage(`Checking availability: ${JSON.stringify(data)}`, 'outgoing');
-    });
+        function updateWebhookPayload() {
+            const orderId = orderIdInput.value || 'PAY-123-XYZ';
+            const transactionStatus = transactionStatusSelect.value;
+            const grossAmount = grossAmountInput.value || '50000.00';
+            
+            const payload = {
+                order_id: orderId,
+                transaction_status: transactionStatus,
+                gross_amount: grossAmount,
+                signature_key: 'test-signature'
+            };
+            
+            webhookPayload.textContent = JSON.stringify(payload, null, 2);
+        }
 
-    // Create booking
-    document.getElementById('createBooking').addEventListener('click', () => {
-      if (!socket || !socket.connected) {
-        addMessage('Not connected to server', 'error');
-        return;
-      }
+        function simulateWebhook() {
+            const serverUrl = serverUrlInput.value;
+            const payload = JSON.parse(webhookPayload.textContent);
+            
+            fetch(`${serverUrl}/api/payments/webhook/midtrans`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                logEvent('Webhook Response', data);
+            })
+            .catch(error => {
+                logEvent('Webhook Error', { message: error.message }, true);
+            });
+        }
 
-      const data = {
-        userId: parseInt(document.getElementById('userId').value),
-        fieldId: parseInt(document.getElementById('createFieldId').value),
-        bookingDate: document.getElementById('createBookingDate').value,
-        startTime: document.getElementById('createStartTime').value,
-        endTime: document.getElementById('createEndTime').value
-      };
+        function generateCurlCommand() {
+            const serverUrl = serverUrlInput.value;
+            const webhook = `${serverUrl}/api/payments/webhook/midtrans`;
+            const payload = JSON.parse(webhookPayload.textContent);
+            
+            return `curl -X POST ${webhook} \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify(payload)}'`;
+        }
 
-      socket.emit('createBooking', data);
-      addMessage(`Creating booking: ${JSON.stringify(data)}`, 'outgoing');
-    });
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    alert('Copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                });
+        }
 
-    // Cancel booking
-    document.getElementById('cancelBooking').addEventListener('click', () => {
-      if (!socket || !socket.connected) {
-        addMessage('Not connected to server', 'error');
-        return;
-      }
+        // Event Listeners
+        connectBtn.addEventListener('click', function() {
+            const token = tokenInput.value;
+            const serverUrl = serverUrlInput.value;
+            
+            if (!token) {
+                alert('Please enter an auth token');
+                return;
+            }
+            
+            // Disconnect existing connections if any
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            // Connect to Socket.IO server
+            socket = io(serverUrl, {
+                auth: { token }
+            });
+            
+            // Connect to namespaces
+            namespaces.notifications = io(`${serverUrl}/notifications`, {
+                auth: { token }
+            });
+            
+            namespaces.bookings = io(`${serverUrl}/bookings`, {
+                auth: { token }
+            });
+            
+            namespaces.payments = io(`${serverUrl}/payments`, {
+                auth: { token }
+            });
+            
+            // Main connection events
+            socket.on('connect', () => {
+                logEvent('Connected to server', { id: socket.id });
+                updateConnectionStatus(true);
+            });
+            
+            socket.on('disconnect', () => {
+                logEvent('Disconnected from server');
+                updateConnectionStatus(false);
+            });
+            
+            socket.on('connect_error', (error) => {
+                logEvent('Connection Error', { message: error.message }, true);
+                updateConnectionStatus(false);
+            });
+            
+            // Namespace connection events
+            Object.keys(namespaces).forEach(ns => {
+                if (!namespaces[ns]) return;
+                
+                namespaces[ns].on('connect', () => {
+                    logEvent(`Connected to ${ns} namespace`, { id: namespaces[ns].id });
+                });
+                
+                namespaces[ns].on('connect_error', (error) => {
+                    logEvent(`${ns} Connection Error`, { message: error.message }, true);
+                });
+                
+                // Specific namespace events
+                if (ns === 'notifications') {
+                    namespaces[ns].on('new_notification', data => {
+                        logEvent('New Notification', data);
+                        getNotifications();
+                    });
+                }
+                
+                if (ns === 'payments') {
+                    namespaces[ns].on('payment_update', data => {
+                        logEvent('Payment Update', data);
+                    });
+                }
+                
+                if (ns === 'bookings') {
+                    namespaces[ns].on('booking_confirmed', data => {
+                        logEvent('Booking Confirmed', data);
+                    });
+                }
+            });
+        });
+        
+        disconnectBtn.addEventListener('click', function() {
+            if (socket) {
+                socket.disconnect();
+                
+                Object.keys(namespaces).forEach(ns => {
+                    if (namespaces[ns]) {
+                        namespaces[ns].disconnect();
+                        namespaces[ns] = null;
+                    }
+                });
+                
+                socket = null;
+                updateConnectionStatus(false);
+                logEvent('Manually disconnected');
+            }
+        });
+        
+        clearLogsBtn.addEventListener('click', function() {
+            eventLogs.innerHTML = '';
+        });
+        
+        getNotificationsBtn.addEventListener('click', getNotifications);
+        
+        markAllReadBtn.addEventListener('click', function() {
+            if (!namespaces.notifications) return;
+            
+            namespaces.notifications.emit('mark-all-notifications-read', response => {
+                logEvent('mark-all-notifications-read response', response);
+                if (response.status === 'success') {
+                    getNotifications();
+                }
+            });
+        });
+        
+        simulateWebhookBtn.addEventListener('click', simulateWebhook);
+        
+        orderIdInput.addEventListener('input', updateWebhookPayload);
+        transactionStatusSelect.addEventListener('change', updateWebhookPayload);
+        grossAmountInput.addEventListener('input', updateWebhookPayload);
+        
+        copyCurlBtn.addEventListener('click', function() {
+            const curlCommand = generateCurlCommand();
+            copyToClipboard(curlCommand);
+        });
 
-      const data = {
-        id: parseInt(document.getElementById('cancelId').value),
-        userId: parseInt(document.getElementById('cancelUserId').value),
-        reason: document.getElementById('cancelReason').value
-      };
-
-      socket.emit('cancelBooking', data);
-      addMessage(`Cancelling booking: ${JSON.stringify(data)}`, 'outgoing');
-    });
-
-    // Clear messages
-    document.getElementById('clearMessages').addEventListener('click', () => {
-      messagesEl.innerHTML = '';
-    });
-
-    // Helper to add message to the messages div
-    function addMessage(message, type) {
-      const messageEl = document.createElement('div');
-      messageEl.className = `message ${type}`;
-      messageEl.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
-      messagesEl.appendChild(messageEl);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    // Helper to add booking to the list
-    function addBooking(booking) {
-      const index = bookings.findIndex(b => b.id === booking.id);
-      if (index !== -1) {
-        bookings[index] = booking;
-      } else {
-        bookings.push(booking);
-      }
-      renderBookings();
-    }
-
-    // Helper to update booking in list
-    function updateBooking(booking) {
-      const index = bookings.findIndex(b => b.id === booking.id);
-      if (index !== -1) {
-        bookings[index] = booking;
-        renderBookings();
-      }
-    }
-
-    // Render bookings list
-    function renderBookings() {
-      bookingsListEl.innerHTML = '';
-      if (bookings.length === 0) {
-        bookingsListEl.textContent = 'No bookings yet';
-        return;
-      }
-
-      bookings.forEach(booking => {
-        const bookingEl = document.createElement('div');
-        bookingEl.className = 'booking-item';
-
-        const startTime = new Date(booking.startTime).toLocaleString();
-        const endTime = new Date(booking.endTime).toLocaleString();
-
-        bookingEl.innerHTML = `
-          <strong>ID:</strong> ${booking.id}<br>
-          <strong>User:</strong> ${booking.user?.name || 'Unknown'}<br>
-          <strong>Field:</strong> ${booking.field?.name || 'Unknown'}<br>
-          <strong>Date:</strong> ${new Date(booking.bookingDate).toLocaleDateString()}<br>
-          <strong>Time:</strong> ${startTime} - ${endTime}<br>
-          <strong>Status:</strong> ${booking.status}<br>
-          <strong>Payment:</strong> ${booking.paymentStatus}
-        `;
-        bookingsListEl.appendChild(bookingEl);
-      });
-    }
-  </script>
+        // Tab functionality
+        function openTab(evt, tabName) {
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].style.display = 'none';
+            }
+            
+            const tabButtons = document.getElementsByClassName('tab-button');
+            for (let i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].className = tabButtons[i].className.replace(' active', '');
+            }
+            
+            document.getElementById(tabName).style.display = 'block';
+            evt.currentTarget.className += ' active';
+        }
+        
+        // Initialize with default data
+        updateWebhookPayload();
+    </script>
 </body>
 </html>

@@ -17,4 +17,14 @@ router.delete('/:id', authMiddleware(), paymentController.deletePayment);
 // Midtrans notification webhook (no auth required as it's called by Midtrans)
 router.post('/notification', midtransController.handleMidtransNotification);
 
+// In your routes file
+const jsonParser = express.json();
+
+router.post('/webhook/midtrans', jsonParser, (req, res) => {
+    console.log('Webhook route hit');
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
+    midtransController.handleMidtransNotification(req, res);
+  });
+
 export default router;
