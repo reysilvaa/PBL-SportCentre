@@ -16,38 +16,50 @@ export const isFieldAvailable = async (
 ): Promise<boolean> => {
   // Format the date part from bookingDate
   const dateString = bookingDate.toISOString().split('T')[0];
-  
-  // Find any overlapping bookings
+
+  console.log("🔍 Checking availability for Field ID:", fieldId);
+  console.log("📆 Booking Date:", dateString);
+  console.log("⏰ Start Time:", startTime, "| End Time:", endTime);
+
+  // Find overlapping bookings with payment status 'paid' or 'dp_paid'
   const overlappingBookings = await prisma.booking.findMany({
     where: {
       fieldId,
-      bookingDate: {
-        equals: new Date(dateString)
-      },
-        payment: {
-          status: {
-            notIn: ['paid', 'dp_paid']
-          }
-        },
-      OR: [
-        // Case 1: New booking starts during an existing booking
+      bookingDate: new Date(dateString), // Ensuring date format is correct
+      AND: [
         {
-          startTime: { lte: startTime },
-          endTime: { gt: startTime }
+          // Check if payment status is not in 'pending' or 'failed'
+          payment: {
+            status: {
+              in: ['paid', 'dp_paid'], // Only consider paid or DP-paid bookings
+            },
+          },
         },
-        // Case 2: New booking ends during an existing booking
         {
-          startTime: { lt: endTime },
-          endTime: { gte: endTime }
+          OR: [
+            // Case 1: New booking starts during an existing booking
+            {
+              startTime: { lte: startTime },
+              endTime: { gt: startTime },
+            },
+            // Case 2: New booking ends during an existing booking
+            {
+              startTime: { lt: endTime },
+              endTime: { gte: endTime },
+            },
+            // Case 3: New booking completely contains an existing booking
+            {
+              startTime: { gte: startTime },
+              endTime: { lte: endTime },
+            },
+          ],
         },
-        // Case 3: New booking completely contains an existing booking
-        {
-          startTime: { gte: startTime },
-          endTime: { lte: endTime }
-        }
-      ]
-    }
+      ],
+    },
   });
-  
+
+  console.log("📋 Overlapping bookings found:", overlappingBookings.length);
+
+  // If there are no overlapping bookings with successful payment, field is available
   return overlappingBookings.length === 0;
 };
