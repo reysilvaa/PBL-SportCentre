@@ -53,6 +53,7 @@ router.get('/admin/bookings/stats',
 );
 
 // Owner routes
+// exp : http://localhost:3000/api/bookings/owner/reports/revenue?type=daily&startDate=2025-03-01&endDate=2025-03-07
 router.get('/owner/reports/revenue', 
 //   authMiddleware(['owner_cabang']), 
   ownerBookingController.getRevenueReports
