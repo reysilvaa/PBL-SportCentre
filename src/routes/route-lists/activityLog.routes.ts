@@ -3,7 +3,7 @@ import {
   getActivityLogs, 
   createActivityLog, 
   deleteActivityLog 
-} from '../../controllers/activityLog.controller';
+} from '../../controllers/admin/super_admin/activityLog.controller';
 import { parseIds } from '../../middlewares/parseId.middleware'; // parse into integer karena dto kirimkan string untuk userId (dto minta number)
 import { authMiddleware } from '../../middlewares/auth.middleware';
 

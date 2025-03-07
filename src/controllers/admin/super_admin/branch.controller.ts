@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { validate } from 'class-validator';
-import prisma from '../config/database';
-import { CreateBranchDto } from '../dto/branch/create-branch.dto';
+import prisma from '../../../config/database';
+import { CreateBranchDto } from '../../../dto/branch/create-branch.dto';
 
 export const getBranches = async (req: Request, res: Response) => {
   try {

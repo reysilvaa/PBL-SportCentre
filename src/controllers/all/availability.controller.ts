@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import prisma from '../config/database';
-import { isFieldAvailable } from '../utils/availability.utils';
+import prisma from '../../config/database';
+import { isFieldAvailable } from '../../utils/availability.utils';
 
 export const checkFieldAvailability = async (req: Request, res: Response): Promise<void> => {
   try {

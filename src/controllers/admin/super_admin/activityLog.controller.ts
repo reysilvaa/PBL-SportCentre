@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { validate } from 'class-validator';
-import prisma from '../config/database';
-import { CreateActivityLogDto } from '../dto/activityLog/create-activity-log.dto';
+import prisma from '../../../config/database';
+import { CreateActivityLogDto } from '../../../dto/activityLog/create-activity-log.dto';
 
 export const getActivityLogs = async (req: Request, res: Response) => {
   try {

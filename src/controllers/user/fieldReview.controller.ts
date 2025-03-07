@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import prisma from '../config/database';
+import prisma from '../../config/database';
 import { plainToInstance } from 'class-transformer';
-import { CreateFieldReviewDto } from '../dto/review/create-review.dto';
+import { CreateFieldReviewDto } from '../../dto/review/create-review.dto';
 import { validate } from 'class-validator';
 
 export const getFieldReviews = async (req: Request, res: Response) => {

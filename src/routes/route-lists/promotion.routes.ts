@@ -4,7 +4,7 @@ import {
   createPromotion, 
   updatePromotion, 
   deletePromotion 
-} from '../../controllers/promotion.controller';
+} from '../../controllers/all/promotion.controller';
 
 const router = express.Router();
 

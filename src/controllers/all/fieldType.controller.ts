@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import prisma from '../config/database';
-import { CreateFieldTypeDto } from '../dto/field/create-field-type.dto';
+import prisma from '../../config/database';
+import { CreateFieldTypeDto } from '../../dto/field/create-field-type.dto';
 import { validate } from 'class-validator';
 
 export const getFieldTypes = async (req: Request, res: Response) => {

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import prisma from '../config/database';
+import prisma from '../../config/database';
 import { PaymentStatus } from '@prisma/client';
 
 // Import the global type definition
