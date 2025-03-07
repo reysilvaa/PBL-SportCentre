@@ -1,15 +1,37 @@
 import { Request, Response } from 'express';
 import { validate } from 'class-validator';
+import { plainToClass } from 'class-transformer';
 import prisma from '../config/database';
 import midtrans from '../config/midtrans';
 import { CreateBookingDto } from '../dto/booking/create-booking.dto';
 import { combineDateWithTime, calculateTotalPrice } from '../utils/date.utils';
 import { isFieldAvailable } from '../utils/availability.utils';
+
 export const createBooking = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log("📥 Request body:", req.body);
 
-    const { userId, fieldId, bookingDate, startTime, endTime } = req.body;
+    // Transform request body to DTO object
+    const bookingDto = plainToClass(CreateBookingDto, req.body);
+    
+    // Validate DTO
+    const validationErrors = await validate(bookingDto);
+    if (validationErrors.length > 0) {
+      res.status(400).json({ 
+        error: 'Validation failed', 
+        details: validationErrors.map(err => ({
+          property: err.property,
+          constraints: err.constraints
+        }))
+      });
+      return;
+    }
+
+    const { userId, fieldId, bookingDate, startTime, endTime } = bookingDto;
+
+    // Convert userId and fieldId to integers
+    const userIdInt = parseInt(userId.toString());
+    const fieldIdInt = parseInt(fieldId.toString());
 
     // Convert strings to Date objects
     const bookingDateTime = new Date(bookingDate);
@@ -20,7 +42,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     console.log("⏰ Start & End Time:", startDateTime, endDateTime);
 
     // Check field availability
-    const isAvailable = await isFieldAvailable(fieldId, bookingDateTime, startDateTime, endDateTime);
+    const isAvailable = await isFieldAvailable(fieldIdInt, bookingDateTime, startDateTime, endDateTime);
     console.log("🏟️ Field available:", isAvailable);
 
     if (!isAvailable) {
@@ -30,7 +52,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 
     // Get field details for pricing
     const field = await prisma.field.findUnique({ 
-      where: { id: fieldId }, 
+      where: { id: fieldIdInt }, 
       include: { branch: true } 
     });
 
@@ -38,6 +60,17 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 
     if (!field) {
       res.status(404).json({ error: 'Field not found' });
+      return;
+    }
+
+    // Fetch user details for customer information
+    const user = await prisma.user.findUnique({
+      where: { id: userIdInt },
+      select: { name: true, email: true, phone: true }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
       return;
     }
 
@@ -54,8 +87,8 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     // Create booking record
     const newBooking = await prisma.booking.create({
       data: { 
-        userId, 
-        fieldId, 
+        userId: userIdInt, 
+        fieldId: fieldIdInt, 
         bookingDate: bookingDateTime, 
         startTime: startDateTime, 
         endTime: endDateTime 
@@ -68,7 +101,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     const payment = await prisma.payment.create({ 
       data: { 
         bookingId: newBooking.id, 
-        userId, 
+        userId: userIdInt, 
         amount: totalPrice, 
         status: 'pending', 
         paymentMethod: 'midtrans' 
@@ -84,9 +117,9 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
         gross_amount: totalPrice 
       },
       customer_details: {
-        first_name: req.body.name || 'Customer',
-        email: req.body.email || 'customer@example.com',
-        phone: req.body.phone || '08123456789'
+        first_name: user.name || 'Customer',
+        email: user.email || 'customer@example.com',
+        phone: user.phone || '08123456789'
       },
       item_details: [{
         id: field.id.toString(),
@@ -110,14 +143,13 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-
 export const getBookings = async (req: Request, res: Response): Promise<void> => {
   try {
     const bookings = await prisma.booking.findMany({
       include: {
         user: { select: { id: true, name: true, email: true } },
         field: { include: { branch: true } },
-        payment: true  // Changed from Payments to payment (singular)
+        payment: true
       }
     });
     res.json(bookings);
@@ -135,7 +167,7 @@ export const getBookingById = async (req: Request, res: Response): Promise<void>
       include: {
         user: { select: { id: true, name: true, email: true } },
         field: { include: { branch: true } },
-        payment: true  // Changed from Payments to payment (singular)
+        payment: true
       }
     });
     
@@ -158,7 +190,7 @@ export const getUserBookings = async (req: Request, res: Response): Promise<void
       where: { userId: parseInt(userId) },
       include: {
         field: { include: { branch: true } },
-        payment: true  // Changed from Payments to payment (singular)
+        payment: true
       },
       orderBy: { bookingDate: 'desc' }
     });

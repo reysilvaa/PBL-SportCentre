@@ -1,47 +1,53 @@
 import prisma from '../config/database';
 
-export async function isFieldAvailable(
-  fieldId: number,
-  bookingDate: Date,
-  startTime: Date,
+/**
+ * Checks if a field is available for booking at the specified time
+ * @param fieldId Field ID to check
+ * @param bookingDate The date of the booking
+ * @param startTime Start time of the booking
+ * @param endTime End time of the booking
+ * @returns Boolean indicating field availability
+ */
+export const isFieldAvailable = async (
+  fieldId: number, 
+  bookingDate: Date, 
+  startTime: Date, 
   endTime: Date
-): Promise<boolean> {
-  const normalizedBookingDate = new Date(bookingDate);
-  normalizedBookingDate.setHours(0, 0, 0, 0); // Pastikan hanya tanggal yang digunakan
-
+): Promise<boolean> => {
+  // Format the date part from bookingDate
+  const dateString = bookingDate.toISOString().split('T')[0];
+  
+  // Find any overlapping bookings
   const overlappingBookings = await prisma.booking.findMany({
     where: {
-      fieldId: Number(fieldId), // Pastikan fieldId berupa number
+      fieldId,
       bookingDate: {
-        equals: normalizedBookingDate, // Gunakan booking date yang distandarisasi
+        equals: new Date(dateString)
       },
-      payment: {
-        is: {
+        payment: {
           status: {
-            notIn: ['paid', 'dp_paid'],
-          },
+            notIn: ['paid', 'dp_paid']
+          }
         },
-      },
       OR: [
-        {
-          startTime: { lte: endTime },
-          endTime: { gt: startTime },
-        },
-        {
-          startTime: { lt: endTime },
-          endTime: { gte: startTime },
-        },
-        {
-          startTime: { gte: startTime },
-          endTime: { lte: endTime },
-        },
+        // Case 1: New booking starts during an existing booking
         {
           startTime: { lte: startTime },
-          endTime: { gte: endTime },
+          endTime: { gt: startTime }
         },
-      ],
-    },
+        // Case 2: New booking ends during an existing booking
+        {
+          startTime: { lt: endTime },
+          endTime: { gte: endTime }
+        },
+        // Case 3: New booking completely contains an existing booking
+        {
+          startTime: { gte: startTime },
+          endTime: { lte: endTime }
+        }
+      ]
+    }
   });
-
+  
   return overlappingBookings.length === 0;
-}
+};

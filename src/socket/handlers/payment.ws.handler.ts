@@ -83,7 +83,7 @@ export function setupPaymentHandlers(namespace: Namespace) {
             item_details: [
               {
                 id: booking.field.id.toString(),
-                name: `${booking.field.branch.name} - ${booking.field.name}`,
+                name: `Cabang ${booking.field.branch.name} - ${booking.field.name}`,
                 price: Number(amount),
                 quantity: 1
               }
