@@ -1,30 +1,17 @@
-import express from 'express';
-import * as paymentController from '../../controllers/payment.controller';
-import * as midtransController from '../../controllers/midtrans.controller';
+import { Router } from 'express';
+import { getPayments, getPaymentById, getUserPayments, updatePaymentStatus, retryPayment, deletePayment } from '../../controllers/payment.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 
-const router = express.Router();
+const router = Router();
 
-router.get('/', authMiddleware(), paymentController.getPayments);
-router.get('/:id', authMiddleware(), paymentController.getPaymentById);
-router.get('/user/:userId', authMiddleware(), paymentController.getUserPayments);
-router.get('/:id/status', authMiddleware(), midtransController.getPaymentStatus);
-router.post('/', authMiddleware(), paymentController.createPayment);
-router.put('/:id/status', authMiddleware(), paymentController.updatePaymentStatus);
-router.post('/:id/retry', authMiddleware(), paymentController.retryPayment);
-router.delete('/:id', authMiddleware(), paymentController.deletePayment);
+// Admin routes
+router.get('/', authMiddleware(['super_admin']), getPayments);
+router.get('/:id', authMiddleware(), getPaymentById);
 
-// Midtrans notification webhook (no auth required as it's called by Midtrans)
-router.post('/notification', midtransController.handleMidtransNotification);
-
-// In your routes file
-const jsonParser = express.json();
-
-router.post('/webhook/midtrans', jsonParser, (req, res) => {
-    console.log('Webhook route hit');
-    console.log('Request body:', req.body);
-    console.log('Request headers:', req.headers);
-    midtransController.handleMidtransNotification(req, res);
-  });
+// User routes
+router.get('/user/:userId', authMiddleware(), getUserPayments);
+router.patch('/:id', authMiddleware(), updatePaymentStatus);
+router.post('/:id/retry', authMiddleware(), retryPayment);
+router.delete('/:id', authMiddleware(), deletePayment);
 
 export default router;

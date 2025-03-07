@@ -1,3 +1,4 @@
+// src/controllers/payment.controller.ts (simplified version)
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import midtrans from '../config/midtrans';
@@ -39,8 +40,7 @@ export const getPaymentById = async (req: Request, res: Response): Promise<void>
                 name: true, 
                 branch: { select: { name: true } } 
               } 
-            },
-            user: { select: { name: true, email: true, phone: true } }
+            }
           }
         }
       }
@@ -78,84 +78,6 @@ export const getUserPayments = async (req: Request, res: Response): Promise<void
   }
 };
 
-export const createPayment = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { bookingId, userId, amount, paymentMethod, status = 'pending' } = req.body;
-
-    if (!bookingId || !userId || !amount || !paymentMethod) {
-      res.status(400).json({ error: 'Missing required fields' });
-      return;
-    }
-
-    // Check if booking exists
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: { 
-        field: { include: { branch: true } },
-        user: { select: { name: true, email: true, phone: true } }
-      }
-    });
-
-    if (!booking) {
-      res.status(404).json({ error: 'Booking not found' });
-      return;
-    }
-
-    // Check if there's already a payment for this booking (using the unique constraint)
-    const existingPayment = await prisma.payment.findUnique({
-      where: { bookingId }
-    });
-
-    if (existingPayment) {
-      res.status(400).json({ error: 'Payment already exists for this booking' });
-      return;
-    }
-
-    const newPayment = await prisma.payment.create({
-      data: { bookingId, userId, amount, paymentMethod, status }
-    });
-
-    // If payment method is Midtrans, create a transaction
-    if (paymentMethod === 'midtrans') {
-      const transaction = await midtrans.createTransaction({
-        transaction_details: {
-          order_id: `PAY-${newPayment.id}`,
-          gross_amount: amount
-        },
-        customer_details: {
-          first_name: booking.user.name,
-          email: booking.user.email,
-          phone: booking.user.phone
-        },
-        item_details: [
-          {
-            id: booking.field.id.toString(),
-            name: `${booking.field.branch.name} - ${booking.field.name}`,
-            price: amount,
-            quantity: 1
-          }
-        ]
-      });
-
-      if (!transaction.redirect_url) {
-        console.error("Midtrans failed to generate redirect URL");
-        res.status(500).json({ error: "Failed to initiate payment" });
-        return;
-      }
-
-      res.status(201).json({
-        payment: newPayment,
-        redirect_url: transaction.redirect_url
-      });
-    } else {
-      res.status(201).json(newPayment);
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(400).json({ error: 'Failed to create payment' });
-  }
-};
-
 export const updatePaymentStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = Number(req.params.id);
@@ -171,9 +93,6 @@ export const updatePaymentStatus = async (req: Request, res: Response): Promise<
       data: { status },
       include: { booking: true }
     });
-
-    // No need to update booking.payment as it's a relation, not a field
-    // The booking is already linked to this payment
 
     res.json(updatedPayment);
   } catch (error) {
@@ -228,13 +147,6 @@ export const retryPayment = async (req: Request, res: Response): Promise<void> =
       ]
     });
 
-    if (!transaction.redirect_url) {
-      console.error("Midtrans failed to generate redirect URL");
-      res.status(500).json({ error: "Failed to initiate payment" });
-      return;
-    }
-
-    // Update payment status to pending
     await prisma.payment.update({
       where: { id },
       data: { status: 'pending' }

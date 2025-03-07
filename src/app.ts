@@ -7,7 +7,6 @@ import router from './routes/index.routes';
 import { setupSocketServer } from './socket/socketServer';
 import { setSocketIo } from './controllers/midtrans.controller';
 import errorMiddleware from './middlewares/error.middleware';
-import apiDocumentationRoutes from './documentation/api-documentation.routes';
 
 const app: Application = express();
 const server: http.Server = http.createServer(app);
@@ -22,7 +21,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
 // Root endpoint for API documentation
-app.use(apiDocumentationRoutes);
 
 // Routes
 app.use('/api', router);

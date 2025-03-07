@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { PaymentStatus } from '@prisma/client';
-import { createMidtransWebhookHandler } from '../handler/socket/midtrans.webhook';
+import { createMidtransWebhookHandler } from '../socket/handler/midtrans.webhook';
 import midtrans from '../config/midtrans';
 
 // Create a variable to store the socket.io instance

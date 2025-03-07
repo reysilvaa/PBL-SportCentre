@@ -50,7 +50,10 @@ export function setupMidtransHandlers(namespace: Namespace) {
         let paymentStatus: PaymentStatus = PaymentStatus.pending;
         
         if (transaction_status === 'capture' || transaction_status === 'settlement') {
-          paymentStatus = PaymentStatus.paid;
+          if (Number(payment.amount) < 50000) {
+            paymentStatus = PaymentStatus.dp_paid;
+          } 
+          paymentStatus = PaymentStatus.paid ;
         } else if (transaction_status === 'pending') {
           paymentStatus = PaymentStatus.pending;
         } else if (['expire', 'cancel', 'deny', 'failure'].includes(transaction_status)) {

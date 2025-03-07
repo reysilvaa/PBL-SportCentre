@@ -5,122 +5,111 @@ import midtrans from '../config/midtrans';
 import { CreateBookingDto } from '../dto/booking/create-booking.dto';
 import { combineDateWithTime, calculateTotalPrice } from '../utils/date.utils';
 import { isFieldAvailable } from '../utils/availability.utils';
-
 export const createBooking = async (req: Request, res: Response): Promise<void> => {
   try {
-    const bookingDto = new CreateBookingDto();
-    Object.assign(bookingDto, req.body);
-    
-    const errors = await validate(bookingDto);
-    if (errors.length > 0) {
-      res.status(400).json({ errors });
+    console.log("📥 Request body:", req.body);
+
+    const { userId, fieldId, bookingDate, startTime, endTime } = req.body;
+
+    // Convert strings to Date objects
+    const bookingDateTime = new Date(bookingDate);
+    console.log("📆 Booking Date:", bookingDateTime);
+
+    const startDateTime = combineDateWithTime(bookingDateTime, startTime);
+    const endDateTime = combineDateWithTime(bookingDateTime, endTime);
+    console.log("⏰ Start & End Time:", startDateTime, endDateTime);
+
+    // Check field availability
+    const isAvailable = await isFieldAvailable(fieldId, bookingDateTime, startDateTime, endDateTime);
+    console.log("🏟️ Field available:", isAvailable);
+
+    if (!isAvailable) {
+      res.status(400).json({ error: 'Field is already booked' });
       return;
     }
 
-    const { userId, fieldId, bookingDate, startTime, endTime } = bookingDto;
-
-    const field = await prisma.field.findUnique({
-      where: { id: fieldId },
-      include: { branch: true }
+    // Get field details for pricing
+    const field = await prisma.field.findUnique({ 
+      where: { id: fieldId }, 
+      include: { branch: true } 
     });
+
+    console.log("📜 Field details:", field);
 
     if (!field) {
       res.status(404).json({ error: 'Field not found' });
       return;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, email: true, phone: true }
-    });
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    const bookingDateTime = new Date(bookingDate);
-    const startDateTime = combineDateWithTime(bookingDateTime, startTime);
-    const endDateTime = combineDateWithTime(bookingDateTime, endTime);
-
-    const isAvailable = await isFieldAvailable(fieldId, bookingDateTime, startDateTime, endDateTime);
-    if (!isAvailable) {
-      res.status(400).json({ error: 'Field is already booked' });
-      return;
-    }
-
+    // Calculate price based on booking time
+    console.log("💰 Field price (Day/Night):", field.priceDay, field.priceNight);
     const totalPrice = calculateTotalPrice(
-      startDateTime,
-      endDateTime,
-      Number(field.priceDay),
+      startDateTime, 
+      endDateTime, 
+      Number(field.priceDay), 
       Number(field.priceNight)
     );
+    console.log("💵 Total price:", totalPrice);
 
-    // Create booking first
+    // Create booking record
     const newBooking = await prisma.booking.create({
-      data: {
-        userId,
-        fieldId,
-        bookingDate: bookingDateTime,
-        startTime: startDateTime,
-        endTime: endDateTime,
-      },
-      include: { field: true, user: { select: { name: true, email: true, phone: true } } }
-    });
-
-    // Create payment with relation to booking
-    const payment = await prisma.payment.create({
-      data: {
-        bookingId: newBooking.id,
-        userId,
-        amount: totalPrice,
-        paymentMethod: 'midtrans',
-        status: 'pending'
+      data: { 
+        userId, 
+        fieldId, 
+        bookingDate: bookingDateTime, 
+        startTime: startDateTime, 
+        endTime: endDateTime 
       }
     });
 
+    console.log("✅ Booking created:", newBooking);
+
+    // Create payment record
+    const payment = await prisma.payment.create({ 
+      data: { 
+        bookingId: newBooking.id, 
+        userId, 
+        amount: totalPrice, 
+        status: 'pending', 
+        paymentMethod: 'midtrans' 
+      } 
+    });
+
+    console.log("💳 Payment created:", payment);
+
+    // Create Midtrans transaction
     const transaction = await midtrans.createTransaction({
-      transaction_details: {
-        order_id: `PAY-${payment.id}`,
-        gross_amount: totalPrice
+      transaction_details: { 
+        order_id: `PAY-${payment.id}`, 
+        gross_amount: totalPrice 
       },
       customer_details: {
-        first_name: user.name,
-        email: user.email,
-        phone: user.phone
+        first_name: req.body.name || 'Customer',
+        email: req.body.email || 'customer@example.com',
+        phone: req.body.phone || '08123456789'
       },
-      item_details: [
-        {
-          id: field.id.toString(),
-          name: `${field.branch.name} - ${field.name}`,
-          price: totalPrice,
-          quantity: 1
-        }
-      ]
+      item_details: [{
+        id: field.id.toString(),
+        name: `${field.branch.name} - ${field.name}`,
+        price: totalPrice,
+        quantity: 1
+      }]
     });
 
-    if (!transaction.redirect_url) {
-      console.error("Midtrans failed to generate redirect URL");
-      res.status(500).json({ error: "Failed to initiate payment" });
-      return;
-    }
+    console.log("🔗 Midtrans transaction:", transaction);
 
-    console.log(`Booking created: ID ${newBooking.id}, User ${userId}`);
-    console.log(`Payment created: ID ${payment.id}, Amount ${totalPrice}`);
-    console.log("Midtrans Transaction Response:", transaction);
-
-    res.status(201).json({
-      message: 'Booking created successfully',
-      booking: { ...newBooking, totalPrice },
-      payment: { id: payment.id, status: payment.status },
-      redirect_url: transaction.redirect_url
+    // Return data with redirect URL
+    res.status(201).json({ 
+      booking: newBooking, 
+      payment, 
+      redirect_url: transaction.redirect_url 
     });
-      
   } catch (error) {
-    console.error('Booking creation error:', error);
-    res.status(400).json({ error: 'Failed to create booking' });
+    console.error("❌ Error in createBooking:", error);
+    res.status(500).json({ error: 'Failed to create booking' });
   }
 };
+
 
 export const getBookings = async (req: Request, res: Response): Promise<void> => {
   try {
