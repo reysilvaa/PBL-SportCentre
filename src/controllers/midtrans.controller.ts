@@ -1,23 +1,13 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { PaymentStatus } from '@prisma/client';
-import { createMidtransWebhookHandler } from '../socket/handler/midtrans.webhook';
-import midtrans from '../config/midtrans';
-
-// Create a variable to store the socket.io instance
-let io: any = null;
-
-// Function to set the io instance
-export const setSocketIo = (socketIo: any) => {
-  io = socketIo;
-};
 
 // Single implementation of handleMidtransNotification
 export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log("Midtrans Webhook Received:", req.body);
 
-    const { order_id, transaction_status, gross_amount, signature_key } = req.body;
+    const { order_id, transaction_status, gross_amount } = req.body;
     
     // Extract payment ID from order_id (removes the PAY- prefix if present)
     const paymentIdStr = order_id.startsWith('PAY-') ? order_id.substring(4).split('-')[0] : order_id;
@@ -100,30 +90,28 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       },
     });
     
-    // If socket.io is available, emit event to notify client
-    if (io) {
-      const roomId = `user_${payment.booking.userId}`;
-      io.to(roomId).emit('payment_update', {
+    // Use the global io instance to emit socket events
+    if (global.io) {
+      // Emit to user's room
+      const userRoomId = `user_${payment.booking.userId}`;
+      global.io.to(userRoomId).emit('payment_update', {
         paymentId: payment.id,
         bookingId: payment.booking.id,
         status: paymentStatus,
         message: `Your payment status is now ${paymentStatus}`,
       });
       
-      // Update booking status if payment is completed
-      if (paymentStatus === PaymentStatus.paid) {
-        await prisma.booking.update({
-          where: { id: payment.bookingId },
-          data: {}, //status berarubah
-        });
-        
-        // Emit booking confirmation event
-        io.to(roomId).emit('booking_confirmed', {
-          bookingId: payment.bookingId,
-          fieldName: payment.booking.field.name,
-          date: payment.booking.bookingDate,
-        });
-      }
+      // Also emit to the payments namespace
+      global.io.of('/payments').emit('status_change', {
+        paymentId: payment.id,
+        bookingId: payment.booking.id,
+        status: paymentStatus,
+        userId: payment.booking.userId
+      });
+      
+      console.log(`Socket notification sent to ${userRoomId} and /payments namespace`);
+    } else {
+      console.warn("Socket server not available, notification not sent");
     }
     
     console.log(`Payment ${paymentId} updated to ${paymentStatus}`);
@@ -138,7 +126,6 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     res.status(500).json({ error: 'Failed to process Midtrans webhook' });
   }
 };
-
 
 export const getPaymentStatus = async (req: Request, res: Response): Promise<void> => {
   try {

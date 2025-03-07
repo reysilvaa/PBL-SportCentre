@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
-import { getIO } from '../config/socket';
 import { PaymentStatus } from '@prisma/client';
+
+// Import the global type definition
 
 export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -70,6 +71,20 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       data: { status: paymentStatus },
     });
 
+    // Create activity log
+    await prisma.activityLog.create({
+      data: {
+        userId: payment.booking.user.id,
+        action: `Payment ${paymentStatus} for booking ${payment.booking.id}`,
+        details: JSON.stringify({
+          bookingId: payment.booking.id,
+          paymentId: payment.id,
+          transactionStatus: transaction_status,
+          amount: gross_amount
+        })
+      }
+    });
+
     // Create notification for the user
     await prisma.notification.create({
       data: {
@@ -82,23 +97,34 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       },
     });
     
-    // Send real-time notification if Socket.IO is available
+    // Send real-time notification using global io instance
     try {
-      const io = getIO();
-      if (io) {
-        const roomId = `user_${payment.booking.user.id}`;
-        io.to(roomId).emit('payment_update', {
+      if (global.io) {
+        const userRoomId = `user_${payment.booking.user.id}`;
+        
+        // Emit to user's specific room
+        global.io.to(userRoomId).emit('payment_update', {
           paymentId: payment.id,
           bookingId: payment.booking.id,
           status: paymentStatus,
           message: `Your payment status is now ${paymentStatus}`,
         });
-        console.log(`📢 Sent real-time update to ${roomId}`);
+        
+        // Also emit to the payments namespace for any admin dashboards
+        global.io.of('/payments').emit('status_change', {
+          paymentId: payment.id,
+          bookingId: payment.booking.id,
+          status: paymentStatus,
+          userId: payment.booking.user.id
+        });
+        
+        console.log(`📢 Sent real-time update to ${userRoomId} and /payments namespace`);
       } else {
         console.warn("⚠️ Socket.IO not initialized, skipping real-time notification");
       }
-    } catch (ioError) {
-      console.error("❌ Socket.IO Error:", ioError);
+    } catch (socketError) {
+      console.error("❌ Socket.IO Error:", socketError);
+      // Continue processing even if socket notification fails
     }
     
     console.log(`✅ Payment ${paymentId} updated to ${paymentStatus}`);

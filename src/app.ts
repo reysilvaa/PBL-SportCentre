@@ -4,8 +4,8 @@ import cors from 'cors';
 import { config } from './config/env';
 import { logger } from './config/logger';
 import router from './routes/index.routes';
+import { initializeSocketIO } from './config/socket';
 import { setupSocketServer } from './socket/socketServer';
-import { setSocketIo } from './controllers/midtrans.controller';
 import errorMiddleware from './middlewares/error.middleware';
 
 const app: Application = express();
@@ -20,18 +20,17 @@ app.use(express.json()); // Add JSON parsing
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
-// Root endpoint for API documentation
+// Initialize Socket.IO and store in global.io
+const io = initializeSocketIO(server);
+
+// Set up socket handlers from the existing socketServer.ts
+setupSocketServer(server); // This should now use the global.io instead of creating a new instance
 
 // Routes
 app.use('/api', router);
 
 // Error handling middleware
 app.use(errorMiddleware as express.ErrorRequestHandler);
-
-// Initialize Socket.IO by passing the HTTP server
-const io = setupSocketServer(server);
-setSocketIo(io);
-
 
 // Start server
 server.listen(config.port, () => {

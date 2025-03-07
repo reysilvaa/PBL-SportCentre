@@ -1,89 +1,58 @@
-import { Server as SocketIOServer } from "socket.io";
 import { Server as HttpServer } from "http";
-import { setupBookingHandlers } from "./handler/booking.ws.handler";
-import { setupPaymentHandlers } from "./handler/payment.ws.handler";
-import { setupMidtransHandlers } from "./handler/midtrans.ws.handler";
-import { setupNotificationHandlers } from "./handler/notification.ws.handler";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { getIO, applyAuthMiddleware, setupNamespaceEvents } from "../config/socket";
+import { setupBookingHandlers } from "./handlers/booking.ws.handler";
+import { setupPaymentHandlers } from "./handlers/payment.ws.handler";
+import { setupMidtransHandlers } from "./handlers/midtrans.ws.handler";
+import { setupNotificationHandlers } from "./handlers/notification.ws.handler";
 
+/**
+ * Set up Socket.IO server with all namespaces and handlers
+ * @param httpServer HTTP server instance
+ * @returns Socket.IO server instance or null if initialization failed
+ */
 export function setupSocketServer(httpServer: HttpServer) {
-  const io = new SocketIOServer(httpServer, {
-    cors: {
-      origin: "*", // In production, restrict this to your domain
-      methods: ["GET", "POST"],
-    },
-    path: "/socket.io", // Default path, can be customized
-  });
-
-  io.use(async (socket, next) => {
-    try {
-      const token = socket.handshake.auth.token;
-      if (!token) {
-        console.log("Warning: Connection without token");
-        socket.data.user = { id: 0, name: "Anonymous" };
-        return next();
-      }
-
-      const user = await authMiddleware(token);
-      if (!user) {
-        return next(new Error("Invalid authentication token"));
-      }
-
-      socket.data.user = user;
-      next();
-    } catch (error) {
-      console.error("Socket auth error:", error);
-      next(new Error("Authentication failed"));
-    }
-  });
-
-  // Create namespaces for different features
-  const bookingNamespace = io.of("/bookings");
-  const paymentNamespace = io.of("/payments");
-  const notificationNamespace = io.of("/notifications");
-
-  // Apply authentication middleware to each namespace
-  [bookingNamespace, paymentNamespace, notificationNamespace].forEach((namespace) => {
-    namespace.use(async (socket, next) => {
-      try {
-        const token = socket.handshake.auth.token;
-        if (!token) {
-          return next(new Error("Authentication token is required"));
-        }
-
-        const user = await authMiddleware(token);
-        if (!user) {
-          return next(new Error("Invalid authentication token"));
-        }
-
-        socket.data.user = user;
-        next();
-      } catch (error) {
-        next(new Error("Authentication failed"));
-      }
+  try {
+    // Get the global io instance
+    const io = getIO();
+    
+    // Create namespaces
+    const bookingNamespace = io.of("/bookings");
+    const paymentNamespace = io.of("/payments");
+    const notificationNamespace = io.of("/notifications");
+    
+    // Set up authentication for each namespace
+    const namespaces = [bookingNamespace, paymentNamespace, notificationNamespace];
+    namespaces.forEach(namespace => {
+      applyAuthMiddleware(namespace);
+      setupNamespaceEvents(namespace);
     });
 
-    namespace.on("connection", (socket) => {
-      console.log(`Client connected to ${namespace.name} - ID: ${socket.id}`);
+    // Set up event handlers for each namespace
+    setupBookingHandlers(bookingNamespace);
+    setupPaymentHandlers(paymentNamespace);
+    setupMidtransHandlers(paymentNamespace);
+    setupNotificationHandlers(notificationNamespace);
 
-      socket.on("disconnect", (reason) => {
-        console.log(`Client disconnected from ${namespace.name} - ID: ${socket.id} - Reason: ${reason}`);
+    // Set up the main io connection handler
+    io.on('connection', (socket) => {
+      console.log(`📡 Main client connected - ID: ${socket.id}`);
+      
+      // Join a room specific to the user
+      socket.on('join-user-room', (userId: number) => {
+        const roomName = `user_${userId}`;
+        socket.join(roomName);
+        console.log(`👤 Socket ${socket.id} joined room ${roomName}`);
       });
-
-      socket.on("error", (error) => {
-        console.error(`Socket error in ${namespace.name}:`, error);
+      
+      socket.on('disconnect', () => {
+        console.log(`🔌 Main client disconnected - ID: ${socket.id}`);
       });
     });
-  });
 
-  // Set up event handlers for each namespace
-  setupBookingHandlers(bookingNamespace);
-  setupPaymentHandlers(paymentNamespace);
-  setupMidtransHandlers(paymentNamespace); // Midtrans handlers share payment namespace
-  setupNotificationHandlers(notificationNamespace);
-
-  // Log when server starts
-  console.log("Socket.IO server initialized");
-
-  return io;
+    console.log("✅ Socket.IO handlers setup completed");
+    return io;
+  } catch (error) {
+    console.error("❌ Failed to set up Socket.IO server:", error);
+    return null;
+  }
 }
