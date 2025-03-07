@@ -4,7 +4,7 @@ import { plainToClass } from 'class-transformer';
 import prisma from '../../config/database';
 import midtrans from '../../config/midtrans';
 import { CreateBookingDto } from '../../dto/booking/create-booking.dto';
-import { combineDateWithTime, calculateTotalPrice } from '../../utils/date.utils';
+import { combineDateWithTime, calculateTotalPrice } from '../../utils/bookingDate.utils';
 import { isFieldAvailable } from '../../utils/availability.utils';
 
 // Define interface for Request with user

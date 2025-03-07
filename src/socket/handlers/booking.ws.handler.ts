@@ -1,7 +1,7 @@
 import { Namespace } from 'socket.io';
 import prisma from '../../config/database';
 import { isFieldAvailable } from '../../utils/availability.utils';
-import { combineDateWithTime, calculateTotalPrice } from '../../utils/date.utils';
+import { combineDateWithTime, calculateTotalPrice } from '../../utils/bookingDate.utils';
 import { PaymentStatus } from '@prisma/client';
 
 export function setupBookingHandlers(namespace: Namespace) {
