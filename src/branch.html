@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Booking Test</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #log { border: 1px solid #ddd; padding: 10px; max-height: 400px; overflow-y: auto; padding: 10px; }
+        .btn { margin-top: 10px; padding: 10px; cursor: pointer; background: blue; color: white; border: none; }
+    </style>
+</head>
+<body>
+
+    <h1>🔌 WebSocket Booking Test</h1>
+
+    <label>Branch ID: </label>
+    <input type="number" id="branchId" value="1">
+    <label>Booking ID: </label>
+    <input type="number" id="bookingId" value="5">
+    <button class="btn" onclick="connectWebSocket()">Connect WebSocket</button>
+    <button class="btn" onclick="fetchBookings()">Fetch All Bookings</button>
+    <button class="btn" onclick="fetchBookingById()">Fetch Booking By ID</button>
+    <button class="btn" onclick="updateBookingStatus()">Update Booking Status</button>
+    <button class="btn" onclick="createManualBooking()">Create Manual Booking</button>
+    <button class="btn" onclick="searchBookings()">Search Bookings</button>
+    <button class="btn" onclick="getBookingStats()">Get Booking Stats</button>
+    <button class="btn" onclick="simulatePayment()">Simulate Payment</button>
+
+    <h2>📜 Log</h2>
+    <div id="log"></div>
+
+    <script>
+        let bookingSocket, paymentSocket, notificationSocket;
+
+        function connectWebSocket() {
+            const branchId = document.getElementById("branchId").value;
+
+            // Connect to /bookings namespace
+            bookingSocket = io("http://localhost:3000/bookings", { query: { branchId } });
+            bookingSocket.on("connect", () => logMessage(`✅ Connected to /bookings (Branch ${branchId})`));
+            bookingSocket.on("booking:updated", (data) => logMessage(`📢 Booking Updated: ${JSON.stringify(data)}`));
+            bookingSocket.on("booking:created", (data) => logMessage(`🎉 New Booking Created: ${JSON.stringify(data)}`));
+            bookingSocket.on("disconnect", () => logMessage("❌ Disconnected from /bookings"));
+
+            // Connect to /payments namespace
+            paymentSocket = io("http://localhost:3000/payments", { query: { branchId } });
+            paymentSocket.on("connect", () => logMessage(`✅ Connected to /payments`));
+            paymentSocket.on("payment:success", (data) => logMessage(`💰 Payment Success: ${JSON.stringify(data)}`));
+            paymentSocket.on("disconnect", () => logMessage("❌ Disconnected from /payments"));
+
+            // Connect to /notifications namespace
+            notificationSocket = io("http://localhost:3000/notifications", { query: { branchId } });
+            notificationSocket.on("connect", () => logMessage(`✅ Connected to /notifications`));
+            notificationSocket.on("notification:new", (data) => logMessage(`🔔 Notification: ${JSON.stringify(data)}`));
+            notificationSocket.on("disconnect", () => logMessage("❌ Disconnected from /notifications"));
+        }
+
+        function fetchBookings() {
+            const branchId = document.getElementById("branchId").value;
+            fetch(`http://localhost:3000/api/bookings/branches/${branchId}/bookings`)
+                .then(res => res.json())
+                .then(data => logMessage(`📄 All Bookings: ${JSON.stringify(data)}`))
+                .catch(err => logMessage(`❌ Error fetching bookings: ${err}`));
+        }
+
+        function fetchBookingById() {
+            const branchId = document.getElementById("branchId").value;
+            const bookingId = document.getElementById("bookingId").value;
+            fetch(`http://localhost:3000/api/bookings/branches/${branchId}/bookings/${bookingId}`)
+                .then(res => res.json())
+                .then(data => logMessage(`📄 Booking Details: ${JSON.stringify(data)}`))
+                .catch(err => logMessage(`❌ Error fetching booking: ${err}`));
+        }
+
+        function updateBookingStatus() {
+            const branchId = document.getElementById("branchId").value;
+            const bookingId = document.getElementById("bookingId").value;
+            fetch(`http://localhost:3000/api/bookings/branches/${branchId}/bookings/${bookingId}/status`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ paymentStatus: "paid" })
+            })
+                .then(res => res.json())
+                .then(data => logMessage(`💰 Booking Updated: ${JSON.stringify(data)}`))
+                .catch(err => logMessage(`❌ Error updating booking: ${err}`));
+        }
+
+        function createManualBooking() {
+            const branchId = document.getElementById("branchId").value;
+            fetch(`http://localhost:3000/api/bookings/branches/${branchId}/bookings/manual`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fieldId: 1,
+                    userId: 2,
+                    bookingDate: new Date().toISOString(),
+                    startTime: "12:00",
+                    endTime: "13:00",
+                })
+            })
+                .then(res => res.json())
+                .then(data => logMessage(`📅 Manual Booking Created: ${JSON.stringify(data)}`))
+                .catch(err => logMessage(`❌ Error creating manual booking: ${err}`));
+        }
+
+        function searchBookings() {
+            const branchId = document.getElementById("branchId").value;
+            const query = prompt("Enter search query (ID, name, or email):");
+            if (!query) return;
+            bookingSocket.emit("booking:search", { query, branchId });
+        }
+
+        function getBookingStats() {
+            const branchId = document.getElementById("branchId").value;
+            bookingSocket.emit("booking:stats", { branchId });
+        }
+
+        function simulatePayment() {
+            const branchId = document.getElementById("branchId").value;
+            const bookingId = document.getElementById("bookingId").value;
+            fetch(`http://localhost:3000/api/payments/simulate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    bookingId,
+                    branchId,
+                    amount: 50000,
+                    status: "success"
+                })
+            })
+                .then(res => res.json())
+                .then(data => logMessage(`💰 Simulated Payment: ${JSON.stringify(data)}`))
+                .catch(err => logMessage(`❌ Error simulating payment: ${err}`));
+        }
+
+        function logMessage(message) {
+            const logDiv = document.getElementById("log");
+            logDiv.innerHTML += `<p><strong>${new Date().toLocaleTimeString()}</strong> - ${message}</p>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>

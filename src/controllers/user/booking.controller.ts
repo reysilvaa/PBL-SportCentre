@@ -8,6 +8,7 @@ import { combineDateWithTime, calculateTotalPrice } from '../../utils/bookingDat
 import { isFieldAvailable } from '../../utils/availability.utils';
 import { startBookingCleanupJob } from '../../utils/bookingCleanup.utils';
 import { PaymentStatus, PaymentMethod } from '@prisma/client';
+import { getIO } from '../../config/socket';
 
 // Define interface for Request with user
 interface AuthenticatedRequest extends Request {
@@ -159,32 +160,56 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     console.log("🔗 Midtrans transaction:", transaction);
 
     // Extract expiry time from Midtrans response and update payment record
-    // Note: You need to extract this information from the Midtrans response
-    // The exact format depends on what Midtrans returns
+    let expiryDate: Date;
+    
     if (transaction.expiry_time) {
       // If Midtrans returns expiry_time directly
-      const expiryDate = new Date(transaction.expiry_time);
-      
-      // Update the payment record with the expiry date from Midtrans
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { expiresDate: expiryDate }
-      });
-      
-      console.log("⏱️ Payment expires at (from Midtrans):", expiryDate);
+      expiryDate = new Date(transaction.expiry_time);
     } else {
       // If Midtrans doesn't return expiry_time directly, calculate it
-      // based on current time + duration from Midtrans
-      const expiryDate = new Date();
+      expiryDate = new Date();
       expiryDate.setMinutes(expiryDate.getMinutes() + expiryMinutes);
+    }
+    
+    // Update the payment record with the expiry date
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { expiresDate: expiryDate }
+    });
+    
+    console.log("⏱️ Payment expires at:", expiryDate);
+
+    // Emit event via Socket.IO to notify about new booking
+    try {
+      const io = getIO();
       
-      // Update the payment record with the calculated expiry date
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { expiresDate: expiryDate }
+      // Emit to admin channel for all bookings
+      io.of('/admin/bookings').emit('new-booking', {
+        booking: newBooking,
+        field: field,
+        payment: payment
       });
       
-      console.log("⏱️ Payment expires at (calculated):", expiryDate);
+      // Emit to user-specific channel
+      io.of('/user/bookings').to(`user-${userIdInt}`).emit('booking-created', {
+        booking: newBooking,
+        field: field,
+        payment: payment,
+        redirect_url: transaction.redirect_url
+      });
+      
+      // Emit to field-specific channel to update availability
+      io.of('/fields').emit('availability-update', {
+        fieldId: fieldIdInt,
+        date: bookingDateTime,
+        timeSlot: { start: startDateTime, end: endDateTime },
+        available: false
+      });
+      
+      console.log("🔔 Socket.IO events emitted for new booking");
+    } catch (error) {
+      console.error("❌ Failed to emit Socket.IO events:", error);
+      // Continue even if socket emission fails
     }
 
     // Return data with redirect URL
@@ -219,7 +244,17 @@ export const midtransWebhook = async (req: Request, res: Response): Promise<void
     
     // Get the payment record
     const payment = await prisma.payment.findUnique({
-      where: { id: paymentId }
+      where: { id: paymentId },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: {
+              select: { id: true, name: true, email: true }
+            }
+          }
+        }
+      }
     });
     
     if (!payment) {
@@ -249,6 +284,30 @@ export const midtransWebhook = async (req: Request, res: Response): Promise<void
       
       console.log(`⏱️ Updated payment #${paymentId} expiry to ${expiryDate} after Midtrans notification`);
       
+      // Emit socket event for payment update
+      try {
+        const io = getIO();
+        
+        io.of('/admin/payments').emit('payment-updated', {
+          paymentId,
+          status: 'pending',
+          expiryDate,
+          bookingId: payment.bookingId,
+          userId: payment.userId
+        });
+        
+        io.of('/user/bookings').to(`user-${payment.userId}`).emit('payment-updated', {
+          paymentId,
+          status: 'pending',
+          expiryDate,
+          bookingId: payment.bookingId
+        });
+        
+        console.log("🔔 Socket.IO events emitted for payment update");
+      } catch (error) {
+        console.error("❌ Failed to emit Socket.IO events:", error);
+      }
+      
       res.status(200).json({ status: 'ok' });
       return;
     } else if (transactionStatus === 'deny' || transactionStatus === 'cancel' || 
@@ -257,12 +316,46 @@ export const midtransWebhook = async (req: Request, res: Response): Promise<void
     }
     
     // Update payment status
-    await prisma.payment.update({
+    const updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
       data: { status: newPaymentStatus }
     });
     
     console.log(`💳 Updated payment #${paymentId} status to ${newPaymentStatus}`);
+    
+    // Emit socket event for payment status change
+    try {
+      const io = getIO();
+      
+      // Prepare data for socket emission
+      const eventData = {
+        paymentId,
+        status: newPaymentStatus,
+        bookingId: payment.bookingId,
+        userId: payment.userId
+      };
+      
+      // Emit to admin channel
+      io.of('/admin/payments').emit('payment-status-changed', eventData);
+      
+      // Emit to user-specific channel
+      io.of('/user/bookings').to(`user-${payment.userId}`).emit('payment-status-changed', eventData);
+      
+      // If payment failed, update field availability
+      if (newPaymentStatus === 'failed') {
+        const booking = payment.booking;
+        io.of('/fields').emit('availability-update', {
+          fieldId: booking.fieldId,
+          date: booking.bookingDate,
+          timeSlot: { start: booking.startTime, end: booking.endTime },
+          available: true
+        });
+      }
+      
+      console.log("🔔 Socket.IO events emitted for payment status change");
+    } catch (error) {
+      console.error("❌ Failed to emit Socket.IO events:", error);
+    }
     
     res.status(200).json({ status: 'ok' });
   } catch (error) {
@@ -278,7 +371,7 @@ export const getUserBookings = async (req: Request, res: Response): Promise<void
       where: { userId: parseInt(userId) },
       include: {
         field: { include: { branch: true } },
-        payment: true // Based on the schema this is a one-to-one relation
+        payment: true
       },
       orderBy: { bookingDate: 'desc' }
     });
@@ -305,7 +398,7 @@ export const getBookingById = async (req: AuthenticatedRequest, res: Response): 
       },
       include: {
         field: { include: { branch: true } },
-        payment: true // Based on the schema this is a one-to-one relation
+        payment: true
       }
     });
     
@@ -323,6 +416,78 @@ export const getBookingById = async (req: AuthenticatedRequest, res: Response): 
     res.json(booking);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// New method for manually canceling a booking
+export const cancelBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    
+    const booking = await prisma.booking.findUnique({
+      where: { id: parseInt(id) },
+      include: { payment: true }
+    });
+    
+    if (!booking) {
+      res.status(404).json({ error: 'Booking not found' });
+      return;
+    }
+    
+    // Ensure users can only cancel their own bookings
+    if (booking.userId !== userId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    
+    // Only allow cancellation of bookings with pending payments
+    if (booking.payment && booking.payment.status !== 'pending') {
+      res.status(400).json({ error: 'Only bookings with pending payments can be canceled' });
+      return;
+    }
+    
+    // Update payment status to canceled
+    if (booking.payment) {
+      await prisma.payment.update({
+        where: { id: booking.payment.id },
+        data: { status: 'failed' as PaymentStatus }
+      });
+    }
+    
+    // Emit socket event for booking cancellation
+    try {
+      const io = getIO();
+      
+      // Emit to admin channel
+      io.of('/admin/bookings').emit('booking-canceled', {
+        bookingId: booking.id,
+        fieldId: booking.fieldId,
+        userId: booking.userId
+      });
+      
+      // Update field availability
+      io.of('/fields').emit('availability-update', {
+        fieldId: booking.fieldId,
+        date: booking.bookingDate,
+        timeSlot: { start: booking.startTime, end: booking.endTime },
+        available: true
+      });
+      
+      console.log("🔔 Socket.IO events emitted for booking cancellation");
+    } catch (error) {
+      console.error("❌ Failed to emit Socket.IO events:", error);
+    }
+    
+    res.json({ message: 'Booking canceled successfully' });
+  } catch (error) {
+    console.error("❌ Error in cancelBooking:", error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

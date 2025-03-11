@@ -9,9 +9,9 @@ import prisma from '../config/database';
  * @returns Boolean indicating field availability
  */
 export const isFieldAvailable = async (
-  fieldId: number, 
-  bookingDate: Date, 
-  startTime: Date, 
+  fieldId: number,
+  bookingDate: Date,
+  startTime: Date,
   endTime: Date
 ): Promise<boolean> => {
   // Format the date part from bookingDate
@@ -21,22 +21,24 @@ export const isFieldAvailable = async (
   console.log("📆 Booking Date:", dateString);
   console.log("⏰ Start Time:", startTime, "| End Time:", endTime);
 
-  // Find overlapping bookings with payment status 'paid', 'dp_paid' atau 'pending'
+  // Find overlapping bookings with payment status 'paid', 'dp_paid' or valid 'pending'
   const overlappingBookings = await prisma.booking.findMany({
     where: {
       fieldId,
       bookingDate: new Date(dateString), // Ensuring date format is correct
       AND: [
         {
-          // Check bookings with payment not expired
+          // Check bookings with valid payment status
           payment: {
             OR: [
-              // Paid bookings
+              // Paid bookings with expiresDate = null
               {
                 status: {
-                  in: ['paid', 'dp_paid'], // Confirmed paid bookings
+                  in: ['paid', 'dp_paid']
                 },
+                expiresDate: null,
               },
+              
               // Pending bookings that haven't expired yet
               {
                 status: 'pending',
@@ -78,10 +80,10 @@ export const isFieldAvailable = async (
   if (overlappingBookings.length > 0) {
     console.log("⚠️ Detail booking yang overlapping:");
     overlappingBookings.forEach(booking => {
-      console.log(`  - Booking #${booking.id}, status: ${booking.payment?.status}`);
+      console.log(`  - Booking #${booking.id}, status: ${booking.payment?.status}, expires: ${booking.payment?.expiresDate || 'No expiry (manual booking)'}`);
     });
   }
 
-  // If there are no overlapping bookings with successful payment or non-expired pending, field is available
+  // If there are no overlapping bookings with valid payment status, field is available
   return overlappingBookings.length === 0;
 };

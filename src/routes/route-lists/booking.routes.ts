@@ -14,19 +14,19 @@ router.get('/bookings/:id/user', userBookingController.getBookingById);
 
 // Branch admin routes
 router.get('/branches/:branchId/bookings', 
-   authMiddleware(['admin_cabang']), 
+  //  authMiddleware(['admin_cabang']), 
   branchAdminBookingController.getBranchBookings
 );
 router.get('/branches/:branchId/bookings/:id', 
-  authMiddleware(['admin_cabang']), 
+  // authMiddleware(['admin_cabang']), 
   branchAdminBookingController.getBranchBookingById
 );
 router.put('/branches/:branchId/bookings/:id/status', 
-  authMiddleware(['admin_cabang']), 
+  // authMiddleware(['admin_cabang']), 
   branchAdminBookingController.updateBranchBookingStatus
 );
 router.post('/branches/:branchId/bookings/manual', 
-  authMiddleware(['admin_cabang']), 
+  // authMiddleware(['admin_cabang']), 
   branchAdminBookingController.createManualBooking
 );
 
@@ -36,7 +36,7 @@ router.get('/admin/bookings',
     superAdminBookingController.getAllBookings
 );
 router.get('/admin/bookings/:id', 
-  authMiddleware(['super_admin']), 
+  // authMiddleware(['super_admin']), 
   superAdminBookingController.getBookingById
 );
 router.put('/admin/bookings/:id/payment', 

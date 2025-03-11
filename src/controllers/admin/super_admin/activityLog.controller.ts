@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { validate } from 'class-validator';
 import prisma from '../../../config/database';
 import { CreateActivityLogDto } from '../../../dto/activityLog/create-activity-log.dto';
+import { getIO } from '../../../config/socket';
 
 export const getActivityLogs = async (req: Request, res: Response) => {
   try {
@@ -45,6 +46,10 @@ export const createActivityLog = async (req: Request, res: Response): Promise<vo
       }
     });
 
+    // Emit event ke semua client yang terhubung
+    const io = getIO();
+    io.emit('activity-log-created', newLog);
+    
     res.status(201).json(newLog); 
   } catch (error) {
     console.error(error);
@@ -52,19 +57,22 @@ export const createActivityLog = async (req: Request, res: Response): Promise<vo
   }
 };
 
-
 export const deleteActivityLog = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const data = await prisma.activityLog.delete({
+    const deletedLog = await prisma.activityLog.delete({
       where: { id: parseInt(id) }
     });
+
+    // Emit event ke semua client bahwa log telah dihapus
+    const io = getIO();
+    io.emit('activity-log-deleted', deletedLog);
+    
     res.status(200).json({
       message: 'Berhasil dihapus',
-      data: data
+      data: deletedLog
     });
-    res.status(204).send();
   } catch (error) {
     res.status(400).json({ error: 'Failed to delete activity log' });
   }
