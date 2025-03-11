@@ -3,7 +3,6 @@ import { getIO, applyAuthMiddleware, setupNamespaceEvents } from "../config/sock
 import { setupBookingHandlers } from "./handlers/booking.ws.handler";
 import { setupPaymentHandlers } from "./handlers/payment.ws.handler";
 import { setupMidtransHandlers } from "./handlers/midtrans.ws.handler";
-import { setupNotificationHandlers } from "./handlers/notification.ws.handler";
 
 /**
  * Set up Socket.IO server with all namespaces and handlers
@@ -31,7 +30,6 @@ export function setupSocketServer(httpServer: HttpServer) {
     setupBookingHandlers(bookingNamespace);
     setupPaymentHandlers(paymentNamespace);
     setupMidtransHandlers(paymentNamespace);
-    setupNotificationHandlers(notificationNamespace);
 
     // Set up the main io connection handler
     io.on('connection', (socket) => {

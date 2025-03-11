@@ -21,18 +21,30 @@ export const isFieldAvailable = async (
   console.log("📆 Booking Date:", dateString);
   console.log("⏰ Start Time:", startTime, "| End Time:", endTime);
 
-  // Find overlapping bookings with payment status 'paid' or 'dp_paid'
+  // Find overlapping bookings with payment status 'paid', 'dp_paid' atau 'pending'
   const overlappingBookings = await prisma.booking.findMany({
     where: {
       fieldId,
       bookingDate: new Date(dateString), // Ensuring date format is correct
       AND: [
         {
-          // Check if payment status is not in 'pending' or 'failed'
+          // Check bookings with payment not expired
           payment: {
-            status: {
-              in: ['paid', 'dp_paid'], // Only consider paid or DP-paid bookings
-            },
+            OR: [
+              // Paid bookings
+              {
+                status: {
+                  in: ['paid', 'dp_paid'], // Confirmed paid bookings
+                },
+              },
+              // Pending bookings that haven't expired yet
+              {
+                status: 'pending',
+                expiresDate: {
+                  gt: new Date(), // Only consider non-expired pending bookings
+                },
+              }
+            ]
           },
         },
         {
@@ -56,10 +68,20 @@ export const isFieldAvailable = async (
         },
       ],
     },
+    include: {
+      payment: true // Include the payment relation in the result
+    }
   });
 
   console.log("📋 Overlapping bookings found:", overlappingBookings.length);
+  
+  if (overlappingBookings.length > 0) {
+    console.log("⚠️ Detail booking yang overlapping:");
+    overlappingBookings.forEach(booking => {
+      console.log(`  - Booking #${booking.id}, status: ${booking.payment?.status}`);
+    });
+  }
 
-  // If there are no overlapping bookings with successful payment, field is available
+  // If there are no overlapping bookings with successful payment or non-expired pending, field is available
   return overlappingBookings.length === 0;
 };
