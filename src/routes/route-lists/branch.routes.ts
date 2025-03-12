@@ -4,7 +4,7 @@ import {
   createBranch, 
   updateBranch, 
   deleteBranch 
-} from '../../controllers/branch.controller';
+} from '../../controllers/admin/super_admin/branch.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 
 const router = express.Router();

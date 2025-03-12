@@ -11,7 +11,6 @@ import promotionRoutes from './route-lists/promotion.routes';
 import promotionUsageRoutes from './route-lists/promotionUsage.routes';
 import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
-import notificationRoutes from './route-lists/notification.routes';
 
 const router = express.Router();
 
@@ -27,6 +26,5 @@ router.use('/field-reviews', fieldReviewRoutes);
 router.use('/promotions', promotionRoutes);
 router.use('/promotion-usages', promotionUsageRoutes);
 router.use('/midtrans-notification', webhookRoutes);
-router.use('/notification', notificationRoutes);
 
 export default router;

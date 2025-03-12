@@ -117,6 +117,7 @@ model Payment {
   paymentMethod PaymentMethod
   status        PaymentStatus @default(pending)
   createdAt     DateTime      @default(now())
+  expiresDate DateTime?
 }
 
 enum PaymentMethod {

@@ -4,7 +4,7 @@ import {
   createFieldReview, 
   updateFieldReview, 
   deleteFieldReview 
-} from '../../controllers/fieldReview.controller';
+} from '../../controllers/user/fieldReview.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 
 const router = express.Router();
