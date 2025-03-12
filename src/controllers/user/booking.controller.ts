@@ -10,10 +10,10 @@ import {
   processMidtransPayment,
   emitBookingEvents,
   getCompleteBooking
-} from '../../utils/booking.utils';
-import { combineDateWithTime, calculateTotalPrice } from '../../utils/bookingDate.utils';
+} from '../../utils/booking/booking.utils';
+import { combineDateWithTime, calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { PaymentStatus } from '@prisma/client';
-import { startBookingCleanupJob } from '../../utils/bookingCleanup.utils';
+import { startBookingCleanupJob } from '../../utils/booking/bookingCleanup.utils';
 
 // Define interface for Request with user
 interface AuthenticatedRequest extends Request {

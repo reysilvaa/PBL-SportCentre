@@ -8,8 +8,8 @@ import {
   createBookingWithPayment,
   getCompleteBooking,
   emitBookingEvents
-} from '../../../utils/booking.utils';
-import { combineDateWithTime } from '../../../utils/bookingDate.utils';
+} from '../../../utils/booking/booking.utils';
+import { combineDateWithTime } from '../../../utils/booking/calculateBooking.utils';
 
 /**
  * Branch Admin Booking Controller

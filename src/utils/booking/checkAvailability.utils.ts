@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from '../../config/database';
 
 /**
  * Checks if a field is available for booking at the specified time

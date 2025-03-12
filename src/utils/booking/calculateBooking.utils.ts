@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from '../../config/database';
 /**
  * Combines a date with a time string to create a new Date object
  * @param date The base date

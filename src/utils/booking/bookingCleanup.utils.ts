@@ -1,5 +1,5 @@
 import { PaymentStatus } from '@prisma/client';
-import prisma from '../config/database';
+import prisma from '../../config/database';
 import { CronJob } from 'cron';
 
 // Define PaymentStatus enum to match Prisma schema

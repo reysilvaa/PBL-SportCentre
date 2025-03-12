@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { validate } from 'class-validator';
 import { CreateActivityLogDto } from '../../../dto/activityLog/create-activity-log.dto';
-import { ActivityLogService } from '../../../utils/activityLog.utils';
+import { ActivityLogService } from '../../../utils/activityLog/activityLog.utils';
 import { getIO } from '../../../config/socket';
 
 export const getActivityLogs = async (req: Request, res: Response): Promise<void> => {

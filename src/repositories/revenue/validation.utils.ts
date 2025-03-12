@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { DateUtils } from '../../utils/date.utils';
+import { DateUtils } from '../../utils/variables/date.utils';
 
 /**
  * Validates that the provided start and end dates are valid and that start date is before end date

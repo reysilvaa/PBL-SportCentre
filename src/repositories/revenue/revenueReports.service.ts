@@ -1,6 +1,6 @@
 import prisma from '../../config/database';
-import { convertBigIntToNumber } from '../../utils/bigInt.utils';
-import { DateUtils } from '../../utils/date.utils';
+import { convertBigIntToNumber } from '../../utils/variables/bigInt.utils';
+import { DateUtils } from '../../utils/variables/date.utils';
 import * as RevenueRepository from './RevenueReports.repositories';
 import {
   RevenueData,

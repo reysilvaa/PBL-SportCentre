@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { PaymentStatus } from '@prisma/client';
 import { getIO } from '../../config/socket';
-import { ActivityLogService } from '../../utils/activityLog.utils';
+import { ActivityLogService } from '../../utils/activityLog/activityLog.utils';
 
 // Import the global type definition
 declare global {

@@ -1,9 +1,9 @@
 import { Response } from 'express';
-import prisma from '../config/database';
-import { getIO } from '../config/socket';
+import prisma from '../../config/database';
+import { getIO } from '../../config/socket';
 import { PaymentStatus, PaymentMethod } from '@prisma/client';
-import midtrans from '../config/midtrans';
-import { isFieldAvailable } from '../utils/availability.utils';
+import midtrans from '../../config/midtrans';
+import { isFieldAvailable } from './checkAvailability.utils';
 import { startBookingCleanupJob } from './bookingCleanup.utils';
 
 

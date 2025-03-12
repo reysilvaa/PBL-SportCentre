@@ -1,5 +1,5 @@
-import prisma from '../config/database';
-import { getIO } from '../config/socket';
+import prisma from '../../config/database';
+import { getIO } from '../../config/socket';
 import { User } from '@prisma/client';
 
 /**
