@@ -25,30 +25,30 @@ export function combineDateWithTime(date: Date, time: string): Date {
     endDateTime: Date, 
     priceDay: number, 
     priceNight: number
-  ): number {
+): number {
     let totalPrice = 0;
     let currentTime = new Date(startDateTime);
     
     // Calculate full hours between start and end times
     while (currentTime < endDateTime) {
-      const nextHour = new Date(currentTime);
-      nextHour.setHours(currentTime.getHours() + 1);
-      
-      // If the next hour would exceed the end time, break the loop
-      if (nextHour > endDateTime) break;
-      
-      const currentHour = currentTime.getHours();
-      
-      // If hour is between 06:00 - 14:59, use priceDay, otherwise priceNight
-      const pricePerHour = (currentHour >= 6 && currentHour < 15) ? priceDay : priceNight;
-      
-      totalPrice += pricePerHour;
-      
-      console.log(`${currentTime.getHours()}:00 - ${nextHour.getHours()}:00, Price per hour: ${pricePerHour}, Running total: ${totalPrice}`);
-      
-      // Move to the next hour
-      currentTime = nextHour;
+        const nextHour = new Date(currentTime);
+        nextHour.setHours(currentTime.getHours() + 1);
+        
+        // If the next hour would exceed the end time, break the loop
+        if (nextHour > endDateTime) break;
+        
+        const currentHour = currentTime.getHours();
+        
+        // If hour is between 06:00 - 14:59, use priceDay, otherwise priceNight
+        const pricePerHour = (currentHour >= 6 && currentHour < 15) ? priceDay : priceNight;
+        
+        totalPrice += pricePerHour;
+        
+        console.log(`${currentTime.getHours()}:00 - ${nextHour.getHours()}:00, Price per hour: ${pricePerHour}, Running total: ${totalPrice}`);
+        
+        // Move to the next hour
+        currentTime = nextHour;
     }
-    
-    return totalPrice;
-  }
+
+    return totalPrice / 2; // Membagi total harga menjadi setengah
+}

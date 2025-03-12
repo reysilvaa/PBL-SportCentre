@@ -1,20 +1,24 @@
 import { Request, Response } from 'express';
 import prisma from '../../../config/database';
 import { getIO } from '../../../config/socket';
-import { isFieldAvailable } from '../../../utils/availability.utils';
-import { combineDateWithTime } from '../../..//utils/bookingDate.utils';
+import { 
+  sendErrorResponse,
+  verifyFieldBranch,
+  validateBookingTime,
+  createBookingWithPayment,
+  getCompleteBooking,
+  emitBookingEvents
+} from '../../../utils/booking.utils';
+import { combineDateWithTime } from '../../../utils/bookingDate.utils';
 
 /**
  * Branch Admin Booking Controller
  * Handles operations that branch admins can perform with real-time updates via WebSockets
  */
 
-
 export const getBranchBookings = async (req: Request, res: Response): Promise<void> => {
   try {
     const { branchId } = req.params;
-    
-    // Ensure the admin is authorized for this branch (should be done in middleware)
     
     // Get all bookings for fields in this branch
     const bookings = await prisma.booking.findMany({
@@ -34,14 +38,13 @@ export const getBranchBookings = async (req: Request, res: Response): Promise<vo
     res.json(bookings);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    sendErrorResponse(res, 500, 'Internal Server Error');
   }
 };
 
 export const getBranchBookingById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { branchId } = req.params; // Or from admin's profile
+    const { id, branchId } = req.params;
     
     const booking = await prisma.booking.findFirst({
       where: { 
@@ -58,21 +61,19 @@ export const getBranchBookingById = async (req: Request, res: Response): Promise
     });
     
     if (!booking) {
-      res.status(404).json({ error: 'Booking not found for this branch' });
-      return;
+      return sendErrorResponse(res, 404, 'Booking not found for this branch');
     }
     
     res.json(booking);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    sendErrorResponse(res, 500, 'Internal Server Error');
   }
 };
 
 export const updateBranchBookingStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { branchId } = req.params; // Or from admin's profile
+    const { id, branchId } = req.params;
     const { paymentStatus } = req.body;
     
     // Verify the booking belongs to this branch
@@ -91,8 +92,7 @@ export const updateBranchBookingStatus = async (req: Request, res: Response): Pr
     });
     
     if (!booking) {
-      res.status(404).json({ error: 'Booking not found for this branch' });
-      return;
+      return sendErrorResponse(res, 404, 'Booking not found for this branch');
     }
     
     // Update payment status
@@ -104,54 +104,33 @@ export const updateBranchBookingStatus = async (req: Request, res: Response): Pr
     }
     
     // Return updated booking
-    const updatedBooking = await prisma.booking.findUnique({
-      where: { id: parseInt(id) },
-      include: { 
-        user: { select: { id: true, name: true, email: true, phone: true } },
-        field: true,
-        payment: true 
-      }
+    const updatedBooking = await getCompleteBooking(parseInt(id));
+    
+    // Emit WebSocket event for booking update
+    emitBookingEvents('update-payment', {
+      booking: updatedBooking,
+      userId: booking.user?.id,
+      branchId,
+      paymentStatus
     });
-    
-    // Emit WebSocket event to notify clients about the booking update
-    const io = getIO();
-    
-    // Emit to branch channel
-    io.to(`branch-${branchId}`).emit('booking:updated', updatedBooking);
-    
-    // Emit to user's personal channel
-    if (booking.user?.id) {
-      io.to(`user-${booking.user.id}`).emit('booking:updated', {
-        bookingId: updatedBooking?.id,
-        paymentStatus: updatedBooking?.payment?.status,
-        message: `Your booking payment status has been updated to: ${updatedBooking?.payment?.status}`
-      });
-    }
     
     res.json(updatedBooking);
   } catch (error) {
     console.error(error);
-    res.status(400).json({ error: 'Failed to update booking' });
+    sendErrorResponse(res, 400, 'Failed to update booking');
   }
 };
 
 export const createManualBooking = async (req: Request, res: Response): Promise<void> => {
   try {
-    
-    const { branchId } = req.params; // Or from admin's profile
+    const { branchId } = req.params;
     const { fieldId, userId, bookingDate, startTime, endTime, paymentStatus } = req.body;
     
     // Verify the field belongs to this branch
-    const field = await prisma.field.findFirst({
-      where: { 
-        id: parseInt(fieldId.toString()),
-        branchId: parseInt(branchId)
-      }
-    });
+    const field = await verifyFieldBranch(parseInt(fieldId.toString()), parseInt(branchId));
     
     if (!field) {
-      res.status(404).json({ error: 'Field not found in this branch' });
-      return;
+      return sendErrorResponse(res, 404, 'Field not found in this branch');
     }
     
     const bookingDateTime = new Date(bookingDate);
@@ -160,105 +139,48 @@ export const createManualBooking = async (req: Request, res: Response): Promise<
     const startDateTime = combineDateWithTime(bookingDateTime, startTime);
     const endDateTime = combineDateWithTime(bookingDateTime, endTime);
     
-    // Validate start and end times
-    if (startDateTime >= endDateTime) {
-      res.status(400).json({ 
-        error: 'End time must be after start time',
-        details: { 
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString()
-        }
-      });
-      return;
-    }
-    
-    // Log booking duration for debugging
-    console.log("⏰ Booking duration check:", {
-      start: startDateTime,
-      end: endDateTime,
-      durationMinutes: (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60)
-    });
-    
-    // Check field availability before creating booking
-    const isAvailable = await isFieldAvailable(
-      parseInt(fieldId.toString()), 
-      bookingDateTime, 
-      startDateTime, 
+    // Validate booking time and availability
+    const timeValidation = await validateBookingTime(
+      parseInt(fieldId.toString()),
+      bookingDateTime,
+      startDateTime,
       endDateTime
     );
     
-    console.log("🔍 Field availability result:", isAvailable);
-    
-    if (!isAvailable) {
-      res.status(400).json({ 
-        error: 'Field is already booked for the selected time slot',
-        details: {
-          fieldId,
-          date: bookingDateTime,
-          startTime: startDateTime,
-          endTime: endDateTime
-        }
-      });
-      return;
+    if (!timeValidation.valid) {
+      return sendErrorResponse(res, 400, timeValidation.message, timeValidation.details);
     }
     
-    // Create booking
-    const newBooking = await prisma.booking.create({
-      data: { 
-        userId: parseInt(userId.toString()), 
-        fieldId: parseInt(fieldId.toString()), 
-        bookingDate: bookingDateTime, 
-        startTime: startDateTime, 
-        endTime: endDateTime
-      }
-    });
+    // Create booking and payment records
+    const { booking, payment } = await createBookingWithPayment(
+      parseInt(userId.toString()),
+      parseInt(fieldId.toString()),
+      bookingDateTime,
+      startDateTime,
+      endDateTime,
+      paymentStatus || 'paid',
+      'cash',
+      field.priceDay
+    );
     
-    // Create payment with provided status (e.g. for cash payments)
-    const payment = await prisma.payment.create({ 
-      data: { 
-        bookingId: newBooking.id, 
-        userId: parseInt(userId.toString()), 
-        amount: field.priceDay, // Simplified for manual bookings
-        status: paymentStatus || 'paid', 
-        paymentMethod: 'cash',// Default for manual bookings
-      } 
-    });
+    // Get complete booking with relations
+    const completeBooking = await getCompleteBooking(booking.id);
     
-    // Fetch complete booking with relations for the WebSocket event
-    const completeBooking = await prisma.booking.findUnique({
-      where: { id: newBooking.id },
-      include: {
-        user: { select: { id: true, name: true, email: true, phone: true } },
-        field: true,
-        payment: true
-      }
-    });
-    
-    // Emit WebSocket event to notify clients about the new booking
-    const io = getIO();
-    
-    // Emit to branch channel
-    io.to(`branch-${branchId}`).emit('booking:created', completeBooking);
-    
-    // Emit to user's personal channel
-    io.to(`user-${userId}`).emit('booking:created', {
+    // Emit WebSocket events
+    emitBookingEvents('new-booking', {
       booking: completeBooking,
-      message: `A new booking has been created for you by the branch admin`
-    });
-    
-    // Emit to field availability channel
-    io.to(`field-${fieldId}`).emit('field:availability-changed', {
+      userId: parseInt(userId.toString()),
       fieldId: parseInt(fieldId.toString()),
-      date: bookingDateTime,
+      branchId: parseInt(branchId),
+      bookingDate: bookingDateTime,
       startTime: startDateTime,
-      endTime: endDateTime,
-      available: false
+      endTime: endDateTime
     });
     
-    res.status(201).json({ booking: newBooking, payment });
+    res.status(201).json({ booking, payment });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to create manual booking' });
+    sendErrorResponse(res, 500, 'Failed to create manual booking');
   }
 };
 
@@ -268,7 +190,6 @@ export const createManualBooking = async (req: Request, res: Response): Promise<
 export const setupBranchBookingSocketHandlers = (): void => {
   const io = getIO();
   const branchNamespace = io.of('/branches');
-  
   
   branchNamespace.on('connection', (socket) => {
     console.log(`🏢 Branch admin connected: ${socket.id}`);
@@ -320,31 +241,26 @@ export const setupBranchBookingSocketHandlers = (): void => {
         
         // Convert to proper date objects
         const bookingDateTime = new Date(bookingDate);
-        // Ensure bookingDate only contains the date part
         bookingDateTime.setHours(0, 0, 0, 0);
         
         const startDateTime = new Date(startTime);
         const endDateTime = new Date(endTime);
         
-        // Validate time range
-        if (startDateTime >= endDateTime) {
-          socket.emit('field:availability-error', {
-            message: 'End time must be after start time',
-            details: {
-              startTime: startDateTime.toISOString(),
-              endTime: endDateTime.toISOString()
-            }
-          });
-          return;
-        }
-        
-        // Check field availability
-        const isAvailable = await isFieldAvailable(
+        // Validate booking time and availability
+        const timeValidation = await validateBookingTime(
           parseInt(fieldId.toString()),
           bookingDateTime,
           startDateTime,
           endDateTime
         );
+        
+        if (!timeValidation.valid) {
+          socket.emit('field:availability-error', {
+            message: timeValidation.message,
+            details: timeValidation.details
+          });
+          return;
+        }
         
         // Send availability result back to client
         socket.emit('field:availability-result', {
@@ -352,7 +268,7 @@ export const setupBranchBookingSocketHandlers = (): void => {
           bookingDate: bookingDateTime.toISOString(),
           startTime: startDateTime.toISOString(),
           endTime: endDateTime.toISOString(),
-          isAvailable
+          isAvailable: true
         });
       } catch (error) {
         console.error('Availability check error:', error);
@@ -404,12 +320,7 @@ export const setupBranchBookingSocketHandlers = (): void => {
         const { fieldId, userId, bookingDate, startTime, endTime, paymentStatus, branchId } = data;
         
         // Verify the field belongs to this branch
-        const field = await prisma.field.findFirst({
-          where: { 
-            id: parseInt(fieldId.toString()),
-            branchId: parseInt(branchId)
-          }
-        });
+        const field = await verifyFieldBranch(parseInt(fieldId.toString()), parseInt(branchId));
         
         if (!field) {
           socket.emit('booking:create-error', { 
@@ -420,106 +331,54 @@ export const setupBranchBookingSocketHandlers = (): void => {
         
         // Convert to proper date objects
         const bookingDateTime = new Date(bookingDate);
-        // Ensure bookingDate only contains the date part
         bookingDateTime.setHours(0, 0, 0, 0);
         
         const startDateTime = new Date(startTime);
         const endDateTime = new Date(endTime);
         
-        // Validate time range
-        if (startDateTime >= endDateTime) {
-          socket.emit('booking:create-error', {
-            message: 'End time must be after start time',
-            details: {
-              startTime: startDateTime.toISOString(),
-              endTime: endDateTime.toISOString()
-            }
-          });
-          return;
-        }
-        
-        // Log booking duration for debugging
-        console.log("⏰ Booking duration check (socket):", {
-          field: parseInt(fieldId.toString()),
-          start: startDateTime.toISOString(),
-          end: endDateTime.toISOString(),
-          durationMinutes: (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60)
-        });
-        
-        // Check field availability before creating booking
-        const isAvailable = await isFieldAvailable(
-          parseInt(fieldId.toString()), 
-          bookingDateTime, 
-          startDateTime, 
+        // Validate booking time and availability
+        const timeValidation = await validateBookingTime(
+          parseInt(fieldId.toString()),
+          bookingDateTime,
+          startDateTime,
           endDateTime
         );
         
-        console.log("🔍 Field availability result (socket):", isAvailable);
-        
-        if (!isAvailable) {
-          socket.emit('booking:create-error', { 
-            message: 'Field is already booked for the selected time slot',
-            details: {
-              fieldId,
-              date: bookingDateTime.toISOString(),
-              startTime: startDateTime.toISOString(),
-              endTime: endDateTime.toISOString() 
-            }
+        if (!timeValidation.valid) {
+          socket.emit('booking:create-error', {
+            message: timeValidation.message,
+            details: timeValidation.details
           });
           return;
         }
         
-        // Create booking
-        const newBooking = await prisma.booking.create({
-          data: { 
-            userId: parseInt(userId.toString()), 
-            fieldId: parseInt(fieldId.toString()), 
-            bookingDate: bookingDateTime, 
-            startTime: startDateTime, 
-            endTime: endDateTime 
-          }
-        });
+        // Create booking and payment records
+        const { booking, payment } = await createBookingWithPayment(
+          parseInt(userId.toString()),
+          parseInt(fieldId.toString()),
+          bookingDateTime,
+          startDateTime,
+          endDateTime,
+          paymentStatus || 'paid',
+          'cash',
+          field.priceDay
+        );
         
-        // Create payment
-        const payment = await prisma.payment.create({ 
-          data: { 
-            bookingId: newBooking.id, 
-            userId: parseInt(userId.toString()), 
-            amount: field.priceDay, 
-            status: paymentStatus || 'paid', 
-            paymentMethod: 'cash'
-          } 
-        });
-        
-        // Fetch complete booking
-        const completeBooking = await prisma.booking.findUnique({
-          where: { id: newBooking.id },
-          include: {
-            user: { select: { id: true, name: true, email: true, phone: true } },
-            field: true,
-            payment: true
-          }
-        });
+        // Get complete booking with relations
+        const completeBooking = await getCompleteBooking(booking.id);
         
         // Emit to current client
         socket.emit('booking:create-success', completeBooking);
         
-        // Emit to branch channel
-        socket.to(`branch-${branchId}`).emit('booking:created', completeBooking);
-        
-        // Emit to user's personal channel
-        io.to(`user-${userId}`).emit('booking:created', {
+        // Emit WebSocket events
+        emitBookingEvents('new-booking', {
           booking: completeBooking,
-          message: `A new booking has been created for you by the branch admin`
-        });
-        
-        // Emit to field availability channel
-        io.to(`field-${fieldId}`).emit('field:availability-changed', {
+          userId: parseInt(userId.toString()),
           fieldId: parseInt(fieldId.toString()),
-          date: bookingDateTime,
+          branchId: parseInt(branchId),
+          bookingDate: bookingDateTime,
           startTime: startDateTime,
-          endTime: endDateTime,
-          available: false
+          endTime: endDateTime
         });
       } catch (error) {
         console.error('Create booking error:', error);

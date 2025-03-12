@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
 // Initialize Socket.IO and store in global.io
-const io = initializeSocketIO(server);
+initializeSocketIO(server);
 
 // Set up socket handlers from the existing socketServer.ts
 setupSocketServer(server); // This should now use the global.io instead of creating a new instance
