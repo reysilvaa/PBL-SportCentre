@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { PaymentStatus } from '@prisma/client';
+import { getIO } from '../../config/socket';
+import { ActivityLogService } from '../../utils/activityLog.utils';
 
 // Import the global type definition
 declare global {
-  var io: any;
   var activeLocks: Record<string, boolean>;
 }
 
@@ -113,20 +114,6 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
         
         console.log("✅ Payment updated in transaction:", updatedPayment);
         
-        // Create activity log
-        await tx.activityLog.create({
-          data: {
-            userId: payment.booking.user.id,
-            action: `Payment ${paymentStatus} for booking ${payment.booking.id}`,
-            details: JSON.stringify({
-              bookingId: payment.booking.id,
-              paymentId: payment.id,
-              transactionStatus: transaction_status,
-              amount: gross_amount
-            })
-          }
-        });
-        
         // Create notification for the user
         await tx.notification.create({
           data: {
@@ -140,19 +127,34 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
         });
       });
       
+      // Create activity log separately to avoid duplicating service logic
+      await ActivityLogService.logPaymentActivity(
+        payment.booking.user.id,
+        paymentId,
+        payment.booking.id,
+        paymentStatus,
+        {
+          transactionStatus: transaction_status,
+          amount: gross_amount
+        }
+      );
+      
       // Verify the update happened correctly
       const verifiedPayment = await prisma.payment.findUnique({
         where: { id: paymentId },
       });
       console.log("🔍 Verified payment status after update:", verifiedPayment?.status);
       
-      // Send real-time notification using global io instance
+      // Get IO instance
+      const io = getIO();
+      
+      // Send real-time notification
       try {
-        if (global.io) {
+        if (io) {
           const userRoomId = `user_${payment.booking.user.id}`;
           
           // Emit to user's specific room
-          global.io.to(userRoomId).emit('payment_update', {
+          io.to(userRoomId).emit('payment_update', {
             paymentId: payment.id,
             bookingId: payment.booking.id,
             status: paymentStatus,
@@ -160,14 +162,14 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
           });
           
           // Also emit to the payments namespace for any admin dashboards
-          global.io.of('/payments').emit('status_change', {
+          io.of('/payments').emit('status_change', {
             paymentId: payment.id,
             bookingId: payment.booking.id,
             status: paymentStatus,
             userId: payment.booking.user.id
           });
           
-          console.log(`📢 Sent real-time update to ${userRoomId} and /payments namespace`);
+          console.log(`📢 Sent real-time updates to ${userRoomId} and /payments namespace`);
         } else {
           console.warn("⚠️ Socket.IO not initialized, skipping real-time notification");
         }

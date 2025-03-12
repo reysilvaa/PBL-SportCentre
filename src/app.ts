@@ -5,7 +5,6 @@ import { config } from './config/env';
 import { logger } from './config/logger';
 import router from './routes/index.routes';
 import { initializeSocketIO } from './config/socket';
-import { setupSocketServer } from './socket/socketServer';
 import errorMiddleware from './middlewares/error.middleware';
 
 const app: Application = express();
@@ -24,8 +23,6 @@ app.use(logger);
 initializeSocketIO(server);
 
 // Set up socket handlers from the existing socketServer.ts
-setupSocketServer(server); // This should now use the global.io instead of creating a new instance
-
 // Routes
 app.use('/api', router);
 
