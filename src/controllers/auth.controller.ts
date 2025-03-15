@@ -3,10 +3,10 @@ import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 import prisma from '../config/database';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
 import { config } from '../config/env';
 import { RegisterDto } from '../dto/auth/register.dto';
 import { LoginDto } from '../dto/auth/login.dto';
+import { hashPassword, verifyPassword } from '../utils/password.utils';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -37,8 +37,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await hashPassword(password);
 
     const user = await prisma.user.create({
       data: {
@@ -90,7 +89,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
       res.status(401).json({ error: 'Invalid credentials' });
       return;
