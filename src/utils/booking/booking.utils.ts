@@ -5,6 +5,7 @@ import { PaymentStatus, PaymentMethod } from '@prisma/client';
 import midtrans from '../../config/midtrans';
 import { isFieldAvailable } from './checkAvailability.utils';
 import { startBookingCleanupJob } from './bookingCleanup.utils';
+import { formatDateToWIB } from '../variables/timezone.utils';
 
 
 // Initialize booking cleanup job when server starts
@@ -35,8 +36,8 @@ export const validateBookingTime = async (fieldId: number, bookingDate: Date, st
       valid: false,
       message: 'End time must be after start time',
       details: { 
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString()
+        startTime: formatDateToWIB(startTime),
+        endTime: formatDateToWIB(endTime)
       }
     };
   }
@@ -50,9 +51,9 @@ export const validateBookingTime = async (fieldId: number, bookingDate: Date, st
       message: 'Field is already booked for the selected time slot',
       details: {
         fieldId,
-        date: bookingDate,
-        startTime,
-        endTime
+        date: formatDateToWIB(bookingDate),
+        startTime: formatDateToWIB(startTime),
+        endTime: formatDateToWIB(endTime)
       }
     };
   }
@@ -185,8 +186,8 @@ export const emitBookingEvents = (eventType: string, data: any) => {
           io.to(`field-${data.fieldId}`).emit('field:availability-changed', {
             fieldId: data.fieldId,
             date: data.bookingDate,
-            startTime: data.startTime,
-            endTime: data.endTime,
+            startTime: formatDateToWIB(data.startTime),
+            endTime: formatDateToWIB(data.endTime),
             available: false
           });
         }
@@ -220,7 +221,7 @@ export const emitBookingEvents = (eventType: string, data: any) => {
         io.of('/fields').emit('availability-update', {
           fieldId: data.fieldId,
           date: data.bookingDate,
-          timeSlot: { start: data.startTime, end: data.endTime },
+          timeSlot: { start: formatDateToWIB(data.startTime), end: formatDateToWIB(data.endTime) },
           available: true
         });
         break;
