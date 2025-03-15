@@ -9,7 +9,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 
 const router = express.Router();
 
-// router.get('/', authMiddleware(['super_admin', 'admin_cabang']), getActivityLogs);
+router.get('/', authMiddleware(['super_admin']), getActivityLogs);
 router.get('/', getActivityLogs);
 router.post('/', parseIds, createActivityLog);
 router.delete('/:id', deleteActivityLog);

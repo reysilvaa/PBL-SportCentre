@@ -14,19 +14,19 @@ router.get('/bookings/:id/user', userBookingController.getBookingById);
 
 // Branch admin routes
 router.get('/branches/:branchId/bookings', 
-  //  authMiddleware(['admin_cabang']), 
+   authMiddleware(['admin_cabang']), 
   branchAdminBookingController.getBranchBookings
 );
 router.get('/branches/:branchId/bookings/:id', 
-  // authMiddleware(['admin_cabang']), 
+  authMiddleware(['admin_cabang']), 
   branchAdminBookingController.getBranchBookingById
 );
 router.put('/branches/:branchId/bookings/:id/status', 
-  // authMiddleware(['admin_cabang']), 
+  authMiddleware(['admin_cabang']), 
   branchAdminBookingController.updateBranchBookingStatus
 );
 router.post('/branches/:branchId/bookings/manual', 
-  // authMiddleware(['admin_cabang']), 
+  authMiddleware(['admin_cabang']), 
   branchAdminBookingController.createManualBooking
 );
 
@@ -36,7 +36,7 @@ router.get('/admin/bookings',
     superAdminBookingController.getAllBookings
 );
 router.get('/admin/bookings/:id', 
-  // authMiddleware(['super_admin']), 
+  authMiddleware(['super_admin']), 
   superAdminBookingController.getBookingById
 );
 router.put('/admin/bookings/:id/payment', 
@@ -55,7 +55,7 @@ router.get('/admin/bookings/stats',
 // Owner routes
 // exp : http://localhost:3000/api/bookings/owner/reports/revenue?type=daily&startDate=2025-03-01&endDate=2025-03-07
 router.get('/owner/reports/revenue', 
-//   authMiddleware(['owner_cabang']), 
+  authMiddleware(['owner_cabang']), 
   ownerBookingController.getRevenueReports
 );
 router.get('/owner/reports/occupancy', 
