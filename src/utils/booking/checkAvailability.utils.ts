@@ -196,6 +196,7 @@ export const isFieldAvailable = async (
 
   console.log("📋 Overlapping bookings found:", overlappingBookings.length);
 
+
   if (overlappingBookings.length > 0) {
     console.log("⚠️ Detail booking yang overlapping:");
     overlappingBookings.forEach(booking => {

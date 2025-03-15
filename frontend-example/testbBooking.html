@@ -35,7 +35,7 @@
     <pre id="cancelResult"></pre>
     
     <script>
-        const socket = io("http://localhost:3000/payments");
+        const socket = io("https://cigarette-articles-stroke-bedrooms.trycloudflare.com/payments");
         socket.on("payment-updated", (data) => {
             alert("Payment Updated: " + JSON.stringify(data));
         });
@@ -59,7 +59,7 @@
     }
 
     try {
-        const res = await fetch("http://localhost:3000/api/bookings", {
+        const res = await fetch("https://cigarette-articles-stroke-bedrooms.trycloudflare.com/api/bookings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
@@ -84,21 +84,21 @@
         
         async function getUserBookings() {
             const userId = document.getElementById("getUserId").value;
-            const res = await fetch(`http://localhost:3000/api/bookings/${userId}/user`);
+            const res = await fetch(`https://cigarette-articles-stroke-bedrooms.trycloudflare.com/api/bookings/${userId}/user`);
             const result = await res.json();
             document.getElementById("userBookings").textContent = JSON.stringify(result, null, 2);
         }
         
         async function getBookingById() {
             const id = document.getElementById("bookingId").value;
-            const res = await fetch(`http://localhost:3000/api/bookings/admin/bookings/${id}`);
+            const res = await fetch(`https://cigarette-articles-stroke-bedrooms.trycloudflare.com/api/bookings/admin/bookings/${id}`);
             const result = await res.json();
             document.getElementById("bookingDetails").textContent = JSON.stringify(result, null, 2);
         }
         
         async function cancelBooking() {
             const id = document.getElementById("cancelBookingId").value;
-            const res = await fetch(`http://localhost:3000/bookings/cancel/${id}`, {
+            const res = await fetch(`https://cigarette-articles-stroke-bedrooms.trycloudflare.com/bookings/cancel/${id}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" }
             });

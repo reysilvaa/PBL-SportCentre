@@ -11,9 +11,18 @@ import {
   emitBookingEvents,
   getCompleteBooking
 } from '../../utils/booking/booking.utils';
-import { combineDateWithTime, calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
+import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { PaymentStatus } from '@prisma/client';
-import { startBookingCleanupJob } from '../../utils/booking/bookingCleanup.utils';
+import { 
+  parseISO, 
+  addMinutes
+} from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+import { 
+  TIMEZONE, 
+  formatDateToWIB, 
+  combineDateWithTimeWIB 
+} from '../../utils/variables/timezone.utils';
 
 // Define interface for Request with user
 interface AuthenticatedRequest extends Request {
@@ -53,12 +62,22 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     const fieldIdInt = parseInt(fieldId.toString());
 
     // Convert strings to Date objects
-    const bookingDateTime = new Date(bookingDate);
-    console.log("📆 Booking Date:", bookingDateTime);
+    const bookingDateTime = parseISO(bookingDate);
+    console.log("📆 Booking Date (WIB):", formatDateToWIB(bookingDateTime));
 
-    const startDateTime = combineDateWithTime(bookingDateTime, startTime);
-    const endDateTime = combineDateWithTime(bookingDateTime, endTime);
-    console.log("⏰ Start & End Time:", startDateTime, endDateTime);
+    // Combine date with time in WIB timezone
+    const startDateTime = toZonedTime(
+      combineDateWithTimeWIB(bookingDateTime, startTime),
+      TIMEZONE
+    );
+    
+    const endDateTime = toZonedTime(
+      combineDateWithTimeWIB(bookingDateTime, endTime),
+      TIMEZONE
+    );
+    
+    console.log("⏰ Start Time (WIB):", formatDateToWIB(startDateTime));
+    console.log("⏰ End Time (WIB):", formatDateToWIB(endDateTime));
 
     // Validate booking time and availability
     const timeValidation = await validateBookingTime(
@@ -129,7 +148,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     );
 
     console.log("🔗 Midtrans transaction:", transaction);
-    console.log("⏱️ Payment expires at:", expiryDate);
+    console.log("⏱️ Payment expires at (WIB):", formatDateToWIB(expiryDate));
 
     // Emit event via Socket.IO to notify about new booking
     try {
@@ -203,9 +222,9 @@ export const midtransWebhook = async (req: Request, res: Response): Promise<void
       newPaymentStatus = 'paid' as PaymentStatus;
     } else if (transactionStatus === 'pending') {
       // Payment is still pending, but we need to update the expiry
-      // Start the 5-minute countdown now
-      const expiryDate = new Date();
-      expiryDate.setMinutes(expiryDate.getMinutes() + 5);
+      // Start the 5-minute countdown now (in WIB)
+      const now = new Date();
+      const expiryDate = addMinutes(now, 5);
       
       await prisma.payment.update({
         where: { id: paymentId },
@@ -215,7 +234,7 @@ export const midtransWebhook = async (req: Request, res: Response): Promise<void
         }
       });
       
-      console.log(`⏱️ Updated payment #${paymentId} expiry to ${expiryDate} after Midtrans notification`);
+      console.log(`⏱️ Updated payment #${paymentId} expiry to ${formatDateToWIB(expiryDate)} after Midtrans notification`);
       
       // Emit socket event for payment update
       emitBookingEvents('update-payment', {
@@ -278,7 +297,21 @@ export const getUserBookings = async (req: Request, res: Response): Promise<void
       },
       orderBy: { bookingDate: 'desc' }
     });
-    res.json(bookings);
+    
+    // Format dates for display (optional)
+    const formattedBookings = bookings.map(booking => ({
+      ...booking,
+      _formattedBookingDate: formatDateToWIB(booking.bookingDate),
+      _formattedStartTime: formatDateToWIB(booking.startTime),
+      _formattedEndTime: formatDateToWIB(booking.endTime),
+      payment: booking.payment ? {
+        ...booking.payment,
+        _formattedExpiresDate: booking.payment.expiresDate ? 
+          formatDateToWIB(booking.payment.expiresDate) : null
+      } : null
+    }));
+    
+    res.json(formattedBookings);
   } catch (error) {
     console.error(error);
     sendErrorResponse(res, 500, 'Internal Server Error');
@@ -307,7 +340,20 @@ export const getBookingById = async (req: AuthenticatedRequest, res: Response): 
       return sendErrorResponse(res, 403, 'You do not have permission to view this booking');
     }
     
-    res.json(booking);
+    // Format dates for display (optional)
+    const formattedBooking = {
+      ...booking,
+      _formattedBookingDate: formatDateToWIB(booking.bookingDate),
+      _formattedStartTime: formatDateToWIB(booking.startTime),
+      _formattedEndTime: formatDateToWIB(booking.endTime),
+      payment: booking.payment ? {
+        ...booking.payment,
+        _formattedExpiresDate: booking.payment.expiresDate ? 
+          formatDateToWIB(booking.payment.expiresDate) : null
+      } : null
+    };
+    
+    res.json(formattedBooking);
   } catch (error) {
     console.error("❌ Error in getBookingById:", error);
     sendErrorResponse(res, 500, 'Failed to retrieve booking details');

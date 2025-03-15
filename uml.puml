@@ -1,0 +1,121 @@
+@startuml
+
+class activitylog {
+  id: int *
+  userId: int
+  action: text
+  createdAt: datetime(3)
+  details: text
+}
+
+class booking {
+  id: int *
+  userId: int
+  fieldId: int
+  bookingDate: datetime(3)
+  startTime: datetime(3)
+  endTime: datetime(3)
+  createdAt: datetime(3)
+}
+
+class branch {
+  id: int *
+  name: varchar(100)
+  location: text
+  ownerId: int
+  status: enum
+  createdAt: datetime(3)
+}
+
+class field {
+  id: int *
+  branchId: int
+  typeId: int
+  name: varchar(100)
+  priceDay: decimal(10,2)
+  priceNight: decimal(10,2)
+  status: enum
+  createdAt: datetime(3)
+}
+
+class fieldreview {
+  id: int *
+  userId: int
+  fieldId: int
+  rating: int
+  review: text
+  createdAt: datetime(3)
+}
+
+class fieldtype {
+  id: int *
+  name: varchar(50)
+}
+
+class notification {
+  id: int *
+  userId: int
+  title: varchar(255)
+  message: text
+  isRead: tinyint(1)
+  type: varchar(50)
+  linkId: varchar(100)
+  createdAt: datetime(3)
+}
+
+class payment {
+  id: int *
+  userId: int
+  amount: decimal(10,2)
+  paymentMethod: enum
+  status: enum
+  createdAt: datetime(3)
+  bookingId: int
+  expiresDate: datetime(3)
+}
+
+class promotion {
+  id: int *
+  code: varchar(50)
+  description: text
+  discountPercent: decimal(5,2)
+  maxDiscount: decimal(10,2)
+  validFrom: datetime(3)
+  validUntil: datetime(3)
+  status: enum
+  createdAt: datetime(3)
+}
+
+class promotionusage {
+  id: int *
+  userId: int
+  bookingId: int
+  promoId: int
+  createdAt: datetime(3)
+}
+
+class user {
+  id: int *
+  name: varchar(100)
+  email: varchar(100)
+  password: varchar(255)
+  phone: varchar(15)
+  role: enum
+  createdAt: datetime(3)
+}
+
+user --|> activitylog : userId
+user --|> booking : userId
+user --|> branch : ownerId
+branch --|> field : branchId
+fieldtype --|> field : typeId
+user --|> fieldreview : userId
+field --|> fieldreview : fieldId
+user --|> notification : userId
+user --|> payment : userId
+booking --|> payment : bookingId
+user --|> promotionusage : userId
+booking --|> promotionusage : bookingId
+promotion --|> promotionusage : promoId
+
+@enduml

@@ -28,6 +28,8 @@
     "class-validator": "^0.14.1",
     "cors": "^2.8.5",
     "cron": "^4.1.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
@@ -54,5 +56,8 @@
     "eslint": "^9.21.0",
     "jiti": "^2.4.2",
     "prettier": "^3.5.3"
+  },
+  "overrides": {
+    "axios": "^1.8.2"
   }
 }
