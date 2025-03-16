@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { validate } from 'class-validator';
 import prisma from '../../config/database';
-import { CreateFieldDto } from '../../dto/field/create-field.dto';
+import { createFieldSchema, updateFieldSchema } from '../../zod-schemas/field.schema';
 
 export const getFields = async (req: Request, res: Response) => {
   try {
@@ -24,20 +23,19 @@ export const getFields = async (req: Request, res: Response) => {
 
 export const createField = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Konversi request body ke DTO dengan data yang sesuai
-    const fieldDto = new CreateFieldDto();
-    Object.assign(fieldDto, req.body);
-
-    // Validasi input
-    const errors = await validate(fieldDto);
-    if (errors.length > 0) {
-      res.status(400).json({ errors });
+    // Validasi data dengan Zod
+    const result = createFieldSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
       return;
     }
 
     // Ambil data setelah validasi
-    const { branchId, typeId, name, priceDay, priceNight } = fieldDto;
-    const status = req.body.status || 'available'; // Tetapkan default jika tidak ada status
+    const { branchId, typeId, name, priceDay, priceNight, status } = result.data;
 
     // Simpan data ke database
     const newField = await prisma.field.create({
@@ -53,28 +51,32 @@ export const createField = async (req: Request, res: Response): Promise<void> =>
 
     res.status(201).json(newField);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to create field' });
+    res.status(400).json({ error: 'Gagal membuat lapangan' });
   }
 };
 
-// dto update blom ini buat verifikasi
 export const updateField = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { typeId, name, priceDay, priceNight, status } = req.body;
+    
+    // Validasi data dengan Zod
+    const result = updateFieldSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
+    }
+    
     const updatedField = await prisma.field.update({
       where: { id: parseInt(id) },
-      data: {
-        typeId,
-        name,
-        priceDay,
-        priceNight,
-        status
-      }
+      data: result.data
     });
     res.json(updatedField);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to update field' });
+    res.status(400).json({ error: 'Gagal memperbarui lapangan' });
   }
 };
 
@@ -86,6 +88,6 @@ export const deleteField = async (req: Request, res: Response) => {
     });
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Failed to delete field' });
+    res.status(400).json({ error: 'Gagal menghapus lapangan' });
   }
 };

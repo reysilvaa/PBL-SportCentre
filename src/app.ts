@@ -5,6 +5,8 @@ import { config } from './config/env';
 import { logger } from './config/logger';
 import router from './routes/index.routes';
 import { initializeSocketIO } from './config/socket';
+import { initializeAllSocketHandlers } from './socket-handlers';
+import { startFieldAvailabilityUpdates } from './controllers/all/availability.controller';
 import errorMiddleware from './middlewares/error.middleware';
 
 const app: Application = express();
@@ -22,7 +24,12 @@ app.use(logger);
 // Initialize Socket.IO and store in global.io
 initializeSocketIO(server);
 
-// Set up socket handlers from the existing socketServer.ts
+// Initialize all Socket.IO handlers
+initializeAllSocketHandlers();
+
+// Start field availability updates
+startFieldAvailabilityUpdates();
+
 // Routes
 app.use('/api', router);
 

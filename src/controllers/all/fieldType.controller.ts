@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
-import { CreateFieldTypeDto } from '../../dto/field/create-field-type.dto';
-import { validate } from 'class-validator';
+import { createFieldTypeSchema, updateFieldTypeSchema } from '../../zod-schemas/fieldType.schema';
 
 export const getFieldTypes = async (req: Request, res: Response) => {
   try {
@@ -28,38 +27,52 @@ export const getFieldTypes = async (req: Request, res: Response) => {
 
 export const createFieldType = async (req: Request, res: Response): Promise<void> => {
   try {
-  const createFieldTypeDto = new CreateFieldTypeDto();
-    Object.assign(createFieldTypeDto, req.body);
-
-    const errors = await validate(createFieldTypeDto);
-    if (errors.length > 0) {
-      res.status(400).json({ errors });
-      return 
+    // Validasi data dengan Zod
+    const result = createFieldTypeSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
     }
 
     // Simpan ke database
     const newFieldType = await prisma.fieldType.create({
       data: {
-        name: createFieldTypeDto.name
+        name: result.data.name
       }
     });
 
     res.status(201).json(newFieldType);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to create field type' });
+    res.status(400).json({ error: 'Gagal membuat tipe lapangan' });
   }
 };
+
 export const updateFieldType = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    
+    // Validasi data dengan Zod
+    const result = updateFieldTypeSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
+    }
+    
     const updatedFieldType = await prisma.fieldType.update({
       where: { id: parseInt(id) },
-      data: { name }
+      data: result.data
     });
     res.json(updatedFieldType);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to update field type' });
+    res.status(400).json({ error: 'Gagal memperbarui tipe lapangan' });
   }
 };
 
@@ -71,6 +84,6 @@ export const deleteFieldType = async (req: Request, res: Response) => {
     });
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Failed to delete field type' });
+    res.status(400).json({ error: 'Gagal menghapus tipe lapangan' });
   }
 };

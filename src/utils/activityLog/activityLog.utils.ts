@@ -1,5 +1,5 @@
 import prisma from '../../config/database';
-import { getIO } from '../../config/socket';
+import { broadcastActivityLogUpdates } from '../../socket-handlers/activityLog.socket';
 import { User } from '@prisma/client';
 
 /**
@@ -43,7 +43,7 @@ export class ActivityLogService {
       console.log(`Activity log created for user ${userId}: ${action}`);
       
       // Emit updates to specific rooms and all clients
-      await this.broadcastActivityLogUpdates(userId);
+      await broadcastActivityLogUpdates(userId);
       
       return newLog;
     } catch (error) {
@@ -98,39 +98,7 @@ export class ActivityLogService {
    * @param userId - Optional user ID to filter logs for specific rooms
    */
   static async broadcastActivityLogUpdates(userId?: number) {
-    const io = getIO();
-    
-    try {
-      // If userId is provided, broadcast to that user's room
-      if (userId) {
-        const userLogs = await prisma.activityLog.findMany({
-          where: { userId },
-          include: {
-            user: { select: { id: true, name: true, email: true } }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-        
-        io.to(`activity_logs_user_${userId}`).emit('activity_logs_updated', userLogs);
-        io.to(`user_${userId}`).emit('activity_logs_updated', userLogs);
-        console.log(`Broadcast activity logs to user ${userId}`);
-      }
-      
-      // Always broadcast to the general room
-      const allLogs = await prisma.activityLog.findMany({
-        include: {
-          user: { select: { id: true, name: true, email: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-      
-      // Broadcast using consistent event names
-      io.to('activity_logs_all').emit('activity_logs_updated', allLogs);
-      io.emit('activity-logs-updated', allLogs); // Legacy event name for compatibility
-      console.log('Broadcast activity logs to all clients');
-    } catch (error) {
-      console.error('Error broadcasting activity log updates:', error);
-    }
+    await broadcastActivityLogUpdates(userId);
   }
   
   /**

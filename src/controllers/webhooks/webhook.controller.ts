@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { PaymentStatus } from '@prisma/client';
-import { getIO } from '../../config/socket';
+import { sendPaymentNotification } from '../../socket-handlers/payment.socket';
 import { ActivityLogService } from '../../utils/activityLog/activityLog.utils';
 
 // Import the global type definition
@@ -145,34 +145,14 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       });
       console.log("🔍 Verified payment status after update:", verifiedPayment?.status);
       
-      // Get IO instance
-      const io = getIO();
-      
-      // Send real-time notification
+      // Send real-time notification using the socket handler
       try {
-        if (io) {
-          const userRoomId = `user_${payment.booking.user.id}`;
-          
-          // Emit to user's specific room
-          io.to(userRoomId).emit('payment_update', {
-            paymentId: payment.id,
-            bookingId: payment.booking.id,
-            status: paymentStatus,
-            message: `Your payment status is now ${paymentStatus}`,
-          });
-          
-          // Also emit to the payments namespace for any admin dashboards
-          io.of('/payments').emit('status_change', {
-            paymentId: payment.id,
-            bookingId: payment.booking.id,
-            status: paymentStatus,
-            userId: payment.booking.user.id
-          });
-          
-          console.log(`📢 Sent real-time updates to ${userRoomId} and /payments namespace`);
-        } else {
-          console.warn("⚠️ Socket.IO not initialized, skipping real-time notification");
-        }
+        sendPaymentNotification({
+          paymentId: payment.id,
+          bookingId: payment.booking.id,
+          status: paymentStatus,
+          userId: payment.booking.user.id
+        });
       } catch (socketError) {
         console.error("❌ Socket.IO Error:", socketError);
         // Continue processing even if socket notification fails

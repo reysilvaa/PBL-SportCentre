@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { validate } from 'class-validator';
-import { plainToClass } from 'class-transformer';
 import prisma from '../../config/database';
-import { CreateBookingDto } from '../../dto/booking/create-booking.dto';
+import { createBookingSchema } from '../../zod-schemas/booking.schema';
 import { 
   sendErrorResponse,
   validateBookingTime,
@@ -12,7 +10,7 @@ import {
   getCompleteBooking
 } from '../../utils/booking/booking.utils';
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { 
   parseISO, 
   addMinutes
@@ -41,25 +39,16 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
   try {
     console.log("📥 Request body:", req.body);
 
-    // Transform request body to DTO object
-    const bookingDto = plainToClass(CreateBookingDto, req.body);
+    // Validasi data dengan Zod
+    const result = createBookingSchema.safeParse(req.body);
     
-    // Validate DTO
-    const validationErrors = await validate(bookingDto);
-    if (validationErrors.length > 0) {
-      return sendErrorResponse(res, 400, 'Validation failed', 
-        validationErrors.map(err => ({
-          property: err.property,
-          constraints: err.constraints
-        }))
+    if (!result.success) {
+      return sendErrorResponse(res, 400, 'Validasi gagal', 
+        result.error.format()
       );
     }
 
-    const { userId, fieldId, bookingDate, startTime, endTime } = bookingDto;
-
-    // Convert userId and fieldId to integers
-    const userIdInt = parseInt(userId.toString());
-    const fieldIdInt = parseInt(fieldId.toString());
+    const { userId, fieldId, bookingDate, startTime, endTime } = result.data;
 
     // Convert strings to Date objects
     const bookingDateTime = parseISO(bookingDate);
@@ -81,7 +70,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 
     // Validate booking time and availability
     const timeValidation = await validateBookingTime(
-      fieldIdInt,
+      fieldId,
       bookingDateTime,
       startDateTime,
       endDateTime
@@ -93,7 +82,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 
     // Get field details for pricing
     const field = await prisma.field.findUnique({ 
-      where: { id: fieldIdInt }, 
+      where: { id: fieldId }, 
       include: { branch: true } 
     });
 
@@ -105,7 +94,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 
     // Fetch user details for customer information
     const user = await prisma.user.findUnique({
-      where: { id: userIdInt },
+      where: { id: userId },
       select: { name: true, email: true, phone: true }
     });
 
@@ -125,13 +114,13 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 
     // Create booking and payment records
     const { booking: newBooking, payment } = await createBookingWithPayment(
-      userIdInt,
-      fieldIdInt,
+      userId,
+      fieldId,
       bookingDateTime,
       startDateTime,
       endDateTime,
-      'pending',
-      'midtrans',
+      PaymentStatus.pending,
+      PaymentMethod.midtrans,
       totalPrice
     );
 
@@ -154,8 +143,8 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     try {
       emitBookingEvents('new-booking', {
         booking: await getCompleteBooking(newBooking.id),
-        userId: userIdInt,
-        fieldId: fieldIdInt,
+        userId: userId,
+        fieldId: fieldId,
         branchId: field.branchId,
         bookingDate: bookingDateTime,
         startTime: startDateTime,

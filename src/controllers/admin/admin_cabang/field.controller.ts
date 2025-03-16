@@ -1,7 +1,6 @@
 import { Response } from 'express';
-import { validate } from 'class-validator';
 import prisma from '../../../config/database';
-import { CreateFieldDto } from '../../../dto/field/create-field.dto';
+import { createFieldSchema, updateFieldSchema } from '../../../zod-schemas/field.schema';
 import { User } from '../../../middlewares/auth.middleware';
 
 // Get all fields for admin's or owner's branch only
@@ -45,32 +44,28 @@ export const createField = async (req: User, res: Response): Promise<void> => {
     // userBranch sudah ditambahkan oleh adminBranchMiddleware
     const branch = req.userBranch!;
     
-    // Convert request body to DTO
-    const fieldDto = new CreateFieldDto();
-    Object.assign(fieldDto, req.body);
+    // Validasi data dengan Zod
+    const result = createFieldSchema.safeParse({
+      ...req.body,
+      branchId: branch.id // Force branchId to be user's branch
+    });
     
-    // Force branchId to be user's branch
-    fieldDto.branchId = branch.id;
-    
-    // Validate input
-    const errors = await validate(fieldDto);
-    if (errors.length > 0) {
+    if (!result.success) {
       res.status(400).json({
         status: false,
         message: 'Validasi gagal',
-        errors
+        errors: result.error.format()
       });
       return;
     }
     
     // Get data after validation
-    const { typeId, name, priceDay, priceNight } = fieldDto;
-    const status = req.body.status || 'available';
+    const { branchId, typeId, name, priceDay, priceNight, status } = result.data;
     
     // Save to database
     const newField = await prisma.field.create({
       data: {
-        branchId: branch.id,
+        branchId,
         typeId,
         name,
         priceDay,
@@ -132,17 +127,21 @@ export const updateField = async (req: User, res: Response): Promise<void> => {
       return;
     }
     
-    const { typeId, name, priceDay, priceNight, status } = req.body;
+    // Validasi data dengan Zod
+    const result = updateFieldSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({
+        status: false,
+        message: 'Validasi gagal',
+        errors: result.error.format()
+      });
+      return;
+    }
     
     const updatedField = await prisma.field.update({
       where: { id: fieldId },
-      data: {
-        typeId,
-        name,
-        priceDay,
-        priceNight,
-        status
-      }
+      data: result.data
     });
     
     // Log activity
@@ -150,7 +149,7 @@ export const updateField = async (req: User, res: Response): Promise<void> => {
       data: {
         userId: req.user!.id,
         action: 'UPDATE_FIELD',
-        details: `Memperbarui lapangan "${name}" (ID: ${fieldId}) di cabang ${branch.name}`
+        details: `Memperbarui lapangan "${updatedField.name}" (ID: ${fieldId}) di cabang ${branch.name}`
       }
     });
     

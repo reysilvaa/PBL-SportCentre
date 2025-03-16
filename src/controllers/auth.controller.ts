@@ -1,39 +1,31 @@
 import { Request, Response } from 'express';
-import { validate } from 'class-validator';
-import { plainToClass } from 'class-transformer';
 import prisma from '../config/database';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
-import { RegisterDto } from '../dto/auth/register.dto';
-import { LoginDto } from '../dto/auth/login.dto';
+import { registerSchema, loginSchema } from '../zod-schemas/auth.schema';
 import { hashPassword, verifyPassword } from '../utils/password.utils';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const registerDto = plainToClass(RegisterDto, req.body);
-    const validationErrors = await validate(registerDto);
-
-    if (validationErrors.length > 0) {
-      const errors = validationErrors.map(error => ({
-        property: error.property,
-        constraints: error.constraints
-      }));
-
+    // Validasi data dengan Zod
+    const result = registerSchema.safeParse(req.body);
+    
+    if (!result.success) {
       res.status(400).json({ 
-        error: 'Validation Failed',
-        details: errors 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
       });
       return;
     }
 
-    const { email, password, name, role } = registerDto;
+    const { email, password, name, role } = result.data;
 
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
     if (existingUser) {
-      res.status(409).json({ error: 'User already exists' });
+      res.status(409).json({ error: 'Email sudah terdaftar' });
       return;
     }
 
@@ -44,7 +36,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         email,
         password: hashedPassword,
         name,
-        role: role ?? 'user'
+        role
       }
     });
 
@@ -62,36 +54,31 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const loginDto = plainToClass(LoginDto, req.body);
-    const validationErrors = await validate(loginDto);
-
-    if (validationErrors.length > 0) {
-      const errors = validationErrors.map(error => ({
-        property: error.property,
-        constraints: error.constraints
-      }));
-
+    // Validasi data dengan Zod
+    const result = loginSchema.safeParse(req.body);
+    
+    if (!result.success) {
       res.status(400).json({ 
-        error: 'Validation Failed',
-        details: errors 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
       });
       return;
     }
 
-    const { email, password } = loginDto;
+    const { email, password } = result.data;
 
     const user = await prisma.user.findUnique({
       where: { email }
     });
 
     if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Email atau password salah' });
       return;
     }
 
     const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Email atau password salah' });
       return;
     }
 
@@ -121,5 +108,5 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 };
 
 export const logout = (req: Request, res: Response): void => {
-  res.json({ message: 'Logout successful' });
+  res.json({ message: 'Logout berhasil' });
 };

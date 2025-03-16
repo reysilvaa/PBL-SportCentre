@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { validate } from 'class-validator';
 import prisma from '../../../config/database';
-import { CreateBranchDto } from '../../../dto/branch/create-branch.dto';
+import { branchSchema, updateBranchSchema } from '../../../zod-schemas/branch.schema';
 
 export const getBranches = async (req: Request, res: Response) => {
   try {
@@ -24,45 +23,54 @@ export const getBranches = async (req: Request, res: Response) => {
 
 export const createBranch = async (req: Request, res: Response): Promise<void> => {
   try {
-    const createBranchDto = new CreateBranchDto();
-    Object.assign(createBranchDto, req.body);
-
-    const errors = await validate(createBranchDto);
-    if (errors.length > 0) {
-      res.status(400).json({ error: 'Validation failed', details: errors });
-      return; 
+    // Validasi data dengan Zod
+    const result = branchSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
     }
 
-    const { name, location, ownerId } = createBranchDto;
+    const { name, location, ownerId, status } = result.data;
     const newBranch = await prisma.branch.create({
       data: {
         name,
         location,
         ownerId,
-        status: req.body.status || 'active',
+        status,
       },
     });
     res.status(201).json(newBranch);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to create branch' });
+    res.status(400).json({ error: 'Gagal membuat cabang' });
   }
 };
 
 export const updateBranch = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, location, status } = req.body;
+    
+    // Validasi data dengan Zod
+    const result = updateBranchSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
+    }
+    
     const updatedBranch = await prisma.branch.update({
       where: { id: parseInt(id) },
-      data: {
-        name,
-        location,
-        status,
-      },
+      data: result.data,
     });
     res.json(updatedBranch);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to update branch' });
+    res.status(400).json({ error: 'Gagal memperbarui cabang' });
   }
 };
 
@@ -74,6 +82,6 @@ export const deleteBranch = async (req: Request, res: Response) => {
     });
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Failed to delete branch' });
+    res.status(400).json({ error: 'Gagal menghapus cabang' });
   }
 };
