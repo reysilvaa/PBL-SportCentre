@@ -6,14 +6,14 @@ import {
   deleteBranch 
 } from '../../controllers/admin/super_admin/branch.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
+import { authMiddleware, superAdminAuth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache';
-import { authMiddleware } from '../../middlewares/auth.middleware';
 
 const router = express.Router();
 
 router.get('/', cacheMiddleware('branches', 300), getBranches);
-router.post('/', authMiddleware(['super_admin']), parseIds, createBranch);
-router.put('/:id', authMiddleware(['super_admin']), updateBranch);
-router.delete('/:id', authMiddleware(['super_admin']), deleteBranch);
+router.post('/', superAdminAuth, parseIds, createBranch);
+router.put('/:id', superAdminAuth, updateBranch);
+router.delete('/:id', superAdminAuth, deleteBranch);
 
 export default router;

@@ -1,118 +1,91 @@
 import NodeCache from 'node-cache';
-import { config } from '../config/env';
 
-// Membuat instance cache yang teroptimasi
+// Creating cache instance
 const cache = new NodeCache({
-  stdTTL: config.cache.ttl, // waktu cache default 5 menit (dalam detik)
-  checkperiod: 60, // periode check expired keys (dalam detik)
-  useClones: false, // tidak menggunakan clone untuk performa yang lebih baik
-  deleteOnExpire: true, // hapus otomatis saat expired
-  maxKeys: 10000 // Batasi jumlah key untuk mencegah memory leak
+  stdTTL: 300, // default cache time - 5 minutes (in seconds)
+  checkperiod: 60, // period to check for expired keys (in seconds)
 });
 
 /**
- * Mendapatkan data dari cache
- * @param key Key cache
+ * Get data from cache
+ * @param key Cache key
  */
 export const getCachedData = <T>(key: string): T | undefined => {
-  try {
-    return cache.get<T>(key);
-  } catch (error) {
-    console.error('Error getting data from cache:', error);
-    return undefined;
-  }
+  return cache.get<T>(key);
 };
 
 /**
- * Menyimpan data ke cache
- * @param key Key cache
- * @param data Data yang akan disimpan
- * @param ttl Time-to-live dalam detik, default menggunakan stdTTL dari konfigurasi cache
+ * Store data in cache
+ * @param key Cache key
+ * @param data Data to be stored
+ * @param ttl Time-to-live in seconds, defaults to stdTTL from cache configuration
  */
 export const setCachedData = <T>(key: string, data: T, ttl?: number): boolean => {
-  try {
-    return ttl !== undefined ? cache.set(key, data, ttl) : cache.set(key, data);
-  } catch (error) {
-    console.error('Error setting data to cache:', error);
-    return false;
-  }
+  return ttl !== undefined ? cache.set(key, data, ttl) : cache.set(key, data);
 };
 
 /**
- * Menghapus data dari cache
- * @param key Key cache
+ * Delete data from cache
+ * @param key Cache key
  */
 export const deleteCachedData = (key: string): number => {
-  try {
-    return cache.del(key);
-  } catch (error) {
-    console.error('Error deleting data from cache:', error);
-    return 0;
-  }
+  return cache.del(key);
 };
 
 /**
- * Menghapus data dari cache berdasarkan pattern
- * @param pattern Pattern key yang akan dihapus
+ * Delete data from cache by pattern
+ * @param pattern Pattern of keys to delete
  */
 export const deleteCachedDataByPattern = (pattern: string): void => {
-  try {
-    const keys = cache.keys();
-    const keysToDelete = keys.filter(key => key.includes(pattern));
-    
-    if (keysToDelete.length > 0) {
-      cache.del(keysToDelete);
-    }
-  } catch (error) {
-    console.error('Error deleting data by pattern from cache:', error);
+  const keys = cache.keys();
+  const keysToDelete = keys.filter(key => key.includes(pattern));
+  
+  if (keysToDelete.length > 0) {
+    cache.del(keysToDelete);
   }
 };
 
 /**
- * Membersihkan seluruh cache
+ * Clear entire cache
  */
 export const clearCache = (): void => {
-  try {
-    cache.flushAll();
-  } catch (error) {
-    console.error('Error clearing cache:', error);
-  }
+  cache.flushAll();
 };
 
 /**
- * Fungsi middleware untuk implementasi caching pada API
+ * Middleware function for API caching implementation
  * @param keyPrefix Key prefix for the cache
- * @param ttl Time-to-live dalam detik
+ * @param ttl Time-to-live in seconds
  */
 export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
   return (req: any, res: any, next: any) => {
     try {
-      // Buat key berdasarkan method, path, dan query params
+      // Create key based on method, path, and query params
       const key = `${keyPrefix}:${req.method}:${req.originalUrl}`;
       
-      // Cek apakah data sudah ada di cache
+      // Check if data exists in cache
       const cachedData = getCachedData<any>(key);
       
       if (cachedData) {
-        // Jika data ada di cache, kirim response langsung
+        // If data exists in cache, send response directly
         return res.json(cachedData);
       }
       
-      // Override method res.json untuk menyimpan response ke cache
+      // Override res.json method to store response in cache
       const originalJson = res.json;
       res.json = function(data: any) {
-        // Simpan data ke cache
+        // Store data in cache
         if (ttl !== undefined) {
           setCachedData(key, data, ttl);
         } else {
           setCachedData(key, data);
         }
         
-        // Kembalikan fungsi asli
+        // Return original function
         return originalJson.call(this, data);
       };
       
-      // Lanjutkan ke middleware berikutnya
+      // Continue to next middleware
       next();
     } catch (error) {
       console.error('Error in cache middleware:', error);
@@ -121,7 +94,9 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
   };
 };
 
-// Metode untuk statistik cache
+/**
+ * Get cache statistics
+ */
 export const getCacheStats = () => {
   return {
     keys: cache.keys().length,
@@ -132,5 +107,5 @@ export const getCacheStats = () => {
   };
 };
 
-// Export seluruh cache
-export default cache; 
+// Export the cache instance
+export default cache;

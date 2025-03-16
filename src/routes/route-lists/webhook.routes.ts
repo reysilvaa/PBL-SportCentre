@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import { handleMidtransNotification } from '../../controllers/webhooks/webhook.controller';
+import express from 'express';
+import { handleMidtransNotification } from '../../controllers/webhook-handlers/midtrans.controller';
 
-const router = Router();
+const router = express.Router();
 
-// This route doesn't need auth middleware since it's called by Midtrans
-router.post('/', handleMidtransNotification);
+// Midtrans webhook endpoint
+router.post('/midtrans', handleMidtransNotification);
 
-export default router;
+export default router; 

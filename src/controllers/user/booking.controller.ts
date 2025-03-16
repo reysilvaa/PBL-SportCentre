@@ -10,7 +10,7 @@ import {
   getCompleteBooking
 } from '../../utils/booking/booking.utils';
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
-import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { PaymentStatus } from '@prisma/client';
 import { 
   parseISO, 
   addMinutes
@@ -22,6 +22,7 @@ import {
   combineDateWithTimeWIB 
 } from '../../utils/variables/timezone.utils';
 import { deleteCachedDataByPattern } from '../../utils/cache';
+import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 
 // Define interface for Request with user
 interface AuthenticatedRequest extends Request {
@@ -36,7 +37,7 @@ interface AuthenticatedRequest extends Request {
  * Handles operations that regular users can perform
  */
 
-export const createBooking = async (req: Request, res: Response): Promise<void> => {
+export const createBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     console.log("📥 Request body:", req.body);
 
@@ -98,80 +99,97 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
       where: { id: userId },
       select: { name: true, email: true, phone: true }
     });
-
+    
     if (!user) {
       return sendErrorResponse(res, 404, 'User not found');
     }
 
-    // Calculate price based on booking time
-    console.log("💰 Field price (Day/Night):", field.priceDay, field.priceNight);
-    const totalPrice = calculateTotalPrice(
-      startDateTime, 
-      endDateTime, 
-      Number(field.priceDay), 
-      Number(field.priceNight)
-    );
+    // Calculate total price
+    const totalPrice = calculateTotalPrice(startDateTime, endDateTime, Number(field.priceDay), Number(field.priceNight));
+    
+    if (totalPrice <= 0) {
+      return sendErrorResponse(res, 400, 'Invalid price calculation');
+    }
+    
     console.log("💵 Total price:", totalPrice);
 
-    // Create booking and payment records
-    const { booking: newBooking, payment } = await createBookingWithPayment(
+    // Create booking with pending payment by default
+    const { booking, payment } = await createBookingWithPayment(
       userId,
       fieldId,
       bookingDateTime,
       startDateTime,
       endDateTime,
-      PaymentStatus.pending,
-      PaymentMethod.midtrans,
+      'pending',
+      'midtrans',
       totalPrice
     );
+    
+    console.log("✅ Booking created:", booking.id);
+    console.log("💳 Payment created:", payment.id);
 
-    console.log("✅ Booking created:", newBooking);
-    console.log("💳 Payment created:", payment);
-
-    // Process payment with Midtrans
-    const { transaction, expiryDate } = await processMidtransPayment(
-      newBooking, 
-      payment, 
-      field, 
-      user, 
+    // Process payment via Midtrans API
+    const paymentResult = await processMidtransPayment(
+      booking,
+      payment,
+      field,
+      user,
       totalPrice
     );
-
-    console.log("🔗 Midtrans transaction:", transaction);
-    console.log("⏱️ Payment expires at (WIB):", formatDateToWIB(expiryDate));
-
-    // Emit event via Socket.IO to notify about new booking
-    try {
-      emitBookingEvents('new-booking', {
-        booking: await getCompleteBooking(newBooking.id),
-        userId: userId,
-        fieldId: fieldId,
-        branchId: field.branchId,
-        bookingDate: bookingDateTime,
-        startTime: startDateTime,
-        endTime: endDateTime
-      });
-    } catch (error) {
-      console.error("❌ Failed to emit Socket.IO events:", error);
-      // Continue even if socket emission fails
+    
+    if (!paymentResult) {
+      // Jika gagal membuat pembayaran, lacak sebagai percobaan gagal
+      if (req.user?.id) {
+        const clientIP = req.ip || req.socket.remoteAddress || '127.0.0.1';
+        await trackFailedBooking(req.user.id, booking.id, clientIP);
+      }
+      
+      return sendErrorResponse(res, 500, 'Failed to create payment gateway');
+    }
+    
+    // Reset counter jika booking berhasil dibuat (status pending tetap dianggap berhasil)
+    if (req.user?.id) {
+      resetFailedBookingCounter(req.user.id);
     }
 
-    // Setelah berhasil create booking
-    // Hapus cache yang terkait booking
-    deleteCachedDataByPattern('booking');
-    deleteCachedDataByPattern('fields_availability');
-    deleteCachedDataByPattern('user_bookings');
-    deleteCachedDataByPattern('branch_bookings');
-    deleteCachedDataByPattern('admin_all_bookings');
+    // Update payment record with Midtrans transaction details
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        expiresDate: paymentResult.expiryDate,
+        status: 'pending'
+      }
+    });
 
-    // Return data with redirect URL
-    res.status(201).json({ 
-      booking: newBooking, 
-      payment, 
-      redirect_url: transaction.redirect_url 
+    console.log("💳 Payment updated with transaction details");
+
+    // Emit real-time events via Socket.IO
+    emitBookingEvents('booking:created', { booking, payment });
+
+    // Clear any cached data that might be affected by this new booking
+    await deleteCachedDataByPattern(`field:${fieldId}:availability:*`);
+    
+    // Return response with booking and payment details
+    res.status(201).json({
+      booking: {
+        ...booking,
+        field,
+        payment: {
+          ...payment,
+          paymentUrl: paymentResult.transaction.redirect_url,
+          status: 'pending'
+        }
+      }
     });
   } catch (error) {
-    console.error("❌ Error in createBooking:", error);
+    console.error("❌ Error creating booking:", error);
+    
+    // Jika error, lacak sebagai percobaan gagal
+    if (req.user?.id) {
+      const clientIP = req.ip || req.socket.remoteAddress || '127.0.0.1';
+      await trackFailedBooking(req.user.id, 0, clientIP);
+    }
+    
     sendErrorResponse(res, 500, 'Failed to create booking');
   }
 };
@@ -355,5 +373,60 @@ export const getBookingById = async (req: AuthenticatedRequest, res: Response): 
   } catch (error) {
     console.error("❌ Error in getBookingById:", error);
     sendErrorResponse(res, 500, 'Failed to retrieve booking details');
+  }
+};
+
+// Menangkap pembatalan booking yang sering
+export const cancelBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const bookingId = parseInt(id);
+    
+    if (isNaN(bookingId)) {
+      return sendErrorResponse(res, 400, 'Invalid booking ID');
+    }
+    
+    // Get the complete booking with all relations
+    const booking = await getCompleteBooking(bookingId);
+    
+    if (!booking) {
+      return sendErrorResponse(res, 404, 'Booking not found');
+    }
+    
+    // Periksa apakah pengguna memiliki izin untuk membatalkan booking ini
+    if (req.user?.role !== 'admin' && req.user?.id !== booking.userId) {
+      return sendErrorResponse(res, 403, 'Anda tidak memiliki izin untuk membatalkan booking ini');
+    }
+    
+    // Periksa status pembayaran
+    if (booking.payment?.status === 'paid') {
+      return sendErrorResponse(res, 400, 'Booking dengan status pembayaran PAID tidak dapat dibatalkan');
+    }
+    
+    // Jika status pending, perbarui menjadi canceled/failed
+    if (booking.payment) {
+      await prisma.payment.update({
+        where: { id: booking.payment.id },
+        data: { status: 'failed' }
+      });
+    }
+    
+    // Tambahkan ke statistik pembatalan user
+    if (req.user?.id) {
+      const clientIP = req.ip || req.socket.remoteAddress || '127.0.0.1';
+      // Melacak pembatalan sebagai potensi penyalahgunaan
+      await trackFailedBooking(req.user.id, bookingId, clientIP);
+    }
+    
+    // Emit real-time events via Socket.IO
+    emitBookingEvents('booking:canceled', { booking });
+    
+    // Clear any cached data that might be affected
+    await deleteCachedDataByPattern(`field:${booking.fieldId}:availability:*`);
+    
+    res.json({ message: 'Booking telah dibatalkan' });
+  } catch (error) {
+    console.error("❌ Error canceling booking:", error);
+    sendErrorResponse(res, 500, 'Gagal membatalkan booking');
   }
 };
