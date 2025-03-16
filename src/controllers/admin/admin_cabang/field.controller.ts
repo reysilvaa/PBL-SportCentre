@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../../../config/database';
 import { createFieldSchema, updateFieldSchema } from '../../../zod-schemas/field.schema';
 import { User } from '../../../middlewares/auth.middleware';
+import { deleteCachedDataByPattern } from '../../../utils/cache';
 
 // Get all fields for admin's or owner's branch only
 export const getFields = async (req: User, res: Response): Promise<void> => {
@@ -54,7 +55,7 @@ export const createField = async (req: User, res: Response): Promise<void> => {
       res.status(400).json({
         status: false,
         message: 'Validasi gagal',
-        errors: result.error.format()
+        error: result.error.format()
       });
       return;
     }
@@ -74,6 +75,11 @@ export const createField = async (req: User, res: Response): Promise<void> => {
       }
     });
     
+    // Hapus cache yang relevan
+    deleteCachedDataByPattern('fields');
+    deleteCachedDataByPattern('admin_fields');
+    deleteCachedDataByPattern('fields_availability');
+    
     // Log activity
     await prisma.activityLog.create({
       data: {
@@ -89,9 +95,9 @@ export const createField = async (req: User, res: Response): Promise<void> => {
       data: newField
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       status: false,
-      message: 'Gagal membuat lapangan',
+      message: 'Internal Server Error',
       error: error
     });
   }
@@ -143,6 +149,12 @@ export const updateField = async (req: User, res: Response): Promise<void> => {
       where: { id: fieldId },
       data: result.data
     });
+    
+    // Hapus cache yang relevan
+    deleteCachedDataByPattern('fields');
+    deleteCachedDataByPattern('admin_fields');
+    deleteCachedDataByPattern('admin_field_detail');
+    deleteCachedDataByPattern('fields_availability');
     
     // Log activity
     await prisma.activityLog.create({
@@ -214,6 +226,12 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     await prisma.field.delete({
       where: { id: fieldId }
     });
+    
+    // Hapus cache yang relevan
+    deleteCachedDataByPattern('fields');
+    deleteCachedDataByPattern('admin_fields');
+    deleteCachedDataByPattern('admin_field_detail');
+    deleteCachedDataByPattern('fields_availability');
     
     // Log activity
     await prisma.activityLog.create({

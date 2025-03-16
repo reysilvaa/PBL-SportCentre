@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
+import { deleteCachedDataByPattern } from '../../utils/cache';
 
 export const getPromotions = async (req: Request, res: Response) => {
   try {
@@ -47,9 +48,13 @@ export const createPromotion = async (req: Request, res: Response) => {
         status: status || 'active'
       }
     });
+
+    // Hapus cache promotions
+    deleteCachedDataByPattern('promotions');
+    
     res.status(201).json(newPromotion);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to create promotion' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -78,9 +83,13 @@ export const updatePromotion = async (req: Request, res: Response) => {
         status
       }
     });
+
+    // Hapus cache promotions
+    deleteCachedDataByPattern('promotions');
+    
     res.json(updatedPromotion);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to update promotion' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -90,8 +99,12 @@ export const deletePromotion = async (req: Request, res: Response) => {
     await prisma.promotion.delete({
       where: { id: parseInt(id) }
     });
+
+    // Hapus cache promotions
+    deleteCachedDataByPattern('promotions');
+    
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Failed to delete promotion' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -21,6 +21,7 @@ import {
   formatDateToWIB, 
   combineDateWithTimeWIB 
 } from '../../utils/variables/timezone.utils';
+import { deleteCachedDataByPattern } from '../../utils/cache';
 
 // Define interface for Request with user
 interface AuthenticatedRequest extends Request {
@@ -154,6 +155,14 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
       console.error("❌ Failed to emit Socket.IO events:", error);
       // Continue even if socket emission fails
     }
+
+    // Setelah berhasil create booking
+    // Hapus cache yang terkait booking
+    deleteCachedDataByPattern('booking');
+    deleteCachedDataByPattern('fields_availability');
+    deleteCachedDataByPattern('user_bookings');
+    deleteCachedDataByPattern('branch_bookings');
+    deleteCachedDataByPattern('admin_all_bookings');
 
     // Return data with redirect URL
     res.status(201).json({ 

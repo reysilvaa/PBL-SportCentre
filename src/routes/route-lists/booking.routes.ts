@@ -4,21 +4,24 @@ import * as branchAdminBookingController from '../../controllers/admin/admin_cab
 import * as superAdminBookingController from '../../controllers/admin/super_admin/booking.controller';
 import * as ownerBookingController from '../../controllers/owner/booking.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
+import { cacheMiddleware } from '../../utils/cache';
 
 const router = Router();
 
 // User routes
 router.post('/', userBookingController.createBooking);
-router.get('/users/:userId/bookings', userBookingController.getUserBookings);
-router.get('/bookings/:id/user', userBookingController.getBookingById);
+router.get('/users/:userId/bookings', cacheMiddleware('user_bookings', 120), userBookingController.getUserBookings);
+router.get('/bookings/:id/user', cacheMiddleware('booking_detail', 120), userBookingController.getBookingById);
 
 // Branch admin routes
 router.get('/branches/:branchId/bookings', 
    authMiddleware(['admin_cabang']), 
-  branchAdminBookingController.getBranchBookings
+   cacheMiddleware('branch_bookings', 60),
+   branchAdminBookingController.getBranchBookings
 );
 router.get('/branches/:branchId/bookings/:id', 
   authMiddleware(['admin_cabang']), 
+  cacheMiddleware('branch_booking_detail', 60),
   branchAdminBookingController.getBranchBookingById
 );
 router.put('/branches/:branchId/bookings/:id/status', 
@@ -33,10 +36,12 @@ router.post('/branches/:branchId/bookings/manual',
 // Super admin routes
 router.get('/admin/bookings', 
     authMiddleware(['super_admin']), 
+    cacheMiddleware('admin_all_bookings', 120),
     superAdminBookingController.getAllBookings
 );
 router.get('/admin/bookings/:id', 
   authMiddleware(['super_admin']), 
+  cacheMiddleware('admin_booking_detail', 60),
   superAdminBookingController.getBookingById
 );
 router.put('/admin/bookings/:id/payment', 
@@ -49,6 +54,7 @@ router.delete('/admin/bookings/:id',
 );
 router.get('/admin/bookings/stats', 
   authMiddleware(['super_admin']), 
+  cacheMiddleware('admin_booking_stats', 300),
   superAdminBookingController.getBookingStats
 );
 
@@ -70,5 +76,16 @@ router.get('/owner/reports/forecast',
   authMiddleware(['super_admin']), 
   ownerBookingController.getBookingForecast
 );
+
+// router.get('/owner/branches/:branchId/bookings', 
+//   authMiddleware(['owner_cabang']), 
+//   cacheMiddleware('owner_branch_bookings', 120),
+//   ownerBookingController.getBranchBookings
+// );
+// router.get('/owner/branches/:branchId/bookings/:id', 
+//   authMiddleware(['owner_cabang']), 
+//   cacheMiddleware('owner_branch_booking_detail', 60),
+//   ownerBookingController.getBranchBookingById
+// );
 
 export default router;

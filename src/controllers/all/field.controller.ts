@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { createFieldSchema, updateFieldSchema } from '../../zod-schemas/field.schema';
+import { deleteCachedDataByPattern } from '../../utils/cache';
 
 export const getFields = async (req: Request, res: Response) => {
   try {
@@ -49,9 +50,20 @@ export const createField = async (req: Request, res: Response): Promise<void> =>
       }
     });
 
+    // Hapus cache yang relevan
+    try {
+      deleteCachedDataByPattern('fields');
+      deleteCachedDataByPattern('admin_fields');
+      deleteCachedDataByPattern('fields_availability');
+    } catch (cacheError) {
+      console.error('Error clearing cache:', cacheError);
+      // Melanjutkan eksekusi meskipun ada error pada cache
+    }
+
     res.status(201).json(newField);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal membuat lapangan' });
+    console.error('Error creating field:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -70,24 +82,50 @@ export const updateField = async (req: Request, res: Response) => {
       return;
     }
     
+    // Update data
     const updatedField = await prisma.field.update({
       where: { id: parseInt(id) },
       data: result.data
     });
+
+    // Hapus cache yang relevan
+    try {
+      deleteCachedDataByPattern('fields');
+      deleteCachedDataByPattern('admin_fields');
+      deleteCachedDataByPattern('admin_field_detail');
+      deleteCachedDataByPattern('fields_availability');
+    } catch (cacheError) {
+      console.error('Error clearing cache:', cacheError);
+      // Melanjutkan eksekusi meskipun ada error pada cache
+    }
+
     res.json(updatedField);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal memperbarui lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
 export const deleteField = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    
     await prisma.field.delete({
       where: { id: parseInt(id) }
     });
+
+    // Hapus cache yang relevan
+    try {
+      deleteCachedDataByPattern('fields');
+      deleteCachedDataByPattern('admin_fields');
+      deleteCachedDataByPattern('admin_field_detail');
+      deleteCachedDataByPattern('fields_availability');
+    } catch (cacheError) {
+      console.error('Error clearing cache:', cacheError);
+      // Melanjutkan eksekusi meskipun ada error pada cache
+    }
+
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Gagal menghapus lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };

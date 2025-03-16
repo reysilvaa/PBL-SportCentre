@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { createFieldReviewSchema, updateFieldReviewSchema } from '../../zod-schemas/fieldReview.schema';
+import { deleteCachedDataByPattern } from '../../utils/cache';
 
 export const getFieldReviews = async (req: Request, res: Response) => {
   try {
@@ -63,9 +64,12 @@ export const createFieldReview = async (req: Request, res: Response): Promise<vo
       }
     });
 
+    // Hapus cache field reviews
+    deleteCachedDataByPattern('field_reviews');
+    
     res.status(201).json(newReview);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal membuat review lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -88,9 +92,13 @@ export const updateFieldReview = async (req: Request, res: Response) => {
       where: { id: parseInt(id) },
       data: result.data
     });
+
+    // Hapus cache field reviews
+    deleteCachedDataByPattern('field_reviews');
+    
     res.json(updatedReview);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal memperbarui review lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -100,8 +108,12 @@ export const deleteFieldReview = async (req: Request, res: Response) => {
     await prisma.fieldReview.delete({
       where: { id: parseInt(id) }
     });
+
+    // Hapus cache field reviews
+    deleteCachedDataByPattern('field_reviews');
+    
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Gagal menghapus review lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };

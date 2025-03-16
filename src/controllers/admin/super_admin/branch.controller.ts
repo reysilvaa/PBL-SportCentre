@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../../config/database';
 import { branchSchema, updateBranchSchema } from '../../../zod-schemas/branch.schema';
+import { deleteCachedDataByPattern } from '../../../utils/cache';
 
 export const getBranches = async (req: Request, res: Response) => {
   try {
@@ -43,9 +44,13 @@ export const createBranch = async (req: Request, res: Response): Promise<void> =
         status,
       },
     });
+
+    // Hapus cache yang relevan
+    deleteCachedDataByPattern('branches');
+    
     res.status(201).json(newBranch);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal membuat cabang' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -68,20 +73,40 @@ export const updateBranch = async (req: Request, res: Response) => {
       where: { id: parseInt(id) },
       data: result.data,
     });
+
+    // Hapus cache yang relevan
+    deleteCachedDataByPattern('branches');
+    
     res.json(updatedBranch);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal memperbarui cabang' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-export const deleteBranch = async (req: Request, res: Response) => {
+export const deleteBranch = async (req: Request, res: Response):Promise<void> => {
   try {
     const { id } = req.params;
+    
+    // Cek apakah cabang memiliki lapangan
+    const fields = await prisma.field.findFirst({
+      where: { branchId: parseInt(id) },
+    });
+    
+    if (fields) {
+      res.status(400).json({ 
+        error: 'Tidak dapat menghapus cabang yang memiliki lapangan' 
+      });
+    }
+    
     await prisma.branch.delete({
       where: { id: parseInt(id) },
     });
+
+    // Hapus cache yang relevan
+    deleteCachedDataByPattern('branches');
+    
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Gagal menghapus cabang' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };

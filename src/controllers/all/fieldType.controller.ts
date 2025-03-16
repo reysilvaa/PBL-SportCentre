@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { createFieldTypeSchema, updateFieldTypeSchema } from '../../zod-schemas/fieldType.schema';
+import { deleteCachedDataByPattern } from '../../utils/cache';
 
 export const getFieldTypes = async (req: Request, res: Response) => {
   try {
@@ -45,9 +46,12 @@ export const createFieldType = async (req: Request, res: Response): Promise<void
       }
     });
 
+    // Hapus cache terkait tipe lapangan
+    deleteCachedDataByPattern('field_types');
+    
     res.status(201).json(newFieldType);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal membuat tipe lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -68,22 +72,44 @@ export const updateFieldType = async (req: Request, res: Response) => {
     
     const updatedFieldType = await prisma.fieldType.update({
       where: { id: parseInt(id) },
-      data: result.data
+      data: {
+        name: result.data.name
+      }
     });
+
+    // Hapus cache terkait tipe lapangan
+    deleteCachedDataByPattern('field_types');
+    
     res.json(updatedFieldType);
   } catch (error) {
-    res.status(400).json({ error: 'Gagal memperbarui tipe lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-export const deleteFieldType = async (req: Request, res: Response) => {
+export const deleteFieldType = async (req: Request, res: Response):Promise<void> => {
   try {
     const { id } = req.params;
+    
+    // Cek apakah ada lapangan yang menggunakan tipe ini
+    const existingField = await prisma.field.findFirst({
+      where: { typeId: parseInt(id) }
+    });
+    
+    if (existingField) {
+      res.status(400).json({ 
+        error: 'Tidak dapat menghapus tipe lapangan yang sedang digunakan' 
+      });
+    }
+    
     await prisma.fieldType.delete({
       where: { id: parseInt(id) }
     });
+
+    // Hapus cache terkait tipe lapangan
+    deleteCachedDataByPattern('field_types');
+    
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Gagal menghapus tipe lapangan' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { createActivityLogSchema } from '../../../zod-schemas/activityLog.schema';
 import { ActivityLogService } from '../../../utils/activityLog/activityLog.utils';
+import { deleteCachedDataByPattern } from '../../../utils/cache';
 
 export const getActivityLogs = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -41,25 +42,28 @@ export const createActivityLog = async (req: Request, res: Response): Promise<vo
       relatedId === null ? undefined : relatedId
     );
     
+    // Hapus cache activity logs
+    deleteCachedDataByPattern('activity_logs');
+    
     res.status(201).json(newLog); 
   } catch (error) {
     console.error(error);
-    res.status(400).json({ error: 'Gagal membuat log aktivitas' });
+    res.status(500).json({ error: 'Gagal membuat log aktivitas' });
   }
 };
 
-export const deleteActivityLog = async (req: Request, res: Response) => {
+export const deleteActivityLog = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const idInt = parseInt(id);
     
-    const deletedLog = await ActivityLogService.deleteLog(idInt);
+    await ActivityLogService.deleteLog(parseInt(id));
     
-    res.status(200).json({
-      message: 'Berhasil dihapus',
-      data: deletedLog
-    });
+    // Hapus cache activity logs
+    deleteCachedDataByPattern('activity_logs');
+    
+    res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Gagal menghapus log aktivitas' });
+    console.error(error);
+    res.status(500).json({ error: 'Gagal menghapus log aktivitas' });
   }
 };

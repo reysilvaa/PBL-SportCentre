@@ -10,5 +10,8 @@ export const config = {
   db: {
     url: process.env.DATABASE_URL!,
   },
-  environment: process.env.NODE_ENV || 'development', // Add this line
+  cache: {
+    ttl: parseInt(process.env.CACHE_TTL || '300'), // default TTL 5 menit
+  },
+  environment: process.env.NODE_ENV || 'development',
 };

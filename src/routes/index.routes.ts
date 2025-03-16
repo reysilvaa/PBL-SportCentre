@@ -11,6 +11,8 @@ import promotionRoutes from './route-lists/promotion.routes';
 import promotionUsageRoutes from './route-lists/promotionUsage.routes';
 import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
+import { getCacheStatistics, getKeysWithPattern } from '../utils/cacheStats';
+import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = express.Router();
 
@@ -26,5 +28,34 @@ router.use('/field-reviews', fieldReviewRoutes);
 router.use('/promotions', promotionRoutes);
 router.use('/promotion-usages', promotionUsageRoutes);
 router.use('/midtrans-notification', webhookRoutes);
+
+// Endpoint untuk health check dan monitoring
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Service is running' });
+});
+
+// Endpoint untuk statistik cache (admin only)
+router.get('/cache-stats', authMiddleware(['super_admin']), (req, res) => {
+  try {
+    const stats = getCacheStatistics();
+    const pattern = req.query.pattern as string;
+    
+    let keys: string[] = [];
+    if (pattern) {
+      keys = getKeysWithPattern(pattern);
+    }
+    
+    res.json({
+      stats,
+      keys: pattern ? keys : undefined,
+      keysCount: pattern ? keys.length : undefined
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Failed to get cache statistics',
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
 
 export default router;

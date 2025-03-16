@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../../../config/database';
 import { hashPassword } from '../../../utils/password.utils';
 import { User } from '../../../middlewares/auth.middleware';
+import { deleteCachedDataByPattern } from '../../../utils/cache';
 
 // Get all users without branch restrictions
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
@@ -54,12 +55,12 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     if (existingUser) {
       res.status(400).json({ 
         status: false,
-        message: 'Email sudah digunakan oleh pengguna lain'
+        message: 'Email sudah digunakan'
       });
       return;
     }
 
-    // Hash password dengan salt
+    // Hash password sebelum menyimpan
     const hashedPassword = await hashPassword(password);
 
     // Buat user baru
@@ -68,17 +69,23 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         name,
         email,
         password: hashedPassword,
-        role: role || 'user' // Default ke role 'user' jika tidak disebutkan
+        role,
+        phone: req.body.phone
       }
     });
 
-    // Hapus password dari response
-    const { password: _, ...userWithoutPassword } = newUser;
+    // Hapus cache yang terkait user
+    deleteCachedDataByPattern('users_');
 
     res.status(201).json({
       status: true,
       message: 'User berhasil dibuat',
-      data: userWithoutPassword
+      data: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role
+      }
     });
   } catch (error) {
     console.error('Error creating user:', error);
@@ -145,6 +152,9 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       where: { id: Number(id) },
       data: updateData
     });
+
+    // Hapus cache yang terkait user
+    deleteCachedDataByPattern('users_');
 
     // Hapus password dari response
     const { password: _, ...userWithoutPassword } = updatedUser;
@@ -251,6 +261,10 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
         where: { id: userId }
       });
     });
+
+    // Setelah berhasil delete
+    // Hapus cache yang terkait user
+    deleteCachedDataByPattern('users_');
 
     res.status(200).json({
       status: true,

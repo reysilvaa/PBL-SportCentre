@@ -10,6 +10,13 @@ import {
   emitBookingEvents
 } from '../../../utils/booking/booking.utils';
 import { combineDateWithTime } from '../../../utils/booking/calculateBooking.utils';
+import { User } from '../../../middlewares/auth.middleware';
+import { deleteCachedDataByPattern } from '../../../utils/cache';
+// import { 
+//   checkBookingConflict, 
+//   isValidTimeRange, 
+//   generateBookingReference 
+// } from '../../../utils/booking/booking.utils';
 
 /**
  * Branch Admin Booking Controller
@@ -71,7 +78,7 @@ export const getBranchBookingById = async (req: Request, res: Response): Promise
   }
 };
 
-export const updateBranchBookingStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateBranchBookingStatus = async (req: User, res: Response): Promise<void> => {
   try {
     const { id, branchId } = req.params;
     const { paymentStatus } = req.body;
@@ -114,6 +121,13 @@ export const updateBranchBookingStatus = async (req: Request, res: Response): Pr
       paymentStatus
     });
     
+    // Hapus cache yang terkait booking
+    deleteCachedDataByPattern('booking');
+    deleteCachedDataByPattern('fields_availability');
+    deleteCachedDataByPattern('user_bookings');
+    deleteCachedDataByPattern('branch_bookings');
+    deleteCachedDataByPattern('admin_all_bookings');
+    
     res.json(updatedBooking);
   } catch (error) {
     console.error(error);
@@ -121,7 +135,7 @@ export const updateBranchBookingStatus = async (req: Request, res: Response): Pr
   }
 };
 
-export const createManualBooking = async (req: Request, res: Response): Promise<void> => {
+export const createManualBooking = async (req: User, res: Response): Promise<void> => {
   try {
     const { branchId } = req.params;
     const { fieldId, userId, bookingDate, startTime, endTime, paymentStatus } = req.body;
@@ -176,6 +190,13 @@ export const createManualBooking = async (req: Request, res: Response): Promise<
       startTime: startDateTime,
       endTime: endDateTime
     });
+    
+    // Hapus cache yang terkait booking
+    deleteCachedDataByPattern('booking');
+    deleteCachedDataByPattern('fields_availability');
+    deleteCachedDataByPattern('user_bookings');
+    deleteCachedDataByPattern('branch_bookings');
+    deleteCachedDataByPattern('admin_all_bookings');
     
     res.status(201).json({ booking, payment });
   } catch (error) {

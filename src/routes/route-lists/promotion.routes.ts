@@ -5,12 +5,14 @@ import {
   updatePromotion, 
   deletePromotion 
 } from '../../controllers/all/promotion.controller';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { cacheMiddleware } from '../../utils/cache';
 
 const router = express.Router();
 
-router.get('/', getPromotions);
-router.post('/', createPromotion);
-router.put('/:id', updatePromotion);
-router.delete('/:id', deletePromotion);
+router.get('/', cacheMiddleware('promotions', 300), getPromotions);
+router.post('/', authMiddleware(['super_admin', 'admin_cabang']), createPromotion);
+router.put('/:id', authMiddleware(['super_admin', 'admin_cabang']), updatePromotion);
+router.delete('/:id', authMiddleware(['super_admin', 'admin_cabang']), deletePromotion);
 
 export default router;
