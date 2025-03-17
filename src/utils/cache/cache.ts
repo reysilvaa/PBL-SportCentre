@@ -1,5 +1,5 @@
 import NodeCache from 'node-cache';
-import { config } from '../config/env';
+import { config } from '../../config/env';
 
 // Membuat instance cache yang teroptimasi
 const cache = new NodeCache({
