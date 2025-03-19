@@ -1,9 +1,5 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
-import { updateFieldSchema } from '../../zod-schemas/field.schema';
-import { deleteCachedDataByPattern } from '../../utils/cache';
-import { deleteImage, extractPublicId } from '../../config/cloudinary';
-import { MulterRequest } from '@/middlewares/multer.middleware';
 
 export const getFields = async (req: Request, res: Response) => {
   try {

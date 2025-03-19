@@ -4,7 +4,7 @@ import * as branchAdminBookingController from '../../controllers/admin/admin_cab
 import * as superAdminBookingController from '../../controllers/admin/super_admin/booking.controller';
 import * as ownerBookingController from '../../controllers/owner/booking.controller';
 import { superAdminAuth, branchAdminAuth, ownerAuth, userAuth } from '../../middlewares/auth.middleware';
-import { cacheMiddleware } from '../../utils/cache';
+import { cacheMiddleware } from '../../utils/cache.utils';
 import { bookingRateLimiter } from '../../middlewares/security.middleware';
 
 const router = Router();

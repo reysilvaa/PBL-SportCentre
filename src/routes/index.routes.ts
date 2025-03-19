@@ -11,7 +11,7 @@ import promotionRoutes from './route-lists/promotion.routes';
 import promotionUsageRoutes from './route-lists/promotionUsage.routes';
 import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
-import cache, { getCacheStats } from '../utils/cache';
+import cache, { getCacheStats } from '../utils/cache.utils';
 import { authMiddleware } from '../middlewares/auth.middleware';
     
 const router = express.Router();

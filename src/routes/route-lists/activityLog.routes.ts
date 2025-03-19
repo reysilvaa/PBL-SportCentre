@@ -6,7 +6,7 @@ import {
 } from '../../controllers/admin/super_admin/activityLog.controller';
 import { parseIds } from '../../middlewares/parseId.middleware'; // parse into integer karena dto kirimkan string untuk userId (dto minta number)
 import { superAdminAuth } from '../../middlewares/auth.middleware';
-import { cacheMiddleware } from '../../utils/cache';
+import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 

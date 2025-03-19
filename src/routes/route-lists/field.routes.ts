@@ -2,7 +2,7 @@ import express from 'express';
 import { getFields } from '../../controllers/all/field.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { authMiddleware, superAdminAuth, branchAdminAuth, ownerAuth } from '../../middlewares/auth.middleware';
-import { cacheMiddleware } from '../../utils/cache';
+import { cacheMiddleware } from '../../utils/cache.utils';
 import { checkAllFieldsAvailability } from '../../controllers/all/availability.controller';
 import { 
   getFields as getAdminFields, 

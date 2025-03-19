@@ -2,7 +2,7 @@
 import express from 'express';
 import * as userController from '../../controllers/admin/super_admin/user.controller';
 import { superAdminAuth, branchAdminAuth, ownerAuth } from '../../middlewares/auth.middleware';
-import { cacheMiddleware } from '../../utils/cache';
+import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 

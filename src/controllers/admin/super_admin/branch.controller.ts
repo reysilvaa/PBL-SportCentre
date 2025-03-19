@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../../config/database';
 import { branchSchema, updateBranchSchema } from '../../../zod-schemas/branch.schema';
-import { deleteCachedDataByPattern } from '../../../utils/cache';
+import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
 export const getBranches = async (req: Request, res: Response) => {
   try {

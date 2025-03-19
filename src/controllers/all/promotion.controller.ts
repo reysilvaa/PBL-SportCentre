@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
-import { deleteCachedDataByPattern } from '../../utils/cache';
+import { deleteCachedDataByPattern } from '../../utils/cache.utils';
 
 export const getPromotions = async (req: Request, res: Response) => {
   try {

@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../../../config/database';
 import { hashPassword } from '../../../utils/password.utils';
 import { User } from '../../../middlewares/auth.middleware';
-import { deleteCachedDataByPattern } from '../../../utils/cache';
+import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
 // Get all users without branch restrictions
 export const getUsers = async (req: Request, res: Response): Promise<void> => {

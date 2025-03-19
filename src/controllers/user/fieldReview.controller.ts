@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { createFieldReviewSchema, updateFieldReviewSchema } from '../../zod-schemas/fieldReview.schema';
-import { deleteCachedDataByPattern } from '../../utils/cache';
+import { deleteCachedDataByPattern } from '../../utils/cache.utils';
 
 export const getFieldReviews = async (req: Request, res: Response) => {
   try {

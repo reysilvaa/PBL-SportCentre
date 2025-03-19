@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import { createFieldTypeSchema, updateFieldTypeSchema } from '../../zod-schemas/fieldType.schema';
-import { deleteCachedDataByPattern } from '../../utils/cache';
+import { deleteCachedDataByPattern } from '../../utils/cache.utils';
 
 export const getFieldTypes = async (req: Request, res: Response) => {
   try {

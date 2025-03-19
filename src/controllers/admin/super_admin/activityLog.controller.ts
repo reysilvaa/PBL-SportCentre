@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { createActivityLogSchema } from '../../../zod-schemas/activityLog.schema';
 import { ActivityLogService } from '../../../utils/activityLog/activityLog.utils';
-import { deleteCachedDataByPattern } from '../../../utils/cache';
+import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
 export const getActivityLogs = async (req: Request, res: Response): Promise<void> => {
   try {

@@ -7,7 +7,7 @@ import {
 } from '../../controllers/admin/super_admin/branch.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { authMiddleware, superAdminAuth } from '../../middlewares/auth.middleware';
-import { cacheMiddleware } from '../../utils/cache';
+import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 

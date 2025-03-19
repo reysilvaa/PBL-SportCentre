@@ -3,8 +3,8 @@ import prisma from '../config/database';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
 import { registerSchema, loginSchema } from '../zod-schemas/auth.schema';
-import { blacklistToken } from '../utils/token-blacklist';
-import { setAuthCookie, clearAuthCookie, setRefreshTokenCookie, clearRefreshTokenCookie } from '../utils/cookies';
+import { blacklistToken } from '../utils/token-blacklist.utils';
+import { setAuthCookie, clearAuthCookie, setRefreshTokenCookie, clearRefreshTokenCookie } from '../utils/cookies.utils';
 import { hashPassword, verifyPassword } from '../utils/password.utils';
 
 // Fungsi untuk generate token

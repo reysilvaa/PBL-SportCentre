@@ -6,7 +6,7 @@ import {
   deletePromotion 
 } from '../../controllers/all/promotion.controller';
 import { superAdminAuth, branchAdminAuth } from '../../middlewares/auth.middleware';
-import { cacheMiddleware } from '../../utils/cache';
+import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 

@@ -2,8 +2,8 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
-import { getAuthToken } from '../utils/cookies';
-import { isTokenBlacklisted } from '../utils/token-blacklist';
+import { getAuthToken } from '../utils/cookies.utils';
+import { isTokenBlacklisted } from '../utils/token-blacklist.utils';
 
 export interface User extends Request {
   user?: {

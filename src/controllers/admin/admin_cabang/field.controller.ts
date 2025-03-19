@@ -2,9 +2,12 @@ import { Response } from 'express';
 import prisma from '../../../config/database';
 import { createFieldSchema, updateFieldSchema } from '../../../zod-schemas/field.schema';
 import { User } from '../../../middlewares/auth.middleware';
-import { deleteCachedDataByPattern } from '../../../utils/cache';
-import { deleteImage, extractPublicId } from '../../../config/cloudinary';
-import { MulterRequest } from '@/middlewares/multer.middleware';
+import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
+import { MulterRequest } from '../../../middlewares/multer.middleware';
+import { cleanupUploadedFile, extractPublicId } from '../../../utils/cloudinary.utils';
+
+// Constants for folder paths
+const FIELDS_FOLDER = 'PBL/fields-images';
 
 // Get all fields for admin's or owner's branch
 export const getFields = async (req: User, res: Response): Promise<void> => {
@@ -43,11 +46,11 @@ export const getFields = async (req: User, res: Response): Promise<void> => {
       data: fields
     });
   } catch (error) {
+    console.error('Error getting fields:', error);
     if (!res.headersSent) {
       res.status(500).json({
         status: false,
-        message: 'Internal Server Error',
-        error
+        message: 'Internal Server Error'
       });
     }
   }
@@ -64,10 +67,7 @@ export const createField = async (req: MulterRequest & User, res: Response): Pro
     if (!branchId) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
-        const publicId = extractPublicId(req.file.path);
-        if (publicId) {
-          await deleteImage(publicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(req.file.path);
       }
       
       res.status(400).json({
@@ -86,16 +86,14 @@ export const createField = async (req: MulterRequest & User, res: Response): Pro
     // Validasi data dengan Zod
     const result = createFieldSchema.safeParse({
       ...req.body,
-      branchId // Force branchId to be user's branch from middleware
+      branchId, // Force branchId to be user's branch from middleware
+      typeId: req.body.typeId ? parseInt(req.body.typeId) : undefined
     });
     
     if (!result.success) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
-        const publicId = extractPublicId(req.file.path);
-        if (publicId) {
-          await deleteImage(publicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(req.file.path);
       }
       
       res.status(400).json({
@@ -118,9 +116,9 @@ export const createField = async (req: MulterRequest & User, res: Response): Pro
     });
     
     // Hapus cache yang relevan
-    deleteCachedDataByPattern('fields');
-    deleteCachedDataByPattern('admin_fields');
-    deleteCachedDataByPattern('fields_availability');
+    await deleteCachedDataByPattern('fields');
+    await deleteCachedDataByPattern('admin_fields');
+    await deleteCachedDataByPattern('fields_availability');
     
     // Log activity
     await prisma.activityLog.create({
@@ -138,18 +136,16 @@ export const createField = async (req: MulterRequest & User, res: Response): Pro
       data: newField
     });
   } catch (error) {
+    console.error('Error creating field:', error);
+    
     // Clean up uploaded file if exists
     if (req.file?.path) {
-      const publicId = extractPublicId(req.file.path);
-      if (publicId) {
-        await deleteImage(publicId, 'PBL/fields-images');
-      }
+      await cleanupUploadedFile(req.file.path);
     }
     
     res.status(500).json({
       status: false,
-      message: 'Internal Server Error',
-      error
+      message: 'Internal Server Error'
     });
   }
 };
@@ -165,10 +161,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     if (isNaN(fieldId)) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
-        const publicId = extractPublicId(req.file.path);
-        if (publicId) {
-          await deleteImage(publicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(req.file.path);
       }
       
       res.status(400).json({
@@ -184,10 +177,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     if (!branchId) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
-        const publicId = extractPublicId(req.file.path);
-        if (publicId) {
-          await deleteImage(publicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(req.file.path);
       }
       
       res.status(400).json({
@@ -216,10 +206,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     if (!existingField) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
-        const publicId = extractPublicId(req.file.path);
-        if (publicId) {
-          await deleteImage(publicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(req.file.path);
       }
       
       res.status(404).json({
@@ -232,14 +219,16 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     // Persiapkan data untuk update
     const updateData = { ...req.body };
     
+    // Parse typeId if it exists
+    if (updateData.typeId) {
+      updateData.typeId = parseInt(updateData.typeId);
+    }
+    
     // Ensure branchId is not changed to another branch
     if (updateData.branchId && parseInt(updateData.branchId) !== branchId) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
-        const publicId = extractPublicId(req.file.path);
-        if (publicId) {
-          await deleteImage(publicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(req.file.path);
       }
       
       res.status(403).json({
@@ -258,10 +247,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
       
       // Hapus gambar lama jika ada
       if (existingField.imageUrl) {
-        const oldPublicId = extractPublicId(existingField.imageUrl);
-        if (oldPublicId) {
-          await deleteImage(oldPublicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(existingField.imageUrl);
       }
     }
     
@@ -271,10 +257,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     if (!result.success) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
-        const publicId = extractPublicId(req.file.path);
-        if (publicId) {
-          await deleteImage(publicId, 'PBL/fields-images');
-        }
+        await cleanupUploadedFile(req.file.path);
       }
       
       res.status(400).json({
@@ -291,10 +274,10 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     });
     
     // Hapus cache yang relevan
-    deleteCachedDataByPattern('fields');
-    deleteCachedDataByPattern('admin_fields');
-    deleteCachedDataByPattern('admin_field_detail');
-    deleteCachedDataByPattern('fields_availability');
+    await deleteCachedDataByPattern('fields');
+    await deleteCachedDataByPattern('admin_fields');
+    await deleteCachedDataByPattern('admin_field_detail');
+    await deleteCachedDataByPattern('fields_availability');
     
     // Log activity
     await prisma.activityLog.create({
@@ -312,18 +295,16 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
       data: updatedField
     });
   } catch (error) {
+    console.error('Error updating field:', error);
+    
     // Clean up uploaded file if exists
     if (req.file?.path) {
-      const publicId = extractPublicId(req.file.path);
-      if (publicId) {
-        await deleteImage(publicId, 'PBL/fields-images');
-      }
+      await cleanupUploadedFile(req.file.path);
     }
     
     res.status(500).json({
       status: false,
-      message: 'Gagal memperbarui lapangan',
-      error
+      message: 'Gagal memperbarui lapangan'
     });
   }
 };
@@ -394,10 +375,7 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     
     // Delete image from Cloudinary if exists
     if (existingField.imageUrl) {
-      const publicId = extractPublicId(existingField.imageUrl);
-      if (publicId) {
-        await deleteImage(publicId, 'PBL/fields-images');
-      }
+      await cleanupUploadedFile(existingField.imageUrl);
     }
     
     // Delete field
@@ -406,10 +384,10 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     });
     
     // Hapus cache yang relevan
-    deleteCachedDataByPattern('fields');
-    deleteCachedDataByPattern('admin_fields');
-    deleteCachedDataByPattern('admin_field_detail');
-    deleteCachedDataByPattern('fields_availability');
+    await deleteCachedDataByPattern('fields');
+    await deleteCachedDataByPattern('admin_fields');
+    await deleteCachedDataByPattern('admin_field_detail');
+    await deleteCachedDataByPattern('fields_availability');
     
     // Log activity
     await prisma.activityLog.create({
@@ -426,10 +404,10 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
       message: 'Berhasil menghapus lapangan'
     });
   } catch (error) {
+    console.error('Error deleting field:', error);
     res.status(500).json({
       status: false,
-      message: 'Gagal menghapus lapangan',
-      error
+      message: 'Gagal menghapus lapangan'
     });
   }
 };
@@ -492,10 +470,10 @@ export const getFieldById = async (req: User, res: Response): Promise<void> => {
       data: field
     });
   } catch (error) {
+    console.error('Error getting field by ID:', error);
     res.status(500).json({
       status: false,
-      message: 'Internal Server Error',
-      error
+      message: 'Internal Server Error'
     });
   }
 };

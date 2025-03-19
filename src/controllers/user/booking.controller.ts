@@ -21,7 +21,7 @@ import {
   formatDateToWIB, 
   combineDateWithTimeWIB 
 } from '../../utils/variables/timezone.utils';
-import { deleteCachedDataByPattern } from '../../utils/cache';
+import { deleteCachedDataByPattern } from '../../utils/cache.utils';
 import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 
 // Define interface for Request with user

@@ -11,7 +11,7 @@ import {
 } from '../../../utils/booking/booking.utils';
 import { combineDateWithTime } from '../../../utils/booking/calculateBooking.utils';
 import { User } from '../../../middlewares/auth.middleware';
-import { deleteCachedDataByPattern } from '../../../utils/cache';
+import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 // import { 
 //   checkBookingConflict, 
 //   isValidTimeRange, 
