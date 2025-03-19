@@ -67,22 +67,26 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
       const cachedData = getCachedData<any>(key);
       
       if (cachedData) {
-        // If data exists in cache, send response directly
-        return res.json(cachedData);
+        // If data exists in cache, send response directly using send instead of json
+        return res.send(cachedData);
       }
       
       // Override res.json method to store response in cache
       const originalJson = res.json;
       res.json = function(data: any) {
-        // Store data in cache
-        if (ttl !== undefined) {
-          setCachedData(key, data, ttl);
-        } else {
-          setCachedData(key, data);
+        // Check if headers have been sent already
+        if (!res.headersSent) {
+          // Store data in cache
+          if (ttl !== undefined) {
+            setCachedData(key, data, ttl);
+          } else {
+            setCachedData(key, data);
+          }
+          
+          // Return original function
+          return originalJson.call(this, data);
         }
-        
-        // Return original function
-        return originalJson.call(this, data);
+        return this;
       };
       
       // Continue to next middleware

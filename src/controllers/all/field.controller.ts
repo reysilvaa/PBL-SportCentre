@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
-import { createFieldSchema, updateFieldSchema } from '../../zod-schemas/field.schema';
+import { updateFieldSchema } from '../../zod-schemas/field.schema';
 import { deleteCachedDataByPattern } from '../../utils/cache';
+import { deleteImage, extractPublicId } from '../../config/cloudinary';
+import { MulterRequest } from '@/middlewares/multer.middleware';
 
 export const getFields = async (req: Request, res: Response) => {
   try {
@@ -17,114 +19,6 @@ export const getFields = async (req: Request, res: Response) => {
       }
     });
     res.json(fields);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-export const createField = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Validasi data dengan Zod
-    const result = createFieldSchema.safeParse(req.body);
-    
-    if (!result.success) {
-      res.status(400).json({ 
-        error: 'Validasi gagal', 
-        details: result.error.format() 
-      });
-      return;
-    }
-
-    // Ambil data setelah validasi
-    const { branchId, typeId, name, priceDay, priceNight, status } = result.data;
-
-    // Simpan data ke database
-    const newField = await prisma.field.create({
-      data: {
-        branchId,
-        typeId,
-        name,
-        priceDay,
-        priceNight,
-        status,
-      }
-    });
-
-    // Hapus cache yang relevan
-    try {
-      deleteCachedDataByPattern('fields');
-      deleteCachedDataByPattern('admin_fields');
-      deleteCachedDataByPattern('fields_availability');
-    } catch (cacheError) {
-      console.error('Error clearing cache:', cacheError);
-      // Melanjutkan eksekusi meskipun ada error pada cache
-    }
-
-    res.status(201).json(newField);
-  } catch (error) {
-    console.error('Error creating field:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-export const updateField = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    // Validasi data dengan Zod
-    const result = updateFieldSchema.safeParse(req.body);
-    
-    if (!result.success) {
-      res.status(400).json({ 
-        error: 'Validasi gagal', 
-        details: result.error.format() 
-      });
-      return;
-    }
-    
-    // Update data
-    const updatedField = await prisma.field.update({
-      where: { id: parseInt(id) },
-      data: result.data
-    });
-
-    // Hapus cache yang relevan
-    try {
-      deleteCachedDataByPattern('fields');
-      deleteCachedDataByPattern('admin_fields');
-      deleteCachedDataByPattern('admin_field_detail');
-      deleteCachedDataByPattern('fields_availability');
-    } catch (cacheError) {
-      console.error('Error clearing cache:', cacheError);
-      // Melanjutkan eksekusi meskipun ada error pada cache
-    }
-
-    res.json(updatedField);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-export const deleteField = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    await prisma.field.delete({
-      where: { id: parseInt(id) }
-    });
-
-    // Hapus cache yang relevan
-    try {
-      deleteCachedDataByPattern('fields');
-      deleteCachedDataByPattern('admin_fields');
-      deleteCachedDataByPattern('admin_field_detail');
-      deleteCachedDataByPattern('fields_availability');
-    } catch (cacheError) {
-      console.error('Error clearing cache:', cacheError);
-      // Melanjutkan eksekusi meskipun ada error pada cache
-    }
-
-    res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }

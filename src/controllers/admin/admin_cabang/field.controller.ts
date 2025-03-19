@@ -3,16 +3,28 @@ import prisma from '../../../config/database';
 import { createFieldSchema, updateFieldSchema } from '../../../zod-schemas/field.schema';
 import { User } from '../../../middlewares/auth.middleware';
 import { deleteCachedDataByPattern } from '../../../utils/cache';
+import { deleteImage, extractPublicId } from '../../../config/cloudinary';
+import { MulterRequest } from '@/middlewares/multer.middleware';
 
-// Get all fields for admin's or owner's branch only
+// Get all fields for admin's or owner's branch
 export const getFields = async (req: User, res: Response): Promise<void> => {
+  if (res.headersSent) return;
+  
   try {
-    // userBranch sudah ditambahkan oleh adminBranchMiddleware
-    const branch = req.userBranch!;
-
+    // Get branch ID from middleware
+    const branchId = req.userBranch?.id;
+    
+    if (!branchId) {
+      res.status(400).json({
+        status: false,
+        message: 'Branch ID is required'
+      });
+      return;
+    }
+    
     const fields = await prisma.field.findMany({
       where: {
-        branchId: branch.id
+        branchId
       },
       include: {
         branch: {
@@ -31,27 +43,61 @@ export const getFields = async (req: User, res: Response): Promise<void> => {
       data: fields
     });
   } catch (error) {
-    res.status(500).json({
-      status: false,
-      message: 'Internal Server Error',
-      error: error
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        status: false,
+        message: 'Internal Server Error',
+        error
+      });
+    }
   }
 };
 
-// Create field for admin's or owner's branch only
-export const createField = async (req: User, res: Response): Promise<void> => {
+// Create field with image upload
+export const createField = async (req: MulterRequest & User, res: Response): Promise<void> => {
+  if (res.headersSent) return;
+  
   try {
-    // userBranch sudah ditambahkan oleh adminBranchMiddleware
-    const branch = req.userBranch!;
+    // Get branch ID from middleware
+    const branchId = req.userBranch?.id;
+    
+    if (!branchId) {
+      // Clean up uploaded file if exists
+      if (req.file?.path) {
+        const publicId = extractPublicId(req.file.path);
+        if (publicId) {
+          await deleteImage(publicId, 'PBL/fields-images');
+        }
+      }
+      
+      res.status(400).json({
+        status: false,
+        message: 'Branch ID is required'
+      });
+      return;
+    }
+    
+    // Get branch name for the activity log
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+      select: { name: true }
+    });
     
     // Validasi data dengan Zod
     const result = createFieldSchema.safeParse({
       ...req.body,
-      branchId: branch.id // Force branchId to be user's branch
+      branchId // Force branchId to be user's branch from middleware
     });
     
     if (!result.success) {
+      // Clean up uploaded file if exists
+      if (req.file?.path) {
+        const publicId = extractPublicId(req.file.path);
+        if (publicId) {
+          await deleteImage(publicId, 'PBL/fields-images');
+        }
+      }
+      
       res.status(400).json({
         status: false,
         message: 'Validasi gagal',
@@ -61,17 +107,13 @@ export const createField = async (req: User, res: Response): Promise<void> => {
     }
     
     // Get data after validation
-    const { branchId, typeId, name, priceDay, priceNight, status } = result.data;
+    const validatedData = result.data;
     
-    // Save to database
+    // Save to database dengan tambahan imageUrl jika ada
     const newField = await prisma.field.create({
       data: {
-        branchId,
-        typeId,
-        name,
-        priceDay,
-        priceNight,
-        status,
+        ...validatedData,
+        imageUrl: req.file?.path || null // Add image URL if file was uploaded
       }
     });
     
@@ -85,7 +127,8 @@ export const createField = async (req: User, res: Response): Promise<void> => {
       data: {
         userId: req.user!.id,
         action: 'CREATE_FIELD',
-        details: `Membuat lapangan baru "${name}" untuk cabang ${branch.name}`
+        details: `Membuat lapangan baru "${validatedData.name}" untuk cabang ${branch?.name || branchId}`,
+        ipAddress: req.ip || undefined
       }
     });
     
@@ -95,48 +138,145 @@ export const createField = async (req: User, res: Response): Promise<void> => {
       data: newField
     });
   } catch (error) {
+    // Clean up uploaded file if exists
+    if (req.file?.path) {
+      const publicId = extractPublicId(req.file.path);
+      if (publicId) {
+        await deleteImage(publicId, 'PBL/fields-images');
+      }
+    }
+    
     res.status(500).json({
       status: false,
       message: 'Internal Server Error',
-      error: error
+      error
     });
   }
 };
 
-// Update field for admin's or owner's branch only
-export const updateField = async (req: User, res: Response): Promise<void> => {
+// Update field with image upload
+export const updateField = async (req: MulterRequest & User, res: Response): Promise<void> => {
+  if (res.headersSent) return;
+  
   try {
-    // userBranch sudah ditambahkan oleh adminBranchMiddleware
-    const branch = req.userBranch!;
-    
     const { id } = req.params;
     const fieldId = parseInt(id);
     
-    // Check if field exists and belongs to user's branch
-    const existingField = await prisma.field.findUnique({
-      where: { id: fieldId }
+    if (isNaN(fieldId)) {
+      // Clean up uploaded file if exists
+      if (req.file?.path) {
+        const publicId = extractPublicId(req.file.path);
+        if (publicId) {
+          await deleteImage(publicId, 'PBL/fields-images');
+        }
+      }
+      
+      res.status(400).json({
+        status: false,
+        message: 'Invalid field ID'
+      });
+      return;
+    }
+    
+    // Get branch ID from middleware
+    const branchId = req.userBranch?.id;
+    
+    if (!branchId) {
+      // Clean up uploaded file if exists
+      if (req.file?.path) {
+        const publicId = extractPublicId(req.file.path);
+        if (publicId) {
+          await deleteImage(publicId, 'PBL/fields-images');
+        }
+      }
+      
+      res.status(400).json({
+        status: false,
+        message: 'Branch ID is required'
+      });
+      return;
+    }
+    
+    // Check if field exists and belongs to the user's branch
+    const existingField = await prisma.field.findFirst({
+      where: { 
+        id: fieldId,
+        branchId
+      },
+      include: {
+        branch: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
     });
     
     if (!existingField) {
+      // Clean up uploaded file if exists
+      if (req.file?.path) {
+        const publicId = extractPublicId(req.file.path);
+        if (publicId) {
+          await deleteImage(publicId, 'PBL/fields-images');
+        }
+      }
+      
       res.status(404).json({
         status: false,
-        message: 'Lapangan tidak ditemukan'
+        message: 'Lapangan tidak ditemukan atau tidak berada dalam cabang Anda'
       });
       return;
     }
     
-    if (existingField.branchId !== branch.id) {
+    // Persiapkan data untuk update
+    const updateData = { ...req.body };
+    
+    // Ensure branchId is not changed to another branch
+    if (updateData.branchId && parseInt(updateData.branchId) !== branchId) {
+      // Clean up uploaded file if exists
+      if (req.file?.path) {
+        const publicId = extractPublicId(req.file.path);
+        if (publicId) {
+          await deleteImage(publicId, 'PBL/fields-images');
+        }
+      }
+      
       res.status(403).json({
         status: false,
-        message: 'Forbidden: Anda hanya dapat mengelola lapangan di cabang Anda sendiri'
+        message: 'Forbidden: Tidak dapat memindahkan lapangan ke cabang lain'
       });
       return;
+    }
+    
+    // Force branchId to be user's branch from middleware
+    updateData.branchId = branchId;
+    
+    // Jika ada file baru yang diupload
+    if (req.file?.path) {
+      updateData.imageUrl = req.file.path;
+      
+      // Hapus gambar lama jika ada
+      if (existingField.imageUrl) {
+        const oldPublicId = extractPublicId(existingField.imageUrl);
+        if (oldPublicId) {
+          await deleteImage(oldPublicId, 'PBL/fields-images');
+        }
+      }
     }
     
     // Validasi data dengan Zod
-    const result = updateFieldSchema.safeParse(req.body);
+    const result = updateFieldSchema.safeParse(updateData);
     
     if (!result.success) {
+      // Clean up uploaded file if exists
+      if (req.file?.path) {
+        const publicId = extractPublicId(req.file.path);
+        if (publicId) {
+          await deleteImage(publicId, 'PBL/fields-images');
+        }
+      }
+      
       res.status(400).json({
         status: false,
         message: 'Validasi gagal',
@@ -161,7 +301,8 @@ export const updateField = async (req: User, res: Response): Promise<void> => {
       data: {
         userId: req.user!.id,
         action: 'UPDATE_FIELD',
-        details: `Memperbarui lapangan "${updatedField.name}" (ID: ${fieldId}) di cabang ${branch.name}`
+        details: `Memperbarui lapangan "${updatedField.name}" (ID: ${fieldId}) di cabang ${existingField.branch.name}`,
+        ipAddress: req.ip || undefined
       }
     });
     
@@ -171,40 +312,69 @@ export const updateField = async (req: User, res: Response): Promise<void> => {
       data: updatedField
     });
   } catch (error) {
-    res.status(400).json({
+    // Clean up uploaded file if exists
+    if (req.file?.path) {
+      const publicId = extractPublicId(req.file.path);
+      if (publicId) {
+        await deleteImage(publicId, 'PBL/fields-images');
+      }
+    }
+    
+    res.status(500).json({
       status: false,
       message: 'Gagal memperbarui lapangan',
-      error: error
+      error
     });
   }
 };
 
-// Delete field for admin's or owner's branch only
+// Delete field
 export const deleteField = async (req: User, res: Response): Promise<void> => {
+  if (res.headersSent) return;
+  
   try {
-    // userBranch sudah ditambahkan oleh adminBranchMiddleware
-    const branch = req.userBranch!;
-    
     const { id } = req.params;
     const fieldId = parseInt(id);
     
-    // Check if field exists and belongs to user's branch
-    const existingField = await prisma.field.findUnique({
-      where: { id: fieldId }
+    if (isNaN(fieldId)) {
+      res.status(400).json({
+        status: false,
+        message: 'Invalid field ID'
+      });
+      return;
+    }
+    
+    // Get branch ID from middleware
+    const branchId = req.userBranch?.id;
+    
+    if (!branchId) {
+      res.status(400).json({
+        status: false,
+        message: 'Branch ID is required'
+      });
+      return;
+    }
+    
+    // Check if field exists and belongs to the user's branch
+    const existingField = await prisma.field.findFirst({
+      where: { 
+        id: fieldId,
+        branchId
+      },
+      include: {
+        branch: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
     });
     
     if (!existingField) {
       res.status(404).json({
         status: false,
-        message: 'Lapangan tidak ditemukan'
-      });
-      return;
-    }
-    
-    if (existingField.branchId !== branch.id) {
-      res.status(403).json({
-        status: false,
-        message: 'Forbidden: Anda hanya dapat mengelola lapangan di cabang Anda sendiri'
+        message: 'Lapangan tidak ditemukan atau tidak berada dalam cabang Anda'
       });
       return;
     }
@@ -220,6 +390,14 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
         message: 'Tidak dapat menghapus lapangan yang memiliki pemesanan'
       });
       return;
+    }
+    
+    // Delete image from Cloudinary if exists
+    if (existingField.imageUrl) {
+      const publicId = extractPublicId(existingField.imageUrl);
+      if (publicId) {
+        await deleteImage(publicId, 'PBL/fields-images');
+      }
     }
     
     // Delete field
@@ -238,7 +416,8 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
       data: {
         userId: req.user!.id,
         action: 'DELETE_FIELD',
-        details: `Menghapus lapangan "${existingField.name}" (ID: ${fieldId}) dari cabang ${branch.name}`
+        details: `Menghapus lapangan "${existingField.name}" (ID: ${fieldId}) dari cabang ${existingField.branch.name}`,
+        ipAddress: req.ip || undefined
       }
     });
     
@@ -247,25 +426,47 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
       message: 'Berhasil menghapus lapangan'
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       status: false,
       message: 'Gagal menghapus lapangan',
-      error: error
+      error
     });
   }
 };
 
 // Get a single field by ID
 export const getFieldById = async (req: User, res: Response): Promise<void> => {
+  if (res.headersSent) return;
+  
   try {
-    // userBranch sudah ditambahkan oleh adminBranchMiddleware
-    const branch = req.userBranch!;
-    
     const { id } = req.params;
     const fieldId = parseInt(id);
     
-    const field = await prisma.field.findUnique({
-      where: { id: fieldId },
+    if (isNaN(fieldId)) {
+      res.status(400).json({
+        status: false,
+        message: 'Invalid field ID'
+      });
+      return;
+    }
+    
+    // Get branch ID from middleware
+    const branchId = req.userBranch?.id;
+    
+    if (!branchId) {
+      res.status(400).json({
+        status: false,
+        message: 'Branch ID is required'
+      });
+      return;
+    }
+    
+    // Check if field exists and belongs to the user's branch
+    const field = await prisma.field.findFirst({
+      where: { 
+        id: fieldId,
+        branchId
+      },
       include: {
         branch: {
           select: {
@@ -280,15 +481,7 @@ export const getFieldById = async (req: User, res: Response): Promise<void> => {
     if (!field) {
       res.status(404).json({
         status: false,
-        message: 'Lapangan tidak ditemukan'
-      });
-      return;
-    }
-    
-    if (field.branchId !== branch.id) {
-      res.status(403).json({
-        status: false,
-        message: 'Forbidden: Anda hanya dapat melihat lapangan di cabang Anda sendiri'
+        message: 'Lapangan tidak ditemukan atau tidak berada dalam cabang Anda'
       });
       return;
     }
@@ -302,7 +495,7 @@ export const getFieldById = async (req: User, res: Response): Promise<void> => {
     res.status(500).json({
       status: false,
       message: 'Internal Server Error',
-      error: error
+      error
     });
   }
 };

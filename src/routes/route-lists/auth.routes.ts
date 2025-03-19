@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(express.urlencoded({ extended: true }));
 
 router.post('/login', loginRateLimiter, login);
-router.post('/register', registerRateLimiter, register);
+router.post('/register', register);
 router.post('/logout', authMiddleware(), logout);
 router.post('/refresh-token', refreshToken);
 
