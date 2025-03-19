@@ -7,24 +7,4 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Helper function to delete images from Cloudinary
-export const deleteImage = async (publicId: string, folder = 'PBL/fields-images'): Promise<void> => {
-  try {
-    await cloudinary.uploader.destroy(`${folder}/${publicId}`);
-  } catch (error) {
-    console.error('Error deleting image from Cloudinary:', error);
-    // You might want to throw or handle the error depending on your requirements
-  }
-};
-
-// Helper function to extract public ID from Cloudinary URL
-export const extractPublicId = (cloudinaryUrl: string): string | null => {
-  try {
-    return cloudinaryUrl.split('/').pop()?.split('.')[0] || null;
-  } catch (error) {
-    console.error('Error extracting public ID:', error);
-    return null;
-  }
-};
-
 export default cloudinary;

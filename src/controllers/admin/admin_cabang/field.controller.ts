@@ -4,7 +4,7 @@ import { createFieldSchema, updateFieldSchema } from '../../../zod-schemas/field
 import { User } from '../../../middlewares/auth.middleware';
 import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 import { MulterRequest } from '../../../middlewares/multer.middleware';
-import { cleanupUploadedFile, extractPublicId } from '../../../utils/cloudinary.utils';
+import { cleanupUploadedFile } from '../../../utils/cloudinary.utils';
 
 // Constants for folder paths
 const FIELDS_FOLDER = 'PBL/fields-images';
@@ -114,6 +114,8 @@ export const createField = async (req: MulterRequest & User, res: Response): Pro
         imageUrl: req.file?.path || null // Add image URL if file was uploaded
       }
     });
+    console.log(req.file?.path); // Path file yang diunggah
+    console.log(req.FOLDER?.path); // Path folder yang digunakan
     
     // Hapus cache yang relevan
     await deleteCachedDataByPattern('fields');
