@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/app.ts",
   "scripts": {
     "dev": "nodemon src/app.ts",
     "build": "tsc",
@@ -12,12 +12,23 @@
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
-  "keywords": [],
+  "keywords": [
+    "PBL",
+    "Reservasi",
+    "Sport Center",
+    "Backend",
+    "Node.js",
+    "TypeScript",
+    "Express",
+    "Prisma",
+    "Midtrans"
+  ],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.4.1",
+    "@types/cookie-parser": "^1.4.8",
     "@types/cron": "^2.0.1",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/multer": "^1.4.12",
@@ -26,22 +37,31 @@
     "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "cloudinary": "^1.41.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "cron": "^4.1.0",
+    "csurf": "^1.10.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
     "helmet": "^8.0.0",
+    "hpp": "^0.2.3",
     "jsonwebtoken": "^9.0.2",
     "midtrans-client": "^1.4.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
+    "node-cache": "^5.1.2",
     "nodemon": "^3.1.9",
     "reflect-metadata": "^0.2.2",
     "socket.io": "^4.8.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

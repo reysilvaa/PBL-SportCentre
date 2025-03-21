@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { validate } from 'class-validator';
-import { CreateActivityLogDto } from '../../../dto/activityLog/create-activity-log.dto';
+import { createActivityLogSchema } from '../../../zod-schemas/activityLog.schema';
 import { ActivityLogService } from '../../../utils/activityLog/activityLog.utils';
-import { getIO } from '../../../config/socket';
+import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
 export const getActivityLogs = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -17,85 +16,54 @@ export const getActivityLogs = async (req: Request, res: Response): Promise<void
     res.status(200).json(logs);
   } catch (error) {
     console.error('Error fetching activity logs:', error);
-    res.status(500).json({ error: 'Failed to fetch activity logs' });
+    res.status(500).json({ error: 'Gagal mengambil log aktivitas' });
   }
-};
-/**
- * Set up a Socket.IO connection for real-time activity log updates
- * @param userId - Optional user ID to filter logs
- */
-const setupRealtimeConnection = (userId?: number) => {
-  const io = getIO();
-  
-  // Create a room name based on userId if provided, otherwise use a general room
-  const roomName = userId ? `activity_logs_user_${userId}` : 'activity_logs_all';
-  
-  // Set up a listener for client connections
-  io.on('connection', (socket) => {
-    console.log(`Client connected to activity logs: ${socket.id}`);
-    
-    // Join the appropriate room
-    socket.join(roomName);
-    
-    // Set up listener for when client wants to subscribe to activity logs
-    socket.on('subscribe_activity_logs', async (options: { userId?: string }) => {
-      // If the client specifies a userId, join that specific room
-      if (options.userId) {
-        const userIdInt = parseInt(options.userId);
-        const userRoom = `activity_logs_user_${userIdInt}`;
-        socket.join(userRoom);
-        console.log(`Client ${socket.id} joined ${userRoom}`);
-        
-        // Send initial data to the client
-        const userLogs = await ActivityLogService.getLogs(userIdInt);
-        socket.emit('activity_logs_initial', userLogs);
-      }
-    });
-    
-    // Handle disconnection
-    socket.on('disconnect', () => {
-      console.log(`Client disconnected from activity logs: ${socket.id}`);
-    });
-  });
 };
 
 export const createActivityLog = async (req: Request, res: Response): Promise<void> => { 
   try {
-    const dto = new CreateActivityLogDto();
-    Object.assign(dto, req.body);
+    // Validasi data dengan Zod
+    const result = createActivityLogSchema.safeParse(req.body);
     
-    const errors = await validate(dto);
-    if (errors.length > 0) {
-      res.status(400).json({ error: 'Validation failed', details: errors });
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
       return;
     }
 
+    const { userId, action, details, relatedId } = result.data;
+
     const newLog = await ActivityLogService.createLog(
-      dto.userId,
-      dto.action,
-      dto.details,
-      dto.relatedId
+      userId,
+      action,
+      details,
+      relatedId === null ? undefined : relatedId
     );
+    
+    // Hapus cache activity logs
+    deleteCachedDataByPattern('activity_logs');
     
     res.status(201).json(newLog); 
   } catch (error) {
     console.error(error);
-    res.status(400).json({ error: 'Failed to create activity log' });
+    res.status(500).json({ error: 'Gagal membuat log aktivitas' });
   }
 };
 
-export const deleteActivityLog = async (req: Request, res: Response) => {
+export const deleteActivityLog = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const idInt = parseInt(id);
     
-    const deletedLog = await ActivityLogService.deleteLog(idInt);
+    await ActivityLogService.deleteLog(parseInt(id));
     
-    res.status(200).json({
-      message: 'Successfully deleted',
-      data: deletedLog
-    });
+    // Hapus cache activity logs
+    deleteCachedDataByPattern('activity_logs');
+    
+    res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Failed to delete activity log' });
+    console.error(error);
+    res.status(500).json({ error: 'Gagal menghapus log aktivitas' });
   }
 };

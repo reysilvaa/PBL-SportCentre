@@ -23,7 +23,7 @@ model User {
   PromoUsages   PromotionUsage[]
   ownedBranches Branch[]
   notifications Notification[] // Add this line
-
+  branches  BranchAdmin[]
 }
 
 enum Role {
@@ -37,11 +37,12 @@ model Branch {
   id        Int          @id @default(autoincrement())
   name      String       @db.VarChar(100)
   location  String       @db.Text
+  imageUrl  String?      @db.VarChar(255)
   owner     User         @relation(fields: [ownerId], references: [id])
   ownerId   Int
   status    BranchStatus @default(active)
   createdAt DateTime     @default(now())
-
+  admins    BranchAdmin[]
   Fields Field[]
 }
 
@@ -49,6 +50,17 @@ enum BranchStatus {
   active
   inactive
 }
+
+model BranchAdmin {
+  branchId Int
+  userId   Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+  user     User   @relation(fields: [userId], references: [id])
+
+  @@id([branchId, userId]) // Composite primary key
+}
+
+
 
 model FieldType {
   id   Int    @id @default(autoincrement())
@@ -67,6 +79,7 @@ model Field {
   priceDay   Decimal     @db.Decimal(10, 2)
   priceNight Decimal     @db.Decimal(10, 2)
   status     FieldStatus @default(available)
+  imageUrl   String?     @db.VarChar(255)
   createdAt  DateTime    @default(now())
 
   Bookings Booking[]
@@ -81,18 +94,18 @@ enum FieldStatus {
 }
 
 model Booking {
-  id          Int       @id @default(autoincrement())
-  user        User      @relation(fields: [userId], references: [id])
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id])
   userId      Int
-  field       Field     @relation(fields: [fieldId], references: [id])
+  field       Field    @relation(fields: [fieldId], references: [id])
   fieldId     Int
   bookingDate DateTime
   startTime   DateTime
   endTime     DateTime
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
   // Payment relation - this booking has one payment
-  payment     Payment?  // No fields/references here because Payment holds the foreign key
+  payment Payment? // No fields/references here because Payment holds the foreign key
 
   PromoUsages PromotionUsage[]
 }
@@ -117,7 +130,9 @@ model Payment {
   paymentMethod PaymentMethod
   status        PaymentStatus @default(pending)
   createdAt     DateTime      @default(now())
-  expiresDate DateTime?
+  expiresDate   DateTime?
+  transactionId String?       @db.VarChar(255)
+  paymentUrl    String?       @db.Text
 }
 
 enum PaymentMethod {
@@ -134,6 +149,7 @@ model ActivityLog {
   userId    Int
   action    String   @db.Text
   details   String?  @db.Text
+  ipAddress String?  @db.VarChar(45)
   createdAt DateTime @default(now())
 }
 

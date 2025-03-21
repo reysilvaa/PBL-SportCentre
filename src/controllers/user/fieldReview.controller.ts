@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
-import { plainToInstance } from 'class-transformer';
-import { CreateFieldReviewDto } from '../../dto/review/create-review.dto';
-import { validate } from 'class-validator';
+import { createFieldReviewSchema, updateFieldReviewSchema } from '../../zod-schemas/fieldReview.schema';
+import { deleteCachedDataByPattern } from '../../utils/cache.utils';
 
 export const getFieldReviews = async (req: Request, res: Response) => {
   try {
@@ -44,15 +43,18 @@ export const getFieldReviews = async (req: Request, res: Response) => {
 
 export const createFieldReview = async (req: Request, res: Response): Promise<void> => {
   try {
-    const createFieldReviewDto = new CreateFieldReviewDto();
-    Object.assign(createFieldReviewDto, req.body);
-
-    const errors = await validate(createFieldReviewDto);
-    if (errors.length > 0) {
-      res.status(400).json({ errors });
-      return; 
+    // Validasi data dengan Zod
+    const result = createFieldReviewSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
     }
-    const { userId, fieldId, rating, review } = createFieldReviewDto;
+
+    const { userId, fieldId, rating, review } = result.data;
     const newReview = await prisma.fieldReview.create({
       data: {
         userId,
@@ -62,26 +64,41 @@ export const createFieldReview = async (req: Request, res: Response): Promise<vo
       }
     });
 
+    // Hapus cache field reviews
+    deleteCachedDataByPattern('field_reviews');
+    
     res.status(201).json(newReview);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to create field review' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
 export const updateFieldReview = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { rating, review } = req.body;
+    
+    // Validasi data dengan Zod
+    const result = updateFieldReviewSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
+    }
+    
     const updatedReview = await prisma.fieldReview.update({
       where: { id: parseInt(id) },
-      data: {
-        rating,
-        review
-      }
+      data: result.data
     });
+
+    // Hapus cache field reviews
+    deleteCachedDataByPattern('field_reviews');
+    
     res.json(updatedReview);
   } catch (error) {
-    res.status(400).json({ error: 'Failed to update field review' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
@@ -91,8 +108,12 @@ export const deleteFieldReview = async (req: Request, res: Response) => {
     await prisma.fieldReview.delete({
       where: { id: parseInt(id) }
     });
+
+    // Hapus cache field reviews
+    deleteCachedDataByPattern('field_reviews');
+    
     res.status(204).send();
   } catch (error) {
-    res.status(400).json({ error: 'Failed to delete field review' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };

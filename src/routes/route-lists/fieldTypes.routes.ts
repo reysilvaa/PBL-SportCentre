@@ -5,20 +5,18 @@ import {
   updateFieldType, 
   deleteFieldType 
 } from '../../controllers/all/fieldType.controller';
-
 import { parseIds } from '../../middlewares/parseId.middleware';
-import { authMiddleware } from '../../middlewares/auth.middleware';
+import { superAdminAuth } from '../../middlewares/auth.middleware';
+import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 
-// Public route - semua pengguna dapat melihat tipe lapangan
-router.get('/', getFieldTypes);
+// Public routes or routes that don't need specific role
+router.get('/', cacheMiddleware('field_types', 600), getFieldTypes);
 
-// Protected routes - hanya super_admin yang dapat membuat, mengubah, dan menghapus tipe lapangan
-router.post('/', authMiddleware(['super_admin']), parseIds, createFieldType);
-router.put('/:id', authMiddleware(['super_admin']), updateFieldType);
-router.delete('/:id', authMiddleware(['super_admin']), deleteFieldType);
-
-
+// Admin only routes
+router.post('/', superAdminAuth, parseIds, createFieldType);
+router.put('/:id', superAdminAuth, updateFieldType);
+router.delete('/:id', superAdminAuth, deleteFieldType);
 
 export default router;

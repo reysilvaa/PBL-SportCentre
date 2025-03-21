@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../../../config/database';
+import { updateBookingPaymentSchema } from '../../../zod-schemas/bookingPayment.schema';
 
 /**
  * Super Admin Booking Controller
@@ -63,7 +64,7 @@ export const getBookingById = async (req: Request, res: Response): Promise<void>
     });
     
     if (!booking) {
-      res.status(404).json({ error: 'Booking not found' });
+      res.status(404).json({ error: 'Booking tidak ditemukan' });
       return;
     }
     
@@ -77,7 +78,17 @@ export const getBookingById = async (req: Request, res: Response): Promise<void>
 export const updateBookingPayment = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { paymentStatus, paymentMethod, amount } = req.body;
+    
+    // Validasi data dengan Zod
+    const result = updateBookingPaymentSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      res.status(400).json({ 
+        error: 'Validasi gagal', 
+        details: result.error.format() 
+      });
+      return;
+    }
     
     const booking = await prisma.booking.findUnique({
       where: { id: parseInt(id) },
@@ -85,17 +96,22 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
     });
     
     if (!booking) {
-      res.status(404).json({ error: 'Booking not found' });
+      res.status(404).json({ error: 'Booking tidak ditemukan' });
+      return;
+    }
+    
+    if (!booking.payment) {
+      res.status(404).json({ error: 'Pembayaran tidak ditemukan' });
       return;
     }
     
     // Update payment details
     const updatedPayment = await prisma.payment.update({
-      where: { id: booking.payment?.id },
+      where: { id: booking.payment.id },
       data: { 
-        status: paymentStatus || booking.payment?.status,
-        paymentMethod: paymentMethod || booking.payment?.paymentMethod,
-        amount: amount ? parseFloat(amount.toString()) : booking.payment?.amount
+        status: result.data.paymentStatus || booking.payment.status,
+        paymentMethod: result.data.paymentMethod || booking.payment.paymentMethod,
+        amount: result.data.amount !== undefined ? result.data.amount : booking.payment.amount
       }
     });
     
@@ -105,7 +121,7 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
     });
   } catch (error) {
     console.error(error);
-    res.status(400).json({ error: 'Failed to update booking payment' });
+    res.status(400).json({ error: 'Gagal memperbarui pembayaran booking' });
   }
 };
 
@@ -120,7 +136,7 @@ export const deleteBooking = async (req: Request, res: Response): Promise<void> 
     });
     
     if (!booking) {
-      res.status(404).json({ error: 'Booking not found' });
+      res.status(404).json({ error: 'Booking tidak ditemukan' });
       return;
     }
     
@@ -139,7 +155,7 @@ export const deleteBooking = async (req: Request, res: Response): Promise<void> 
     res.status(204).send();
   } catch (error) {
     console.error(error);
-    res.status(400).json({ error: 'Failed to delete booking' });
+    res.status(400).json({ error: 'Gagal menghapus booking' });
   }
 };
 
