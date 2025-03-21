@@ -224,7 +224,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Gunakan Prisma transaction untuk menghapus semua relasi dan user
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // 1. Hapus semua notifikasi user
       await tx.notification.deleteMany({
         where: { userId }

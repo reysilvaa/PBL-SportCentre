@@ -40,7 +40,7 @@ export const getUsers = async (req: User, res: Response): Promise<void> => {
     
     // Ambil user unik dari bookings
     const uniqueUsers = Array.from(
-      new Map(bookings.map(booking => [booking.userId, booking.user])).values()
+      new Map(bookings.map((booking: { userId: number; user: any }) => [booking.userId, booking.user])).values()
     );
     
     res.json({
@@ -48,7 +48,7 @@ export const getUsers = async (req: User, res: Response): Promise<void> => {
       message: 'Daftar user berhasil didapatkan',
       data: uniqueUsers.map(user => {
         // Hapus password dari response
-        const { password, ...userWithoutPassword } = user;
+        const { password, ...userWithoutPassword } = user as { password: string; [key: string]: any };
         return {
           ...userWithoutPassword,
           branch: branch.name

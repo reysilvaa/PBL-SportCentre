@@ -37,6 +37,7 @@ model Branch {
   id        Int          @id @default(autoincrement())
   name      String       @db.VarChar(100)
   location  String       @db.Text
+  imageUrl  String?      @db.VarChar(255)
   owner     User         @relation(fields: [ownerId], references: [id])
   ownerId   Int
   status    BranchStatus @default(active)
