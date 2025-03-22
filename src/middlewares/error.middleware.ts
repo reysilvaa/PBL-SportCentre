@@ -42,12 +42,10 @@ const errorMiddleware = (
     return res.status(400).json({ error: 'Invalid JSON format' });
   }
 
-  res
-    .status(500)
-    .json({
-      error: 'Internal Server Error',
-      details: err.message || 'Unexpected error occurred',
-    });
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details: err.message || 'Unexpected error occurred',
+  });
 };
 
 export default errorMiddleware;

@@ -15,12 +15,10 @@ export const checkAllFieldsAvailability = async (
     res.status(200).json({ success: true, data: results });
   } catch (error) {
     console.error('Error checking all fields availability:', error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: 'Failed to check all fields availability',
-      });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check all fields availability',
+    });
   }
 };
 

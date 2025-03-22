@@ -10,13 +10,11 @@ export function validateDateMiddleware(
 
     // Validasi bookingDate
     if (bookingDate && isNaN(Date.parse(bookingDate))) {
-      res
-        .status(400)
-        .json({
-          error: 'Invalid date format',
-          field: 'bookingDate',
-          message: 'bookingDate must be a valid date string (YYYY-MM-DD)',
-        });
+      res.status(400).json({
+        error: 'Invalid date format',
+        field: 'bookingDate',
+        message: 'bookingDate must be a valid date string (YYYY-MM-DD)',
+      });
       return;
     }
 
@@ -24,12 +22,10 @@ export function validateDateMiddleware(
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
     if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
-      res
-        .status(400)
-        .json({
-          error: 'Invalid time format',
-          message: 'startTime and endTime must be in HH:MM format',
-        });
+      res.status(400).json({
+        error: 'Invalid time format',
+        message: 'startTime and endTime must be in HH:MM format',
+      });
       return;
     }
 
