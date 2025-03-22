@@ -20,6 +20,13 @@ export const registerSchema = z.object({
   }).min(1, {
     message: 'Nama tidak boleh kosong'
   }),
+  phone: z.string({
+    message: 'Nomor telepon wajib diisi'  
+  }).min(1, {
+    message: 'Nomor telepon tidak boleh kosong'
+}).regex(/^(\+62|62|0)8[1-9][0-9]{6,9}$/, {
+  message: 'Format nomor telepon tidak valid'
+}),
   role: RoleEnum.optional().default('user')
 });
 

@@ -1,148 +1,215 @@
-# 🏀 Backend Sport Center 
+# 🏀 Sport Center Reservation API
 
 <div align="center">
-    <img src="https://img.shields.io/badge/Node.js-v22.8.0-green?logo=nodedotjs" alt="Node.js Version">
-    <img src="https://img.shields.io/badge/TypeScript-blue?logo=typescript" alt="TypeScript">
-    <img src="https://img.shields.io/badge/Prisma-ORM-blue?logo=prisma" alt="Prisma ORM">
-    <img src="https://img.shields.io/badge/Express.js-black?logo=express" alt="Express.js">
+
+[![Node.js Version](https://img.shields.io/badge/Node.js-v22.8.0-green?logo=nodedotjs)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-blue?logo=prisma)](https://www.prisma.io/)
+[![Express.js](https://img.shields.io/badge/Express.js-4.x-black?logo=express)](https://expressjs.com/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-Real--time-black?logo=socket.io)](https://socket.io/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+🏢 Backend API untuk sistem reservasi fasilitas olahraga modern
+
 </div>
 
-## 🔍 Project Overview
+## 🌟 Fitur Utama
 
-Backend aplikasi Sport Center menggunakan teknologi modern untuk membangun API yang powerfull, scalable, dan real-time:
+- 🔒 **Autentikasi & Otorisasi**
+oda  - JWT-based authentication
+  - Role-based access control (Super Admin/Branch Admin/User)
+  - Secure password hashing dengan bcrypt
 
-- **🚀 Node.js**: Runtime environment JavaScript
-- **💻 TypeScript**: Tipesafe JavaScript
-- **💾 Prisma ORM**: Database toolkit modern
-- **🌐 Express.js**: Web application framework
+- 📅 **Manajemen Reservasi**
+  - Real-time booking status via Socket.io
+  - Pencarian & filter fasilitas olahraga
+  - Sistem pembayaran terintegrasi dengan Midtrans
+  - Review dan rating fasilitas
 
----
+- 🔔 **Notifikasi**
+  - Real-time updates via Socket.io
+  - Activity log tracking
+  - Status pembayaran dan booking
 
-## 🛠 Requirements
+- 📊 **Manajemen Cabang**
+  - Multiple branch management
+  - Analisis pendapatan per cabang
+  - Manajemen lapangan dan tipe lapangan
+  - Sistem promosi dan diskon
 
-<details>
-<summary>📋 Spesifikasi Versi</summary>
+## 🛠 Tech Stack
 
-- **Node.js**: v22.8.0 atau lebih baru
-- **npm**: v10.8.2 atau lebih baru
+- **Runtime**: Node.js v22.8.0
+- **Language**: TypeScript 5.0
+- **Framework**: Express.js
+- **Database**: MySQL + Prisma ORM
+- **Real-time**: Socket.io
+- **Payment Gateway**: Midtrans
+- **File Storage**: Cloudinary
+- **Security**: Helmet, CORS, Rate Limiting
+- **Logging**: Winston
 
-> 💡 **Tips**: Gunakan [nvm](https://github.com/nvm-sh/nvm) untuk manajemen versi Node.js
-</details>
+## 🚀 Quick Start
 
-## 🚦 Instalasi & Setup
-
-### 1. 💽 Setup Database
-```bash
-# Buat database MySQL bernama sport_center
-mysql -u root -p
-CREATE DATABASE sport_center;
-```
-
-### 2. 📦 Install Dependencies
-```bash
-npm install
-```
-
-### 3. 🔐 Konfigurasi JWT Secret
-```bash
-# Generate secret key
-openssl rand -base64 32
-```
-
-Simpan di `.env`:
-```env
-JWT_SECRET=your_generated_secret_key
-```
-
-### 4-7. 🛠 Inisialisasi & Migrasi
+### Prerequisites
 
 ```bash
-# Inisialisasi TypeScript
-npx tsc --init
-
-# Inisialisasi Prisma
-npx prisma init
-
-# Generate Prisma Client
-npx prisma generate
-
-# Migrasi Database
-npx prisma migrate dev --name init
+# Versi minimum yang dibutuhkan
+Node.js >= v22.8.0
+npm >= v10.8.2
+MySQL >= 8.0
 ```
 
-### 8. 🏃 Menjalankan Aplikasi
+### Instalasi
 
-<table>
-    <tr>
-        <th>Mode</th>
-        <th>Perintah</th>
-    </tr>
-    <tr>
-        <td>Pengembangan</td>
-        <td><code>npm run dev</code></td>
-    </tr>
-    <tr>
-        <td>Produksi</td>
-        <td><code>npm run build && npm start</code></td>
-    </tr>
-</table>
+1. **Clone & Install Dependencies**
+   ```bash
+   git clone <repository-url>
+   cd backend
+   npm install
+   ```
 
-### 9. 📖 Dokumentasi API
-🔗 Akses: [http://localhost:3000/](http://localhost:3000/)
+2. **Setup Environment**
+   ```bash
+   # Copy .env.example
+   cp .env.example .env
+   ```
 
----
+   Edit `.env` dengan konfigurasi yang sesuai:
+   ```env
+   # Database
+   DATABASE_URL="mysql://user:password@localhost:3306/sport_center"
 
-## 📦 Ecosystem Packages
+   # JWT
+   JWT_ACCESS_TOKEN_SECRET=your_access_token_secret
+   JWT_REFRESH_TOKEN_SECRET=your_refresh_token_secret
+   
+   # Midtrans
+   MIDTRANS_SERVER_KEY=your_server_key
+   MIDTRANS_CLIENT_KEY=your_client_key
+   
+   # Cloudinary
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   ```
 
-### 🔒 Dependencies
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-    <img src="https://img.shields.io/badge/@prisma/client-Database%20ORM-brightgreen" alt="Prisma Client">
-    <img src="https://img.shields.io/badge/bcryptjs-Password%20Hashing-yellow" alt="Bcrypt">
-    <img src="https://img.shields.io/badge/cors-CORS%20Middleware-blue" alt="CORS">
-    <img src="https://img.shields.io/badge/express-Web%20Framework-lightgrey" alt="Express">
-    <img src="https://img.shields.io/badge/jsonwebtoken-Authentication-orange" alt="JWT">
-    <img src="https://img.shields.io/badge/socket.io-Real--time%20API-black" alt="Socket.io">
-</div>
+3. **Setup Database & Prisma**
+   ```bash
+   # Generate Prisma Client
+   npx prisma generate
+   
+   # Run migrations
+   npx prisma migrate dev
+   
+   # Seed database
+   npx prisma db seed
+   ```
 
-### 🛠 DevDependencies
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-    <img src="https://img.shields.io/badge/TypeScript-Compiler-blue" alt="TypeScript">
-    <img src="https://img.shields.io/badge/ESLint-Code%20Linting-purple" alt="ESLint">
-    <img src="https://img.shields.io/badge/Prettier-Code%20Formatting-pink" alt="Prettier">
-    <img src="https://img.shields.io/badge/ts--node-TypeScript%20Executor-green" alt="ts-node">
-</div>
+4. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
----
+   Server berjalan di `http://localhost:3000`
 
-## 📂 Struktur Project
+## 📁 Struktur Project
 
 ```
 backend/
-├── 📂 prisma/             # Konfigurasi dan skema database Prisma
-├── 📂 src/
-│   ├── 🔧 config/         # Konfigurasi database, logger, dan pengaturan enviroment aplikasi
-│   ├── 📄 documentation/  # Plain HTML page untuk Documentation API aplikasi
-│   ├── 🎮 controllers/    # Logika bisnis aplikasi
-│   ├── 🛡️ middlewares/   # Middleware Express
-│   ├── 📊 models/         # Model database (jika diperlukan)
-│   ├── 🌐 routes/         # Routing API
-│   ├── 🔬 services/       # Service layer
-│   ├── 🧰 utils/          # Helper functions
-│   ├── 🚀 app.ts          # Entry point aplikasi
-├── 🔐 .env                # Konfigurasi environment
-├── 📦 package.json        # Dependencies dan scripts
-├── ⚙️ tsconfig.json       # Konfigurasi TypeScript
-└── 📖 README.md           # Dokumentasi
+├── prisma/                 # Database schema & migrations
+│   ├── migrations/        # Database migrations
+│   ├── schema.prisma      # Prisma schema
+│   └── seeds/            # Database seeders
+├── src/
+│   ├── config/           # App configuration
+│   ├── controllers/      # Request handlers
+│   │   ├── admin/       # Admin controllers
+│   │   ├── owner/       # Owner controllers
+│   │   └── user/        # User controllers
+│   ├── middlewares/      # Express middlewares
+│   ├── routes/           # API routes
+│   ├── socket-handlers/  # Socket.io handlers
+│   ├── utils/            # Helper functions
+│   ├── zod-schemas/      # Request validation
+│   └── app.ts           # App entry point
+├── .env                  # Environment variables
+└── package.json         # Dependencies
 ```
 
-## 🌟 Fitur Utama
-- 🔒 Autentikasi JWT
-- 💾 ORM dengan Prisma
-- 🔄 Real-time API dengan Socket.io
-- 🛡️ Keamanan dengan Helmet
-- 📝 Logging dengan Morgan
+## 📚 API Documentation
+
+### Base URL
+```
+http://localhost:3000/api/v1
+```
+
+### Endpoints
+
+<details>
+<summary><b>🔐 Auth</b></summary>
+
+- `POST /auth/register` - Register user baru
+- `POST /auth/login` - Login user
+- `POST /auth/refresh` - Refresh access token
+- `POST /auth/logout` - Logout user
+</details>
+
+<details>
+<summary><b>🏢 Branch</b></summary>
+
+- `GET /branches` - List semua cabang
+- `GET /branches/:id` - Detail cabang
+- `POST /branches` - Tambah cabang baru (Super Admin)
+- `PUT /branches/:id` - Update cabang
+- `DELETE /branches/:id` - Hapus cabang
+</details>
+
+<details>
+<summary><b>⚽ Field</b></summary>
+
+- `GET /fields` - List semua lapangan
+- `GET /fields/:id` - Detail lapangan
+- `POST /fields` - Tambah lapangan baru (Admin)
+- `PUT /fields/:id` - Update lapangan
+- `DELETE /fields/:id` - Hapus lapangan
+</details>
+
+<details>
+<summary><b>📅 Booking</b></summary>
+
+- `GET /bookings` - List reservasi user
+- `POST /bookings` - Buat reservasi baru
+- `GET /bookings/:id` - Detail reservasi
+- `DELETE /bookings/:id` - Batalkan reservasi
+</details>
+
+<details>
+<summary><b>💰 Payment</b></summary>
+
+- `GET /payments` - List pembayaran user
+- `GET /payments/:id` - Detail pembayaran
+- `POST /payments/notification` - Webhook Midtrans
+</details>
+
+## 🔧 Scripts
+
+```json
+{
+  "dev": "ts-node-dev src/app.ts",
+  "build": "tsc",
+  "start": "node dist/app.js",
+  "lint": "eslint src/**/*.ts",
+  "format": "prettier --write src/**/*.ts"
+}
+```
+
+## 📝 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-## 📌 Catatan Penting
-> **Perhatian**: Pastikan selalu update dependencies dan perhatikan keamanan aplikasi Anda.
+<div align="center">
+Made with ❤️ by PBL Team
+</div>

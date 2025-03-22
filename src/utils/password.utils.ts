@@ -1,21 +1,25 @@
-import bcrypt from 'bcryptjs';
+import * as argon2 from 'argon2';
 
 /**
- * Menghasilkan hash dari password dengan salt
+ * Menghasilkan hash dari password menggunakan Argon2 (tanpa perlu salt manual)
  * @param password Password yang akan di-hash
- * @returns Password yang sudah di-hash dengan salt
+ * @returns Hash password dalam format Argon2
  */
 export const hashPassword = async (password: string): Promise<string> => {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
+  return await argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 4
+  });
 };
 
 /**
- * Memverifikasi apakah password cocok dengan hash
+ * Memverifikasi apakah password cocok dengan hash menggunakan Argon2
  * @param password Password yang akan diverifikasi
  * @param hashedPassword Password hash yang tersimpan
  * @returns Boolean yang menunjukkan apakah password cocok
  */
 export const verifyPassword = async (password: string, hashedPassword: string): Promise<boolean> => {
-  return bcrypt.compare(password, hashedPassword);
-}; 
+  return await argon2.verify(hashedPassword, password);
+};
