@@ -5,11 +5,11 @@ export const getBookingsWithPayments = async (start: Date, end: Date) => {
     where: {
       bookingDate: {
         gte: start,
-        lte: end
+        lte: end,
       },
       payment: {
-        status: 'paid'
-      }
+        status: 'paid',
+      },
     },
     select: {
       id: true,
@@ -17,8 +17,8 @@ export const getBookingsWithPayments = async (start: Date, end: Date) => {
       fieldId: true,
       payment: {
         select: {
-          amount: true
-        }
+          amount: true,
+        },
       },
       field: {
         select: {
@@ -28,57 +28,61 @@ export const getBookingsWithPayments = async (start: Date, end: Date) => {
           branch: {
             select: {
               id: true,
-              name: true
-            }
-          }
-        }
-      }
-    }
+              name: true,
+            },
+          },
+        },
+      },
+    },
   });
 };
 
-export const getBookingsForOccupancy = async (start: Date, end: Date, branchId?: number) => {
+export const getBookingsForOccupancy = async (
+  start: Date,
+  end: Date,
+  branchId?: number,
+) => {
   const whereBooking: any = {
     bookingDate: {
       gte: start,
-      lte: end
-    }
+      lte: end,
+    },
   };
-  
+
   if (branchId) {
     whereBooking.field = {
-      branchId
+      branchId,
     };
   }
-  
+
   return prisma.booking.findMany({
     where: whereBooking,
     include: {
       field: {
         include: {
-          branch: true
-        }
+          branch: true,
+        },
       },
-      payment: true
+      payment: true,
     },
     orderBy: {
-      bookingDate: 'asc'
-    }
+      bookingDate: 'asc',
+    },
   });
 };
 
 export const getAllFields = async (branchId?: number) => {
   const whereField: any = {};
-  
+
   if (branchId) {
     whereField.branchId = branchId;
   }
-  
+
   return prisma.field.findMany({
     where: whereField,
     include: {
-      branch: true
-    }
+      branch: true,
+    },
   });
 };
 
@@ -86,17 +90,17 @@ export const getBookingsWithDetails = async (fromDate: Date) => {
   return prisma.booking.findMany({
     where: {
       bookingDate: {
-        gte: fromDate
-      }
+        gte: fromDate,
+      },
     },
     include: {
       payment: {
         where: {
-          status: 'paid'
+          status: 'paid',
         },
         select: {
-          amount: true
-        }
+          amount: true,
+        },
       },
       field: {
         select: {
@@ -104,13 +108,13 @@ export const getBookingsWithDetails = async (fromDate: Date) => {
           branch: {
             select: {
               id: true,
-              name: true
-            }
-          }
-        }
+              name: true,
+            },
+          },
+        },
       },
-      user: true
-    }
+      user: true,
+    },
   });
 };
 
@@ -119,15 +123,15 @@ export const getAllBookingsWithPayments = async () => {
     include: {
       payment: {
         where: {
-          status: 'paid'
+          status: 'paid',
         },
         select: {
-          amount: true
-        }
-      }
+          amount: true,
+        },
+      },
     },
     orderBy: {
-      bookingDate: 'asc'
-    }
+      bookingDate: 'asc',
+    },
   });
 };

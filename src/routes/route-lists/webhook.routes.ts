@@ -6,4 +6,4 @@ const router = express.Router();
 // Midtrans webhook endpoint
 router.post('/midtrans', handleMidtransNotification);
 
-export default router; 
+export default router;

@@ -17,18 +17,18 @@ export function initializeSocketIO(server: HttpServer): SocketServer {
     global.io = new SocketServer(server, {
       cors: {
         origin: '*',
-        // || process.env.FRONTEND_URL || 'http://localhost:3000' 
+        // || process.env.FRONTEND_URL || 'http://localhost:3000'
         methods: ['GET', 'POST'],
-        credentials: true
+        credentials: true,
       },
       // Increase ping timeout and interval for better connection stability
       pingTimeout: 60000,
-      pingInterval: 25000
+      pingInterval: 25000,
     });
 
     console.log('✅ Socket.IO server initialized');
   }
-  
+
   return global.io;
 }
 
@@ -49,18 +49,21 @@ export function getIO(): SocketServer {
  * @param namespace Socket.IO namespace
  * @param requireAuth Whether authentication is required (default: true)
  */
-export function applyAuthMiddleware(namespace: Namespace, requireAuth: boolean = true): void {
+export function applyAuthMiddleware(
+  namespace: Namespace,
+  requireAuth: boolean = true,
+): void {
   namespace.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
-      
+
       // If token is not provided but auth is not required, allow connection
       if (!token) {
         if (!requireAuth) {
           socket.data.user = null;
           return next();
         }
-        return next(new Error("Authentication token is required"));
+        return next(new Error('Authentication token is required'));
       }
 
       // Verify token
@@ -71,9 +74,9 @@ export function applyAuthMiddleware(namespace: Namespace, requireAuth: boolean =
             socket.data.user = null;
             return next();
           }
-          return next(new Error("Invalid authentication token"));
+          return next(new Error('Invalid authentication token'));
         }
-        
+
         socket.data.user = user;
         next();
       } catch (authError) {
@@ -81,14 +84,14 @@ export function applyAuthMiddleware(namespace: Namespace, requireAuth: boolean =
           socket.data.user = null;
           return next();
         }
-        next(new Error("Authentication failed"));
+        next(new Error('Authentication failed'));
       }
     } catch (error) {
       if (!requireAuth) {
         socket.data.user = null;
         return next();
       }
-      next(new Error("Authentication failed"));
+      next(new Error('Authentication failed'));
     }
   });
 }
@@ -98,14 +101,18 @@ export function applyAuthMiddleware(namespace: Namespace, requireAuth: boolean =
  * @param namespace Socket.IO namespace
  */
 export function setupNamespaceEvents(namespace: Namespace): void {
-  namespace.on("connection", (socket) => {
-    console.log(`📡 Client connected to ${namespace.name || '/'} - ID: ${socket.id}`);
+  namespace.on('connection', (socket) => {
+    console.log(
+      `📡 Client connected to ${namespace.name || '/'} - ID: ${socket.id}`,
+    );
 
-    socket.on("disconnect", (reason) => {
-      console.log(`🔌 Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`);
+    socket.on('disconnect', (reason) => {
+      console.log(
+        `🔌 Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`,
+      );
     });
 
-    socket.on("error", (error) => {
+    socket.on('error', (error) => {
       console.error(`❌ Socket error in ${namespace.name || '/'}:`, error);
     });
   });

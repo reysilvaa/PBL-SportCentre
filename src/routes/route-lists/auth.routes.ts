@@ -1,7 +1,15 @@
 import express from 'express';
-import { login, logout, register, refreshToken } from '../../controllers/auth.controller';
+import {
+  login,
+  logout,
+  register,
+  refreshToken,
+} from '../../controllers/auth.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
-import { loginRateLimiter, registerRateLimiter } from '../../middlewares/security.middleware';
+import {
+  loginRateLimiter,
+  registerRateLimiter,
+} from '../../middlewares/security.middleware';
 
 const router = express.Router();
 

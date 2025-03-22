@@ -5,14 +5,20 @@ import { emitBookingEvents } from '../../utils/booking/booking.utils';
 import { getIO } from '../../config/socket';
 import { sendPaymentNotification } from '../../socket-handlers/payment.socket';
 import { ActivityLogService } from '../../utils/activityLog/activityLog.utils';
-import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
+import {
+  trackFailedBooking,
+  resetFailedBookingCounter,
+} from '../../middlewares/security.middleware';
 
 // Import the global type definition
 declare global {
   var activeLocks: Record<string, boolean>;
 }
 
-export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
+export const handleMidtransNotification = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     const notification = req.body;
     console.log('🔔 Midtrans notification received:', notification);
@@ -25,15 +31,15 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     const grossAmount = notification.gross_amount;
 
     if (!orderId) {
-      console.error("❌ Missing order_id in webhook request");
+      console.error('❌ Missing order_id in webhook request');
       res.status(400).json({ error: 'Missing order_id' });
       return;
     }
 
     // Handle test notifications from Midtrans
     if (orderId && orderId.includes('_test_')) {
-      console.log("ℹ️ Received test notification from Midtrans:", orderId);
-      console.log("✅ Test notification processed successfully");
+      console.log('ℹ️ Received test notification from Midtrans:', orderId);
+      console.log('✅ Test notification processed successfully');
       res.status(200).json({ message: 'Test notification acknowledged' });
       return;
     }
@@ -48,7 +54,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     } else {
       paymentId = parseInt(orderId);
     }
-    
+
     if (isNaN(paymentId)) {
       console.error('❌ Invalid payment ID format in order_id');
       res.status(400).json({ error: 'Invalid order_id format' });
@@ -57,17 +63,17 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
 
     // Use locking mechanism to prevent concurrent updates
     const lockKey = `payment_update_${paymentId}`;
-    
+
     // Initialize locks if not exists
     if (!global.activeLocks) global.activeLocks = {};
-    
+
     // Check if payment is already being processed
     if (global.activeLocks[lockKey]) {
-      console.log("⚠️ Another update for this payment is already in progress");
+      console.log('⚠️ Another update for this payment is already in progress');
       res.status(409).json({ message: 'Update already in progress' });
       return;
     }
-    
+
     // Set lock
     global.activeLocks[lockKey] = true;
 
@@ -75,14 +81,16 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       // Find the payment in the database
       const payment = await prisma.payment.findUnique({
         where: { id: paymentId },
-        include: { 
+        include: {
           booking: {
             include: {
               field: true,
-              user: { select: { id: true, name: true, email: true, phone: true } }
-            }
-          }
-        }
+              user: {
+                select: { id: true, name: true, email: true, phone: true },
+              },
+            },
+          },
+        },
       });
 
       if (!payment) {
@@ -93,24 +101,31 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
 
       // Determine new payment status based on transaction status
       let newStatus: PaymentStatus;
-      
-      if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
+
+      if (
+        transactionStatus === 'capture' ||
+        transactionStatus === 'settlement'
+      ) {
         if (fraudStatus === 'challenge') {
           newStatus = PaymentStatus.pending; // Need manual verification
         } else if (fraudStatus === 'accept' || fraudStatus === null) {
           // Check if it's partial payment
           const fieldPrice = Number(payment.amount);
-          const paymentAmount = typeof grossAmount === 'string' ? 
-            parseFloat(grossAmount) : Number(grossAmount);
+          const paymentAmount =
+            typeof grossAmount === 'string'
+              ? parseFloat(grossAmount)
+              : Number(grossAmount);
 
           if (paymentAmount < fieldPrice) {
             newStatus = PaymentStatus.dp_paid; // Partial payment
-            console.log(`💰 Down payment received: ${paymentAmount} out of ${fieldPrice}`);
+            console.log(
+              `💰 Down payment received: ${paymentAmount} out of ${fieldPrice}`,
+            );
           } else {
             newStatus = PaymentStatus.paid; // Full payment
             console.log(`💰 Full payment received: ${paymentAmount}`);
           }
-          
+
           // Reset failed counter if payment successful
           if (payment.booking.userId) {
             resetFailedBookingCounter(payment.booking.userId);
@@ -120,13 +135,22 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
         }
       } else if (transactionStatus === 'pending') {
         newStatus = PaymentStatus.pending; // Payment pending
-      } else if (transactionStatus === 'deny' || transactionStatus === 'cancel' || transactionStatus === 'expire' || transactionStatus === 'failure') {
+      } else if (
+        transactionStatus === 'deny' ||
+        transactionStatus === 'cancel' ||
+        transactionStatus === 'expire' ||
+        transactionStatus === 'failure'
+      ) {
         newStatus = PaymentStatus.failed; // Payment failed
-        
+
         // Jika pembayaran gagal, tambahkan ke pelacakan
         if (payment.booking && payment.booking.userId) {
           const clientIP = req.ip || req.socket.remoteAddress || '127.0.0.1';
-          await trackFailedBooking(payment.booking.userId, payment.booking.id, clientIP);
+          await trackFailedBooking(
+            payment.booking.userId,
+            payment.booking.id,
+            clientIP,
+          );
         }
       } else if (transactionStatus === 'refund') {
         newStatus = PaymentStatus.refunded; // Payment refunded
@@ -134,22 +158,29 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
         newStatus = PaymentStatus.pending; // Default to pending for other statuses
       }
 
-      console.log("🔄 Updating payment status from", payment.status, "to", newStatus);
+      console.log(
+        '🔄 Updating payment status from',
+        payment.status,
+        'to',
+        newStatus,
+      );
 
       // Use transaction to ensure all database operations complete together
       await prisma.$transaction(async (tx) => {
         // Update payment status in the database
         await tx.payment.update({
           where: { id: paymentId },
-          data: { 
+          data: {
             status: newStatus,
             // Add transaction ID if available
-            ...(notification.transaction_id && { transactionId: notification.transaction_id })
-          }
+            ...(notification.transaction_id && {
+              transactionId: notification.transaction_id,
+            }),
+          },
         });
-        
+
         console.log('✅ Payment status updated:', newStatus);
-        
+
         // Create notification for the user
         await tx.notification.create({
           data: {
@@ -159,7 +190,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
             isRead: false,
             type: 'PAYMENT',
             linkId: payment.id.toString(),
-          }
+          },
         });
       });
 
@@ -171,40 +202,44 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
         newStatus,
         {
           transactionStatus,
-          amount: grossAmount
-        }
+          amount: grossAmount,
+        },
       );
 
       // Get complete booking with updated payment for emitting events
       const updatedBooking = await prisma.booking.findUnique({
         where: { id: payment.booking.id },
-        include: { 
+        include: {
           user: { select: { id: true, name: true, email: true, phone: true } },
           field: { include: { branch: true } },
-          payment: true
-        }
+          payment: true,
+        },
       });
 
       if (updatedBooking) {
         // Emit real-time events via Socket.IO
-        emitBookingEvents('payment:updated', { 
+        emitBookingEvents('payment:updated', {
           booking: updatedBooking,
-          oldStatus: payment.status, 
-          newStatus 
+          oldStatus: payment.status,
+          newStatus,
         });
 
         // Emit to user's personal channel
-        getIO().to(`user-${updatedBooking.userId}`).emit('payment:updated', {
-          booking: updatedBooking,
-          status: newStatus,
-          message: `Status pembayaran Anda telah diperbarui menjadi ${newStatus}`
-        });
-        
+        getIO()
+          .to(`user-${updatedBooking.userId}`)
+          .emit('payment:updated', {
+            booking: updatedBooking,
+            status: newStatus,
+            message: `Status pembayaran Anda telah diperbarui menjadi ${newStatus}`,
+          });
+
         // Emit to branch channel
-        getIO().to(`branch-${updatedBooking.field.branchId}`).emit('payment:updated', {
-          booking: updatedBooking,
-          status: newStatus
-        });
+        getIO()
+          .to(`branch-${updatedBooking.field.branchId}`)
+          .emit('payment:updated', {
+            booking: updatedBooking,
+            status: newStatus,
+          });
 
         // Send notification using the specialized payment notification handler
         try {
@@ -212,10 +247,10 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
             paymentId: payment.id,
             bookingId: payment.booking.id,
             status: newStatus,
-            userId: payment.booking.user.id
+            userId: payment.booking.user.id,
           });
         } catch (socketError) {
-          console.error("❌ Socket.IO Error:", socketError);
+          console.error('❌ Socket.IO Error:', socketError);
           // Continue processing even if socket notification fails
         }
       }
@@ -224,13 +259,16 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       const verifiedPayment = await prisma.payment.findUnique({
         where: { id: paymentId },
       });
-      console.log("🔍 Verified payment status after update:", verifiedPayment?.status);
+      console.log(
+        '🔍 Verified payment status after update:',
+        verifiedPayment?.status,
+      );
 
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
-        message: 'Payment status updated successfully', 
+        message: 'Payment status updated successfully',
         paymentId,
-        paymentStatus: newStatus
+        paymentStatus: newStatus,
       });
     } finally {
       // Always release the lock
@@ -240,4 +278,4 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     console.error('❌ Error processing Midtrans notification:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-}; 
+};

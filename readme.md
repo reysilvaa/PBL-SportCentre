@@ -16,17 +16,20 @@
 ## 🌟 Fitur Utama
 
 - 🔒 **Autentikasi & Otorisasi**
-oda  - JWT-based authentication
+  oda - JWT-based authentication
+
   - Role-based access control (Super Admin/Branch Admin/User)
   - Secure password hashing dengan bcrypt
 
 - 📅 **Manajemen Reservasi**
+
   - Real-time booking status via Socket.io
   - Pencarian & filter fasilitas olahraga
   - Sistem pembayaran terintegrasi dengan Midtrans
   - Review dan rating fasilitas
 
 - 🔔 **Notifikasi**
+
   - Real-time updates via Socket.io
   - Activity log tracking
   - Status pembayaran dan booking
@@ -63,6 +66,7 @@ MySQL >= 8.0
 ### Instalasi
 
 1. **Clone & Install Dependencies**
+
    ```bash
    git clone <repository-url>
    cd backend
@@ -70,12 +74,14 @@ MySQL >= 8.0
    ```
 
 2. **Setup Environment**
+
    ```bash
    # Copy .env.example
    cp .env.example .env
    ```
 
    Edit `.env` dengan konfigurasi yang sesuai:
+
    ```env
    # Database
    DATABASE_URL="mysql://user:password@localhost:3306/sport_center"
@@ -83,11 +89,11 @@ MySQL >= 8.0
    # JWT
    JWT_ACCESS_TOKEN_SECRET=your_access_token_secret
    JWT_REFRESH_TOKEN_SECRET=your_refresh_token_secret
-   
+
    # Midtrans
    MIDTRANS_SERVER_KEY=your_server_key
    MIDTRANS_CLIENT_KEY=your_client_key
-   
+
    # Cloudinary
    CLOUDINARY_CLOUD_NAME=your_cloud_name
    CLOUDINARY_API_KEY=your_api_key
@@ -95,18 +101,20 @@ MySQL >= 8.0
    ```
 
 3. **Setup Database & Prisma**
+
    ```bash
    # Generate Prisma Client
    npx prisma generate
-   
+
    # Run migrations
    npx prisma migrate dev
-   
+
    # Seed database
    npx prisma db seed
    ```
 
 4. **Start Development Server**
+
    ```bash
    npm run dev
    ```
@@ -140,6 +148,7 @@ backend/
 ## 📚 API Documentation
 
 ### Base URL
+
 ```
 http://localhost:3000/api/v1
 ```

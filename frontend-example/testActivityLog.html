@@ -1,175 +1,200 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebSocket Test - Activity Logs</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            text-align: center;
-        }
-        #status {
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        #logs {
-            background: #fff;
-            padding: 10px;
-            border-radius: 5px;
-            max-width: 800px;
-            margin: 10px auto;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-        }
-        .log-item {
-            padding: 5px;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .log-item:last-child {
-            border-bottom: none;
-        }
-        button {
-            padding: 5px 10px;
-            cursor: pointer;
-            border: none;
-            background: red;
-            color: white;
-            border-radius: 3px;
-        }
-        button:hover {
-            background: darkred;
-        }
-        #log-form {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        #log-form input, #log-form textarea {
-            padding: 5px;
-            margin-right: 10px;
-        }
-        #log-form button {
-            background: green;
-        }
-        #filter-section {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        #filter-section input {
-            margin-right: 10px;
-            padding: 5px;
-        }
-        #filter-section button {
-            background: blue;
-        }
-        .log-details {
-            font-size: 0.8em;
-            color: #666;
-            margin-top: 5px;
-        }
-        .expanded {
-            background-color: #f8f8f8;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      h1 {
+        text-align: center;
+      }
+      #status {
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      #logs {
+        background: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 800px;
+        margin: 10px auto;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      }
+      .log-item {
+        padding: 5px;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .log-item:last-child {
+        border-bottom: none;
+      }
+      button {
+        padding: 5px 10px;
+        cursor: pointer;
+        border: none;
+        background: red;
+        color: white;
+        border-radius: 3px;
+      }
+      button:hover {
+        background: darkred;
+      }
+      #log-form {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      #log-form input,
+      #log-form textarea {
+        padding: 5px;
+        margin-right: 10px;
+      }
+      #log-form button {
+        background: green;
+      }
+      #filter-section {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+      #filter-section input {
+        margin-right: 10px;
+        padding: 5px;
+      }
+      #filter-section button {
+        background: blue;
+      }
+      .log-details {
+        font-size: 0.8em;
+        color: #666;
+        margin-top: 5px;
+      }
+      .expanded {
+        background-color: #f8f8f8;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>WebSocket Test - Activity Logs</h1>
     <p id="status">🔴 Disconnected</p>
 
     <div id="filter-section">
-        <input type="text" id="filterUserId" placeholder="Filter by User ID">
-        <button onclick="filterLogs()">Filter</button>
-        <button onclick="subscribeToUserLogs()">Subscribe to Updates</button>
+      <input type="text" id="filterUserId" placeholder="Filter by User ID" />
+      <button onclick="filterLogs()">Filter</button>
+      <button onclick="subscribeToUserLogs()">Subscribe to Updates</button>
     </div>
 
     <div id="logs">
-        <h3>Activity Logs:</h3>
-        <div id="log-list"></div>
+      <h3>Activity Logs:</h3>
+      <div id="log-list"></div>
     </div>
 
     <div id="log-form">
-        <input type="text" id="userId" placeholder="User ID" style="width: 100px;">
-        <input type="text" id="action" placeholder="Action" style="width: 200px;">
-        <textarea id="details" placeholder="Details (optional JSON)" style="width: 250px;"></textarea>
-        <input type="text" id="relatedId" placeholder="Related ID (optional)" style="width: 120px;">
-        <button onclick="createLog()">Create Log</button>
+      <input
+        type="text"
+        id="userId"
+        placeholder="User ID"
+        style="width: 100px"
+      />
+      <input
+        type="text"
+        id="action"
+        placeholder="Action"
+        style="width: 200px"
+      />
+      <textarea
+        id="details"
+        placeholder="Details (optional JSON)"
+        style="width: 250px"
+      ></textarea>
+      <input
+        type="text"
+        id="relatedId"
+        placeholder="Related ID (optional)"
+        style="width: 120px"
+      />
+      <button onclick="createLog()">Create Log</button>
     </div>
 
     <script>
-        const apiUrl = 'http://localhost:3000/api'; // Base API URL
-        const socket = io('http://localhost:3000'); // WebSocket URL
-        let currentFilterUserId = null;
+      const apiUrl = 'http://localhost:3000/api'; // Base API URL
+      const socket = io('http://localhost:3000'); // WebSocket URL
+      let currentFilterUserId = null;
 
-        // Status connection events
-        socket.on("connect", () => {
-            document.getElementById("status").innerText = "🟢 Connected to WebSocket";
+      // Status connection events
+      socket.on('connect', () => {
+        document.getElementById('status').innerText =
+          '🟢 Connected to WebSocket';
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('status').innerText = '🔴 Disconnected';
+      });
+
+      // Listen for activity log events using various event names for compatibility
+      [
+        'activity-logs-updated',
+        'activity_logs_updated',
+        'activity-log-created',
+      ].forEach((eventName) => {
+        socket.on(eventName, (data) => {
+          console.log(`Received ${eventName} event:`, data);
+
+          // Handle both array and single object formats
+          const logs = Array.isArray(data) ? data : [data];
+
+          // Clear existing logs if we received a full update
+          if (Array.isArray(data)) {
+            document.getElementById('log-list').innerHTML = '';
+          }
+
+          // Add logs to the list
+          logs.forEach((log) => addLogToList(log));
         });
+      });
 
-        socket.on("disconnect", () => {
-            document.getElementById("status").innerText = "🔴 Disconnected";
-        });
+      // Listen for deletion events
+      socket.on('activity-log-deleted', (log) => {
+        console.log('Log deleted:', log);
+        removeLogFromList(log.id);
+      });
 
-        // Listen for activity log events using various event names for compatibility
-        ["activity-logs-updated", "activity_logs_updated", "activity-log-created"].forEach(eventName => {
-            socket.on(eventName, (data) => {
-                console.log(`Received ${eventName} event:`, data);
-                
-                // Handle both array and single object formats
-                const logs = Array.isArray(data) ? data : [data];
-                
-                // Clear existing logs if we received a full update
-                if (Array.isArray(data)) {
-                    document.getElementById("log-list").innerHTML = "";
-                }
-                
-                // Add logs to the list
-                logs.forEach(log => addLogToList(log));
-            });
-        });
+      // Add log to the display list
+      function addLogToList(log) {
+        // Skip if we're filtering and this log is not for the filtered user
+        if (currentFilterUserId && log.userId != currentFilterUserId) {
+          return;
+        }
 
-        // Listen for deletion events
-        socket.on("activity-log-deleted", (log) => {
-            console.log("Log deleted:", log);
-            removeLogFromList(log.id);
-        });
+        const logList = document.getElementById('log-list');
 
-        // Add log to the display list
-        function addLogToList(log) {
-            // Skip if we're filtering and this log is not for the filtered user
-            if (currentFilterUserId && log.userId != currentFilterUserId) {
-                return;
-            }
-            
-            const logList = document.getElementById("log-list");
-            
-            // Check if log already exists in the list
-            const existingLog = document.getElementById(`log-${log.id}`);
-            if (existingLog) {
-                existingLog.remove(); // Remove it so we can add the updated version
-            }
-            
-            const logItem = document.createElement("div");
-            logItem.classList.add("log-item");
-            logItem.setAttribute("id", `log-${log.id}`);
-            
-            // Format timestamp
-            const timestamp = new Date(log.createdAt).toLocaleString();
-            
-            // Format user info
-            const userName = log.user ? log.user.name : `User ${log.userId}`;
-            
-            // Create log content
-            logItem.innerHTML = `
+        // Check if log already exists in the list
+        const existingLog = document.getElementById(`log-${log.id}`);
+        if (existingLog) {
+          existingLog.remove(); // Remove it so we can add the updated version
+        }
+
+        const logItem = document.createElement('div');
+        logItem.classList.add('log-item');
+        logItem.setAttribute('id', `log-${log.id}`);
+
+        // Format timestamp
+        const timestamp = new Date(log.createdAt).toLocaleString();
+
+        // Format user info
+        const userName = log.user ? log.user.name : `User ${log.userId}`;
+
+        // Create log content
+        logItem.innerHTML = `
                 <div style="flex: 1;">
                     <div>
                         <strong>${timestamp}</strong> - ${userName}: ${log.action}
@@ -179,174 +204,175 @@
                 </div>
                 <button onclick="deleteLog(${log.id})">❌</button>
             `;
-            
-            // Add click event to expand/collapse
-            logItem.addEventListener('click', function(e) {
-                if (e.target.tagName !== 'BUTTON') {
-                    this.classList.toggle('expanded');
-                }
-            });
-            
-            // Add to the top of the list for chronological order
-            if (logList.firstChild) {
-                logList.insertBefore(logItem, logList.firstChild);
-            } else {
-                logList.appendChild(logItem);
-            }
+
+        // Add click event to expand/collapse
+        logItem.addEventListener('click', function (e) {
+          if (e.target.tagName !== 'BUTTON') {
+            this.classList.toggle('expanded');
+          }
+        });
+
+        // Add to the top of the list for chronological order
+        if (logList.firstChild) {
+          logList.insertBefore(logItem, logList.firstChild);
+        } else {
+          logList.appendChild(logItem);
+        }
+      }
+
+      // Format details JSON as string or parse if needed
+      function formatDetails(details) {
+        if (!details) return '';
+
+        try {
+          // If it's already a string but actually JSON, parse and then stringify it nicely
+          const parsed =
+            typeof details === 'string' ? JSON.parse(details) : details;
+          return JSON.stringify(parsed, null, 2);
+        } catch (e) {
+          // If not valid JSON, just return the string
+          return details;
+        }
+      }
+
+      // Remove log from the display list
+      function removeLogFromList(logId) {
+        const logItem = document.getElementById(`log-${logId}`);
+        if (logItem) {
+          logItem.remove();
+        }
+      }
+
+      // Create a new activity log
+      async function createLog() {
+        const userId = document.getElementById('userId').value;
+        const action = document.getElementById('action').value;
+        const details = document.getElementById('details').value;
+        const relatedId = document.getElementById('relatedId').value;
+
+        if (!userId || !action) {
+          alert('User ID and Action are required!');
+          return;
         }
 
-        // Format details JSON as string or parse if needed
-        function formatDetails(details) {
-            if (!details) return '';
-            
-            try {
-                // If it's already a string but actually JSON, parse and then stringify it nicely
-                const parsed = typeof details === 'string' ? JSON.parse(details) : details;
-                return JSON.stringify(parsed, null, 2);
-            } catch (e) {
-                // If not valid JSON, just return the string
-                return details;
-            }
+        const payload = {
+          userId: parseInt(userId),
+          action,
+        };
+
+        // Add optional fields if provided
+        if (details) {
+          try {
+            // Try to parse as JSON first
+            JSON.parse(details);
+            payload.details = details;
+          } catch (e) {
+            // If not valid JSON, use as a string
+            payload.details = details;
+          }
         }
 
-        // Remove log from the display list
-        function removeLogFromList(logId) {
-            const logItem = document.getElementById(`log-${logId}`);
-            if (logItem) {
-                logItem.remove();
-            }
+        if (relatedId && !isNaN(parseInt(relatedId))) {
+          payload.relatedId = parseInt(relatedId);
         }
 
-        // Create a new activity log
-        async function createLog() {
-            const userId = document.getElementById("userId").value;
-            const action = document.getElementById("action").value;
-            const details = document.getElementById("details").value;
-            const relatedId = document.getElementById("relatedId").value;
+        try {
+          const response = await fetch(`${apiUrl}/activity-logs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
 
-            if (!userId || !action) {
-                alert("User ID and Action are required!");
-                return;
-            }
+          if (response.ok) {
+            // Clear form fields on success
+            document.getElementById('action').value = '';
+            document.getElementById('details').value = '';
+            document.getElementById('relatedId').value = '';
 
-            const payload = { 
-                userId: parseInt(userId), 
-                action 
-            };
-            
-            // Add optional fields if provided
-            if (details) {
-                try {
-                    // Try to parse as JSON first
-                    JSON.parse(details);
-                    payload.details = details;
-                } catch (e) {
-                    // If not valid JSON, use as a string
-                    payload.details = details;
-                }
-            }
-            
-            if (relatedId && !isNaN(parseInt(relatedId))) {
-                payload.relatedId = parseInt(relatedId);
-            }
-
-            try {
-                const response = await fetch(`${apiUrl}/activity-logs`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    // Clear form fields on success
-                    document.getElementById("action").value = "";
-                    document.getElementById("details").value = "";
-                    document.getElementById("relatedId").value = "";
-                    
-                    // Keep userId for convenience
-                } else {
-                    const error = await response.json();
-                    alert(`Failed to create log: ${error.error || 'Unknown error'}`);
-                }
-            } catch (error) {
-                console.error("Error creating log:", error);
-                alert("Error connecting to the server");
-            }
+            // Keep userId for convenience
+          } else {
+            const error = await response.json();
+            alert(`Failed to create log: ${error.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('Error creating log:', error);
+          alert('Error connecting to the server');
         }
+      }
 
-        // Delete an activity log
-        async function deleteLog(logId) {
-            try {
-                const response = await fetch(`${apiUrl}/activity-logs/${logId}`, {
-                    method: "DELETE"
-                });
+      // Delete an activity log
+      async function deleteLog(logId) {
+        try {
+          const response = await fetch(`${apiUrl}/activity-logs/${logId}`, {
+            method: 'DELETE',
+          });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    alert(`Failed to delete log: ${error.error || 'Unknown error'}`);
-                }
-            } catch (error) {
-                console.error("Error deleting log:", error);
-                alert("Error connecting to the server");
-            }
+          if (!response.ok) {
+            const error = await response.json();
+            alert(`Failed to delete log: ${error.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('Error deleting log:', error);
+          alert('Error connecting to the server');
         }
+      }
 
-        // Filter logs by user ID
-        async function filterLogs() {
-            const userId = document.getElementById("filterUserId").value;
-            currentFilterUserId = userId ? parseInt(userId) : null;
-            
-            try {
-                const url = userId 
-                    ? `${apiUrl}/activity-logs?userId=${userId}` 
-                    : `${apiUrl}/activity-logs`;
-                
-                const response = await fetch(url);
-                const logs = await response.json();
-                
-                // Clear existing logs
-                document.getElementById("log-list").innerHTML = "";
-                
-                // Add filtered logs
-                logs.forEach(addLogToList);
-            } catch (error) {
-                console.error("Error fetching logs:", error);
-                alert("Error connecting to the server");
-            }
+      // Filter logs by user ID
+      async function filterLogs() {
+        const userId = document.getElementById('filterUserId').value;
+        currentFilterUserId = userId ? parseInt(userId) : null;
+
+        try {
+          const url = userId
+            ? `${apiUrl}/activity-logs?userId=${userId}`
+            : `${apiUrl}/activity-logs`;
+
+          const response = await fetch(url);
+          const logs = await response.json();
+
+          // Clear existing logs
+          document.getElementById('log-list').innerHTML = '';
+
+          // Add filtered logs
+          logs.forEach(addLogToList);
+        } catch (error) {
+          console.error('Error fetching logs:', error);
+          alert('Error connecting to the server');
         }
+      }
 
-        // Subscribe to user-specific logs
-        function subscribeToUserLogs() {
-            const userId = document.getElementById("filterUserId").value;
-            
-            if (userId) {
-                // Join user-specific room
-                socket.emit('subscribe_activity_logs', { userId });
-                alert(`Subscribed to real-time updates for User ${userId}`);
-            } else {
-                alert("Please enter a User ID to subscribe");
-            }
+      // Subscribe to user-specific logs
+      function subscribeToUserLogs() {
+        const userId = document.getElementById('filterUserId').value;
+
+        if (userId) {
+          // Join user-specific room
+          socket.emit('subscribe_activity_logs', { userId });
+          alert(`Subscribed to real-time updates for User ${userId}`);
+        } else {
+          alert('Please enter a User ID to subscribe');
         }
+      }
 
-        // Initial fetch of logs when the page loads
-        async function fetchLogs() {
-            try {
-                const response = await fetch(`${apiUrl}/activity-logs?realtime=true`);
-                const logs = await response.json();
-                
-                // Sort logs by creation date (newest first)
-                logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                
-                // Add all logs to the list
-                logs.forEach(addLogToList);
-            } catch (error) {
-                console.error("Error fetching initial logs:", error);
-                alert("Error connecting to the server");
-            }
+      // Initial fetch of logs when the page loads
+      async function fetchLogs() {
+        try {
+          const response = await fetch(`${apiUrl}/activity-logs?realtime=true`);
+          const logs = await response.json();
+
+          // Sort logs by creation date (newest first)
+          logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+          // Add all logs to the list
+          logs.forEach(addLogToList);
+        } catch (error) {
+          console.error('Error fetching initial logs:', error);
+          alert('Error connecting to the server');
         }
+      }
 
-        // Initialize the page
-        fetchLogs();
+      // Initialize the page
+      fetchLogs();
     </script>
-</body>
+  </body>
 </html>

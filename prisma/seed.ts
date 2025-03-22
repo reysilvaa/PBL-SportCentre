@@ -1,14 +1,14 @@
-import { PrismaClient } from "@prisma/client";
-import seedUsers from "./seeds/users";
-import seedBranches from "./seeds/branches";
-import seedFieldTypes from "./seeds/fieldTypes";
-import seedFields from "./seeds/fields";
-import seedBookings from "./seeds/bookings";
-import seedPayments from "./seeds/payments";
-import seedActivityLogs from "./seeds/activityLogs";
-import seedFieldReviews from "./seeds/fieldReviews";
-import seedPromotions from "./seeds/promotions";
-import seedPromotionUsages from "./seeds/promotionUsages";
+import { PrismaClient } from '@prisma/client';
+import seedUsers from './seeds/users';
+import seedBranches from './seeds/branches';
+import seedFieldTypes from './seeds/fieldTypes';
+import seedFields from './seeds/fields';
+import seedBookings from './seeds/bookings';
+import seedPayments from './seeds/payments';
+import seedActivityLogs from './seeds/activityLogs';
+import seedFieldReviews from './seeds/fieldReviews';
+import seedPromotions from './seeds/promotions';
+import seedPromotionUsages from './seeds/promotionUsages';
 
 const prisma = new PrismaClient();
 
@@ -24,7 +24,7 @@ async function main() {
   await seedPromotions(prisma);
   await seedPromotionUsages(prisma);
 
-  console.log("Seeding selesai.");
+  console.log('Seeding selesai.');
 }
 
 main()

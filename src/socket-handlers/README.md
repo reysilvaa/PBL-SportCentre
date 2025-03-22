@@ -36,7 +36,11 @@ Untuk menambahkan socket handler baru:
 ```typescript
 // contoh.socket.ts
 import { Socket } from 'socket.io';
-import { getIO, applyAuthMiddleware, setupNamespaceEvents } from '../config/socket';
+import {
+  getIO,
+  applyAuthMiddleware,
+  setupNamespaceEvents,
+} from '../config/socket';
 
 export const handleExampleEvent = async (socket: Socket, data: any) => {
   // Implementasi handler
@@ -45,15 +49,15 @@ export const handleExampleEvent = async (socket: Socket, data: any) => {
 export const setupExampleSocketHandlers = (): void => {
   const io = getIO();
   const namespace = io.of('/example');
-  
+
   // Setup namespace
   applyAuthMiddleware(namespace, false);
   setupNamespaceEvents(namespace);
-  
+
   namespace.on('connection', (socket) => {
     socket.on('example:event', (data) => handleExampleEvent(socket, data));
   });
-  
+
   console.log('✅ Example socket handlers initialized');
 };
 ```
@@ -67,4 +71,4 @@ export const initializeAllSocketHandlers = (): void => {
   setupExampleSocketHandlers();
   // ...
 };
-``` 
+```

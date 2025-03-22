@@ -11,7 +11,12 @@ class AppError extends Error {
   }
 }
 
-const errorMiddleware = (err: any, req: Request, res: Response, next: NextFunction) => {
+const errorMiddleware = (
+  err: any,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   console.error('Error Middleware:', err);
 
   if (err instanceof PrismaClientKnownRequestError) {
@@ -37,7 +42,12 @@ const errorMiddleware = (err: any, req: Request, res: Response, next: NextFuncti
     return res.status(400).json({ error: 'Invalid JSON format' });
   }
 
-  res.status(500).json({ error: 'Internal Server Error', details: err.message || 'Unexpected error occurred' });
+  res
+    .status(500)
+    .json({
+      error: 'Internal Server Error',
+      details: err.message || 'Unexpected error occurred',
+    });
 };
 
 export default errorMiddleware;

@@ -20,16 +20,16 @@ export const setCookie = (
     sameSite?: boolean | 'none' | 'lax' | 'strict';
     domain?: string;
     path?: string;
-  }
+  },
 ) => {
   // Gabungkan dengan konfigurasi default
   const cookieOptions = {
     maxAge: config.cookies.maxAge,
     httpOnly: config.cookies.httpOnly,
-    secure: config.cookies.secure, 
+    secure: config.cookies.secure,
     sameSite: config.cookies.sameSite,
     path: '/',
-    ...options
+    ...options,
   };
 
   res.cookie(name, value, cookieOptions);
@@ -41,7 +41,11 @@ export const setCookie = (
  * @param name Nama cookie
  * @param signed Apakah cookie ditandatangani (signed)
  */
-export const getCookie = (req: Request, name: string, signed = false): string | undefined => {
+export const getCookie = (
+  req: Request,
+  name: string,
+  signed = false,
+): string | undefined => {
   return signed ? req.signedCookies[name] : req.cookies[name];
 };
 
@@ -57,13 +61,13 @@ export const clearCookie = (
   options?: {
     path?: string;
     domain?: string;
-  }
+  },
 ) => {
   const cookieOptions = {
     path: '/',
-    ...options
+    ...options,
   };
-  
+
   res.clearCookie(name, cookieOptions);
 };
 
@@ -76,7 +80,7 @@ export const setAuthCookie = (res: Response, token: string) => {
   setCookie(res, 'auth_token', token, {
     httpOnly: true, // Untuk keamanan, tidak dapat diakses oleh JavaScript
     signed: true, // Ditandatangani untuk verifikasi
-    maxAge: config.cookies.maxAge
+    maxAge: config.cookies.maxAge,
   });
 };
 
@@ -105,7 +109,7 @@ export const setRefreshTokenCookie = (res: Response, token: string) => {
   setCookie(res, 'refresh_token', token, {
     httpOnly: true,
     signed: true,
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 hari
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
   });
 };
 
@@ -130,11 +134,14 @@ export const clearRefreshTokenCookie = (res: Response) => {
  * @param res Express response object
  * @param preferences Object preferensi user
  */
-export const setUserPreferencesCookie = (res: Response, preferences: object) => {
+export const setUserPreferencesCookie = (
+  res: Response,
+  preferences: object,
+) => {
   setCookie(res, 'user_preferences', JSON.stringify(preferences), {
     httpOnly: false, // Dapat diakses oleh JavaScript client-side
     signed: false,
-    maxAge: 365 * 24 * 60 * 60 * 1000 // 1 tahun
+    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 tahun
   });
 };
 
@@ -145,7 +152,7 @@ export const setUserPreferencesCookie = (res: Response, preferences: object) => 
 export const getUserPreferences = (req: Request) => {
   const prefCookie = getCookie(req, 'user_preferences');
   if (!prefCookie) return {};
-  
+
   try {
     return JSON.parse(prefCookie);
   } catch (error) {
@@ -165,5 +172,5 @@ export default {
   getRefreshToken,
   clearRefreshTokenCookie,
   setUserPreferencesCookie,
-  getUserPreferences
-}; 
+  getUserPreferences,
+};

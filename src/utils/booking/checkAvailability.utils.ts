@@ -18,38 +18,47 @@ type FieldAvailability = {
 const isOverlapping = (slot1: TimeSlot, slot2: TimeSlot): boolean => {
   return (
     (slot1.start <= slot2.start && slot1.end > slot2.start) || // Kasus 1
-    (slot1.start < slot2.end && slot1.end >= slot2.end) ||     // Kasus 2
-    (slot1.start >= slot2.start && slot1.end <= slot2.end) ||  // Kasus 3
-    (slot1.start <= slot2.start && slot1.end >= slot2.end)     // Kasus 4
+    (slot1.start < slot2.end && slot1.end >= slot2.end) || // Kasus 2
+    (slot1.start >= slot2.start && slot1.end <= slot2.end) || // Kasus 3
+    (slot1.start <= slot2.start && slot1.end >= slot2.end) // Kasus 4
   );
 };
 
 /**
  * Mencari booking yang valid berdasarkan status payment
  */
-const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot) => {
+const getValidBookings = async (
+  fieldId: number,
+  date: Date,
+  timeSlot?: TimeSlot,
+) => {
   // Create date range for the entire day to avoid timezone issues
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
-  
+
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
-  
-  console.log("Searching for bookings between:", startOfDay.toISOString(), "and", endOfDay.toISOString());
+
+  console.log(
+    'Searching for bookings between:',
+    startOfDay.toISOString(),
+    'and',
+    endOfDay.toISOString(),
+  );
 
   const whereClause: any = {
     fieldId,
     // Use date range instead of exact equality
     bookingDate: {
       gte: startOfDay,
-      lte: endOfDay
+      lte: endOfDay,
     },
     payment: {
       OR: [
         { status: { in: ['paid', 'dp_paid'] } },
-        { status: 'pending', expiresDate: { gt: new Date() } }
-      ]
-    }
+        { status: 'pending', expiresDate: { gt: new Date() } },
+      ],
+    },
   };
 
   // Jika timeSlot tersedia, tambahkan kondisi overlap
@@ -58,49 +67,57 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
       { startTime: { lte: timeSlot.start }, endTime: { gt: timeSlot.start } },
       { startTime: { lt: timeSlot.end }, endTime: { gte: timeSlot.end } },
       { startTime: { gte: timeSlot.start }, endTime: { lte: timeSlot.end } },
-      { startTime: { lte: timeSlot.start }, endTime: { gte: timeSlot.end } }
+      { startTime: { lte: timeSlot.start }, endTime: { gte: timeSlot.end } },
     ];
   }
-  
+
   // Debug - Show all bookings for this field regardless of date
   const debugQuery = await prisma.booking.findMany({
     where: { fieldId },
-    include: { payment: true }
+    include: { payment: true },
   });
-  
-  console.log("ALL bookings for field regardless of date:", debugQuery.length);
-  
+
+  console.log('ALL bookings for field regardless of date:', debugQuery.length);
+
   if (debugQuery.length > 0) {
-    console.log("First few bookings:", debugQuery.slice(0, 3).map(b => ({
-      id: b.id,
-      fieldId: b.fieldId,
-      date: b.bookingDate,
-      start: b.startTime,
-      end: b.endTime
-    })));
-    
+    console.log(
+      'First few bookings:',
+      debugQuery.slice(0, 3).map((b) => ({
+        id: b.id,
+        fieldId: b.fieldId,
+        date: b.bookingDate,
+        start: b.startTime,
+        end: b.endTime,
+      })),
+    );
+
     // Debug - Payment status
-    debugQuery.forEach(booking => {
-      console.log(`Booking #${booking.id} payment:`, booking.payment ? {
-        status: booking.payment.status,
-        expires: booking.payment.expiresDate
-      } : "No payment record");
+    debugQuery.forEach((booking) => {
+      console.log(
+        `Booking #${booking.id} payment:`,
+        booking.payment
+          ? {
+              status: booking.payment.status,
+              expires: booking.payment.expiresDate,
+            }
+          : 'No payment record',
+      );
     });
-    
+
     // Debug - Date comparison
-    console.log("Date comparison:");
-    console.log("Query start date:", startOfDay.toISOString());
-    console.log("Query end date:", endOfDay.toISOString());
-    console.log("Booking date:", debugQuery[0].bookingDate.toISOString());
-    
+    console.log('Date comparison:');
+    console.log('Query start date:', startOfDay.toISOString());
+    console.log('Query end date:', endOfDay.toISOString());
+    console.log('Booking date:', debugQuery[0].bookingDate.toISOString());
+
     // Try a direct query with the exact booking date
     const directQuery = await prisma.booking.findMany({
       where: {
         fieldId,
-        bookingDate: debugQuery[0].bookingDate
-      }
+        bookingDate: debugQuery[0].bookingDate,
+      },
     });
-    console.log("Direct query with exact bookingDate:", directQuery.length);
+    console.log('Direct query with exact bookingDate:', directQuery.length);
   }
 
   // Execute the final query with all conditions
@@ -110,13 +127,13 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
       payment: true,
       field: {
         include: {
-          branch: true
-        }
-      }
+          branch: true,
+        },
+      },
     },
     orderBy: {
-      startTime: 'asc'
-    }
+      startTime: 'asc',
+    },
   });
 };
 /**
@@ -124,14 +141,14 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
  */
 const generateHourlyTimeSlots = (date: Date): TimeSlot[] => {
   const slots: TimeSlot[] = [];
-  
+
   for (let hour = 0; hour < 24; hour++) {
     const start = new Date(date);
     start.setHours(hour, 0, 0, 0);
-    
+
     const end = new Date(date);
     end.setHours(hour + 1, 0, 0, 0);
-    
+
     slots.push({ start, end });
   }
 
@@ -142,38 +159,38 @@ const generateHourlyTimeSlots = (date: Date): TimeSlot[] => {
  * Menghitung slot waktu yang tersedia berdasarkan waktu buka, tutup, dan booking yang ada
  */
 export const calculateAvailableTimeSlots = (
-  openingTime: Date, 
-  closingTime: Date, 
-  bookedSlots: TimeSlot[]
+  openingTime: Date,
+  closingTime: Date,
+  bookedSlots: TimeSlot[],
 ): TimeSlot[] => {
   if (bookedSlots.length === 0) {
     return [{ start: openingTime, end: closingTime }];
   }
-  
-  const sortedBookings = [...bookedSlots].sort((a, b) => 
-    a.start.getTime() - b.start.getTime()
+
+  const sortedBookings = [...bookedSlots].sort(
+    (a, b) => a.start.getTime() - b.start.getTime(),
   );
-  
+
   const availableSlots: TimeSlot[] = [];
   let currentTime = openingTime;
-  
+
   for (const booking of sortedBookings) {
     if (currentTime < booking.start) {
       availableSlots.push({
         start: currentTime,
-        end: booking.start
+        end: booking.start,
       });
     }
     currentTime = booking.end > currentTime ? booking.end : currentTime;
   }
-  
+
   if (currentTime < closingTime) {
     availableSlots.push({
       start: currentTime,
-      end: closingTime
+      end: closingTime,
     });
   }
-  
+
   return availableSlots;
 };
 
@@ -184,23 +201,28 @@ export const isFieldAvailable = async (
   fieldId: number,
   bookingDate: Date,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
 ): Promise<boolean> => {
-  console.log("🔍 Checking availability for Field ID:", fieldId);
-  console.log("📆 Booking Date:", bookingDate);
-  console.log("⏰ Start Time:", startTime);
-  console.log("⏰ End Time:", endTime);
+  console.log('🔍 Checking availability for Field ID:', fieldId);
+  console.log('📆 Booking Date:', bookingDate);
+  console.log('⏰ Start Time:', startTime);
+  console.log('⏰ End Time:', endTime);
 
   const timeSlot = { start: startTime, end: endTime };
-  const overlappingBookings = await getValidBookings(fieldId, bookingDate, timeSlot);
+  const overlappingBookings = await getValidBookings(
+    fieldId,
+    bookingDate,
+    timeSlot,
+  );
 
-  console.log("📋 Overlapping bookings found:", overlappingBookings.length);
-
+  console.log('📋 Overlapping bookings found:', overlappingBookings.length);
 
   if (overlappingBookings.length > 0) {
-    console.log("⚠️ Detail booking yang overlapping:");
-    overlappingBookings.forEach(booking => {
-      console.log(`  - Booking #${booking.id}, status: ${booking.payment?.status}, expires: ${booking.payment?.expiresDate ? booking.payment.expiresDate : 'No expiry'}`);
+    console.log('⚠️ Detail booking yang overlapping:');
+    overlappingBookings.forEach((booking) => {
+      console.log(
+        `  - Booking #${booking.id}, status: ${booking.payment?.status}, expires: ${booking.payment?.expiresDate ? booking.payment.expiresDate : 'No expiry'}`,
+      );
       console.log(`    Time: ${booking.startTime} - ${booking.endTime}`);
     });
   }
@@ -211,13 +233,15 @@ export const isFieldAvailable = async (
 /**
  * Mendapatkan ketersediaan semua lapangan untuk hari ini
  */
-export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> => {
+export const getAllFieldsAvailability = async (): Promise<
+  FieldAvailability[]
+> => {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Set ke awal hari
-  
+
   const hourlyTimeSlots = generateHourlyTimeSlots(today);
   const fields = await prisma.field.findMany({
-    include: { branch: true }
+    include: { branch: true },
   });
 
   const availabilityResults: FieldAvailability[] = [];
@@ -229,30 +253,32 @@ export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> =
       fieldName: field.name,
       branch: field.branch.name,
       isAvailable: false,
-      availableTimeSlots: []
+      availableTimeSlots: [],
     };
 
     // Dapatkan semua booking valid untuk field ini pada hari ini
     const validBookings = await getValidBookings(field.id, today);
-    const bookedSlots = validBookings.map(booking => ({
+    const bookedSlots = validBookings.map((booking) => ({
       start: new Date(booking.startTime),
-      end: new Date(booking.endTime)
+      end: new Date(booking.endTime),
     }));
     // Inside getAllFieldsAvailability, before checking hourly slots:
-    console.log("All valid bookings for field:", field.id);
-    console.log(validBookings.map(b => ({
-      id: b.id, 
-      date: b.bookingDate,
-      start: b.startTime,
-      end: b.endTime,
-      paymentStatus: b.payment?.status,
-      expires: b.payment?.expiresDate
-    })));
+    console.log('All valid bookings for field:', field.id);
+    console.log(
+      validBookings.map((b) => ({
+        id: b.id,
+        date: b.bookingDate,
+        start: b.startTime,
+        end: b.endTime,
+        paymentStatus: b.payment?.status,
+        expires: b.payment?.expiresDate,
+      })),
+    );
 
     // Periksa setiap slot per jam
     for (const slot of hourlyTimeSlots) {
-      const isOverlap = bookedSlots.some(bookedSlot => 
-        isOverlapping(slot, bookedSlot)
+      const isOverlap = bookedSlots.some((bookedSlot) =>
+        isOverlapping(slot, bookedSlot),
       );
 
       if (!isOverlap) {
@@ -260,10 +286,10 @@ export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> =
       }
     }
 
-    fieldAvailability.isAvailable = (fieldAvailability.availableTimeSlots?.length || 0) > 0;
+    fieldAvailability.isAvailable =
+      (fieldAvailability.availableTimeSlots?.length || 0) > 0;
     availabilityResults.push(fieldAvailability);
   }
-  
 
   return availabilityResults;
 };
@@ -271,44 +297,59 @@ export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> =
 /**
  * Mendapatkan slot waktu yang tersedia untuk field tertentu pada tanggal tertentu
  */
-export const getAvailableTimeSlots = async (fieldId: number, date: Date): Promise<TimeSlot[]> => {
+export const getAvailableTimeSlots = async (
+  fieldId: number,
+  date: Date,
+): Promise<TimeSlot[]> => {
   // Set tanggal ke awal hari
   const targetDate = new Date(date);
   targetDate.setHours(0, 0, 0, 0);
-  
-  console.log(`🔍 Mencari slot tersedia untuk lapangan #${fieldId} pada tanggal: ${targetDate.toISOString().split('T')[0]}`);
-  
+
+  console.log(
+    `🔍 Mencari slot tersedia untuk lapangan #${fieldId} pada tanggal: ${targetDate.toISOString().split('T')[0]}`,
+  );
+
   // Dapatkan semua booking valid untuk field ini pada tanggal tersebut
   const validBookings = await getValidBookings(Number(fieldId), targetDate);
-  
-  console.log(`📋 Ditemukan ${validBookings.length} booking valid pada tanggal tersebut`);
-  
+
+  console.log(
+    `📋 Ditemukan ${validBookings.length} booking valid pada tanggal tersebut`,
+  );
+
   // Tetapkan jam buka dan tutup (24 jam)
   const openingTime = new Date(targetDate);
   openingTime.setHours(0, 0, 0, 0);
-  
+
   const closingTime = new Date(targetDate);
   closingTime.setHours(24, 0, 0, 0);
-  
+
   // Map booking ke time slots
-  const bookedSlots = validBookings.map(booking => {
+  const bookedSlots = validBookings.map((booking) => {
     const bookingStart = new Date(booking.startTime);
     const bookingEnd = new Date(booking.endTime);
-    
-    console.log(`  - Booking: ${bookingStart.toLocaleTimeString()} - ${bookingEnd.toLocaleTimeString()}`);
-    
+
+    console.log(
+      `  - Booking: ${bookingStart.toLocaleTimeString()} - ${bookingEnd.toLocaleTimeString()}`,
+    );
+
     return {
       start: bookingStart,
-      end: bookingEnd
+      end: bookingEnd,
     };
   });
-  
-  const availableSlots = calculateAvailableTimeSlots(openingTime, closingTime, bookedSlots);
-  
+
+  const availableSlots = calculateAvailableTimeSlots(
+    openingTime,
+    closingTime,
+    bookedSlots,
+  );
+
   console.log(`✅ Tersedia ${availableSlots.length} slot waktu:`);
   availableSlots.forEach((slot, index) => {
-    console.log(`  ${index+1}. ${slot.start.toLocaleTimeString()} - ${slot.end.toLocaleTimeString()}`);
+    console.log(
+      `  ${index + 1}. ${slot.start.toLocaleTimeString()} - ${slot.end.toLocaleTimeString()}`,
+    );
   });
-  
+
   return availableSlots;
 };

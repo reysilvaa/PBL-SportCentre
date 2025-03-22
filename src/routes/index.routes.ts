@@ -13,7 +13,7 @@ import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
 import cache, { getCacheStats } from '../utils/cache.utils';
 import { authMiddleware } from '../middlewares/auth.middleware';
-    
+
 const router = express.Router();
 
 router.use('/auth', authRoutes);
@@ -39,21 +39,21 @@ router.get('/cache-stats', authMiddleware(['super_admin']), (req, res) => {
   try {
     const stats = getCacheStats();
     const pattern = req.query.pattern as string;
-    
+
     let keys: string[] = [];
     if (pattern) {
-      keys = cache.keys().filter(key => key.includes(pattern));
+      keys = cache.keys().filter((key) => key.includes(pattern));
     }
-    
+
     res.json({
       stats,
       keys: pattern ? keys : undefined,
-      keysCount: pattern ? keys.length : undefined
+      keysCount: pattern ? keys.length : undefined,
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to get cache statistics',
-      message: error instanceof Error ? error.message : String(error)
+      message: error instanceof Error ? error.message : String(error),
     });
   }
 });

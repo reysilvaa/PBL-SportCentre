@@ -1,5 +1,9 @@
 import { Socket } from 'socket.io';
-import { getIO, applyAuthMiddleware, setupNamespaceEvents } from '../config/socket';
+import {
+  getIO,
+  applyAuthMiddleware,
+  setupNamespaceEvents,
+} from '../config/socket';
 
 /**
  * Handle payment status update
@@ -7,15 +11,15 @@ import { getIO, applyAuthMiddleware, setupNamespaceEvents } from '../config/sock
 export const handlePaymentStatusUpdate = (socket: Socket, data: any) => {
   try {
     const { paymentId, bookingId, status, userId } = data;
-    
+
     // Broadcast to all clients in the payments namespace
     socket.broadcast.emit('status_change', {
       paymentId,
       bookingId,
       status,
-      userId
+      userId,
     });
-    
+
     // Also emit to user-specific room if userId is provided
     if (userId) {
       const io = getIO();
@@ -23,7 +27,7 @@ export const handlePaymentStatusUpdate = (socket: Socket, data: any) => {
         paymentId,
         bookingId,
         status,
-        message: `Your payment status is now ${status}`
+        message: `Your payment status is now ${status}`,
       });
     }
   } catch (error) {
@@ -44,33 +48,37 @@ export const sendPaymentNotification = (data: {
   try {
     const { paymentId, bookingId, status, userId } = data;
     const io = getIO();
-    
+
     if (!io) {
-      console.warn("⚠️ Socket.IO not initialized, skipping real-time notification");
+      console.warn(
+        '⚠️ Socket.IO not initialized, skipping real-time notification',
+      );
       return;
     }
-    
+
     const userRoomId = `user_${userId}`;
-    
+
     // Emit to user's specific room
     io.to(userRoomId).emit('payment_update', {
       paymentId,
       bookingId,
       status,
-      message: `Your payment status is now ${status}`
+      message: `Your payment status is now ${status}`,
     });
-    
+
     // Also emit to the payments namespace for any admin dashboards
     io.of('/payments').emit('status_change', {
       paymentId,
       bookingId,
       status,
-      userId
+      userId,
     });
-    
-    console.log(`📢 Sent real-time payment updates to ${userRoomId} and /payments namespace`);
+
+    console.log(
+      `📢 Sent real-time payment updates to ${userRoomId} and /payments namespace`,
+    );
   } catch (error) {
-    console.error("❌ Socket.IO Error:", error);
+    console.error('❌ Socket.IO Error:', error);
     // Continue processing even if socket notification fails
   }
 };
@@ -81,24 +89,26 @@ export const sendPaymentNotification = (data: {
 export const setupPaymentSocketHandlers = (): void => {
   const io = getIO();
   const paymentsNamespace = io.of('/payments');
-  
+
   // Apply authentication middleware (optional)
   applyAuthMiddleware(paymentsNamespace, false);
-  
+
   // Set up basic namespace events
   setupNamespaceEvents(paymentsNamespace);
-  
+
   paymentsNamespace.on('connection', (socket: Socket) => {
     console.log(`💳 Payment client connected: ${socket.id}`);
-    
+
     // Handle payment status update
-    socket.on('status_change', (data) => handlePaymentStatusUpdate(socket, data));
-    
+    socket.on('status_change', (data) =>
+      handlePaymentStatusUpdate(socket, data),
+    );
+
     // Handle client leaving
     socket.on('disconnect', () => {
       console.log(`💳 Payment client disconnected: ${socket.id}`);
     });
   });
-  
+
   console.log('✅ Payment socket handlers initialized');
-}; 
+};

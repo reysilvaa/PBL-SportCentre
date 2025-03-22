@@ -1,18 +1,26 @@
 import { Request, Response } from 'express';
 import { getIO } from '../../config/socket';
-import { 
-  isFieldAvailable, 
-  getAllFieldsAvailability, 
-  getAvailableTimeSlots 
+import {
+  isFieldAvailable,
+  getAllFieldsAvailability,
+  getAvailableTimeSlots,
 } from '../../utils/booking/checkAvailability.utils';
 
-export const checkAllFieldsAvailability = async (req: Request, res: Response) => {
+export const checkAllFieldsAvailability = async (
+  req: Request,
+  res: Response,
+) => {
   try {
     const results = await getAllFieldsAvailability();
     res.status(200).json({ success: true, data: results });
   } catch (error) {
     console.error('Error checking all fields availability:', error);
-    res.status(500).json({ success: false, error: 'Failed to check all fields availability' });
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: 'Failed to check all fields availability',
+      });
   }
 };
 

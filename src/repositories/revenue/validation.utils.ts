@@ -9,9 +9,9 @@ import { DateUtils } from '../../utils/variables/date.utils';
  * @returns boolean indicating if validation passed
  */
 export const validateDateRange = (
-  startDate: string, 
-  endDate: string, 
-  res: Response
+  startDate: string,
+  endDate: string,
+  res: Response,
 ): boolean => {
   // Check if dates are provided
   if (!startDate || !endDate) {
@@ -46,9 +46,11 @@ export const validateDateRange = (
     const maxRangeDays = 365; // 1 year
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays > maxRangeDays) {
-      res.status(400).json({ error: `Date range cannot exceed ${maxRangeDays} days` });
+      res
+        .status(400)
+        .json({ error: `Date range cannot exceed ${maxRangeDays} days` });
       return false;
     }
 
@@ -67,16 +69,16 @@ export const validateDateRange = (
  * @returns boolean indicating if validation passed
  */
 export const validateId = (
-  id: string | undefined, 
-  res: Response, 
-  paramName: string = 'ID'
+  id: string | undefined,
+  res: Response,
+  paramName: string = 'ID',
 ): boolean => {
   if (!id) {
     return true; // ID is optional
   }
 
   const parsedId = parseInt(id);
-  
+
   if (isNaN(parsedId) || parsedId <= 0 || parsedId.toString() !== id) {
     res.status(400).json({ error: `${paramName} must be a positive integer` });
     return false;
@@ -93,9 +95,9 @@ export const validateId = (
  * @returns boolean indicating if validation passed
  */
 export const validatePagination = (
-  page: string | undefined, 
-  limit: string | undefined, 
-  res: Response
+  page: string | undefined,
+  limit: string | undefined,
+  res: Response,
 ): boolean => {
   if (!page && !limit) {
     return true; // Pagination is optional
@@ -110,7 +112,9 @@ export const validatePagination = (
   }
 
   if (isNaN(limitNum) || limitNum <= 0 || limitNum > 100) {
-    res.status(400).json({ error: 'Limit must be a positive integer between 1 and 100' });
+    res
+      .status(400)
+      .json({ error: 'Limit must be a positive integer between 1 and 100' });
     return false;
   }
 
@@ -125,9 +129,9 @@ export const validatePagination = (
  * @returns boolean indicating if validation passed
  */
 export const validateRequiredString = (
-  value: string | undefined, 
-  res: Response, 
-  paramName: string
+  value: string | undefined,
+  res: Response,
+  paramName: string,
 ): boolean => {
   if (!value || value.trim() === '') {
     res.status(400).json({ error: `${paramName} is required` });

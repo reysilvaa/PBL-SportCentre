@@ -1,9 +1,9 @@
 import express from 'express';
-import { 
-  getFieldReviews, 
-  createFieldReview, 
-  updateFieldReview, 
-  deleteFieldReview 
+import {
+  getFieldReviews,
+  createFieldReview,
+  updateFieldReview,
+  deleteFieldReview,
 } from '../../controllers/user/fieldReview.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { authMiddleware, userAuth } from '../../middlewares/auth.middleware';

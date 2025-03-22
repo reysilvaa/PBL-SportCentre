@@ -10,7 +10,7 @@ export const hashPassword = async (password: string): Promise<string> => {
     type: argon2.argon2id,
     memoryCost: 65536,
     timeCost: 3,
-    parallelism: 4
+    parallelism: 4,
   });
 };
 
@@ -20,6 +20,9 @@ export const hashPassword = async (password: string): Promise<string> => {
  * @param hashedPassword Password hash yang tersimpan
  * @returns Boolean yang menunjukkan apakah password cocok
  */
-export const verifyPassword = async (password: string, hashedPassword: string): Promise<boolean> => {
+export const verifyPassword = async (
+  password: string,
+  hashedPassword: string,
+): Promise<boolean> => {
   return await argon2.verify(hashedPassword, password);
 };

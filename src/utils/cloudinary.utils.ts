@@ -1,15 +1,15 @@
-import cloudinary from '../config/cloudinary'
+import cloudinary from '../config/cloudinary';
 // Helper function to extract public ID from Cloudinary URL
 export const extractPublicId = (cloudinaryUrl: string): string | null => {
   if (!cloudinaryUrl) return null;
-  
+
   try {
     // Extract the filename without extension
     const matches = cloudinaryUrl.match(/\/([^/]+)\.[\w]+$/);
     if (matches && matches[1]) {
       return matches[1];
     }
-    
+
     // Alternative extraction in case the URL format is different
     const parts = cloudinaryUrl.split('/');
     const lastPart = parts[parts.length - 1];
@@ -23,7 +23,7 @@ export const extractPublicId = (cloudinaryUrl: string): string | null => {
 // Helper function to delete images from Cloudinary
 export const deleteImage = async (publicId: string): Promise<void> => {
   if (!publicId) return;
-  
+
   try {
     await cloudinary.uploader.destroy(publicId);
   } catch (error) {
@@ -35,7 +35,7 @@ export const deleteImage = async (publicId: string): Promise<void> => {
 // Helper function to clean up uploaded file
 export const cleanupUploadedFile = async (fileUrl?: string): Promise<void> => {
   if (!fileUrl) return;
-  
+
   try {
     // For Cloudinary URLs, extract public ID and delete
     if (fileUrl.includes('cloudinary.com')) {

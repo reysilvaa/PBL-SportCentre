@@ -1,9 +1,9 @@
 import express from 'express';
-import { 
-  getFieldTypes, 
-  createFieldType, 
-  updateFieldType, 
-  deleteFieldType 
+import {
+  getFieldTypes,
+  createFieldType,
+  updateFieldType,
+  deleteFieldType,
 } from '../../controllers/all/fieldType.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { superAdminAuth } from '../../middlewares/auth.middleware';

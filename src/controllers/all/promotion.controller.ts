@@ -12,12 +12,12 @@ export const getPromotions = async (req: Request, res: Response) => {
             user: {
               select: {
                 id: true,
-                name: true
-              }
-            }
-          }
-        }
-      }
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
     res.json(promotions);
   } catch (error) {
@@ -27,14 +27,14 @@ export const getPromotions = async (req: Request, res: Response) => {
 
 export const createPromotion = async (req: Request, res: Response) => {
   try {
-    const { 
-      code, 
-      description, 
-      discountPercent, 
-      maxDiscount, 
-      validFrom, 
-      validUntil, 
-      status 
+    const {
+      code,
+      description,
+      discountPercent,
+      maxDiscount,
+      validFrom,
+      validUntil,
+      status,
     } = req.body;
 
     const newPromotion = await prisma.promotion.create({
@@ -45,13 +45,13 @@ export const createPromotion = async (req: Request, res: Response) => {
         maxDiscount,
         validFrom,
         validUntil,
-        status: status || 'active'
-      }
+        status: status || 'active',
+      },
     });
 
     // Hapus cache promotions
     deleteCachedDataByPattern('promotions');
-    
+
     res.status(201).json(newPromotion);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
@@ -61,14 +61,14 @@ export const createPromotion = async (req: Request, res: Response) => {
 export const updatePromotion = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { 
-      code, 
-      description, 
-      discountPercent, 
-      maxDiscount, 
-      validFrom, 
-      validUntil, 
-      status 
+    const {
+      code,
+      description,
+      discountPercent,
+      maxDiscount,
+      validFrom,
+      validUntil,
+      status,
     } = req.body;
 
     const updatedPromotion = await prisma.promotion.update({
@@ -80,13 +80,13 @@ export const updatePromotion = async (req: Request, res: Response) => {
         maxDiscount,
         validFrom,
         validUntil,
-        status
-      }
+        status,
+      },
     });
 
     // Hapus cache promotions
     deleteCachedDataByPattern('promotions');
-    
+
     res.json(updatedPromotion);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
@@ -97,12 +97,12 @@ export const deletePromotion = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await prisma.promotion.delete({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
     });
 
     // Hapus cache promotions
     deleteCachedDataByPattern('promotions');
-    
+
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });

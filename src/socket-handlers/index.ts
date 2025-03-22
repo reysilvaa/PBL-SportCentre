@@ -8,12 +8,12 @@ import { setupActivityLogSocketHandlers } from './activityLog.socket';
  */
 export const initializeAllSocketHandlers = (): void => {
   console.log('🔌 Initializing all socket handlers...');
-  
+
   // Initialize all socket handlers
   setupBranchSocketHandlers();
   setupFieldSocketHandlers();
   setupPaymentSocketHandlers();
   setupActivityLogSocketHandlers();
-  
+
   console.log('✅ All socket handlers initialized successfully');
-}; 
+};

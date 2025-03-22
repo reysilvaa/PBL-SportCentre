@@ -14,37 +14,39 @@ export class ActivityLogService {
    * @param relatedId - Optional ID of related entity (booking, field, etc.)
    */
   static async createLog(
-    userId: number, 
-    action: string, 
-    details?: string | object, 
-    relatedId?: number
+    userId: number,
+    action: string,
+    details?: string | object,
+    relatedId?: number,
   ) {
     try {
       // Convert object to string if details is provided as an object
-      const detailsStr = details 
-        ? (typeof details === 'string' ? details : JSON.stringify(details))
+      const detailsStr = details
+        ? typeof details === 'string'
+          ? details
+          : JSON.stringify(details)
         : undefined;
-      
+
       // Create the log in the database
       const newLog = await prisma.activityLog.create({
         data: {
           userId,
           action,
           details: detailsStr,
-          ...(relatedId && { relatedId })
+          ...(relatedId && { relatedId }),
         },
         include: {
           user: {
-            select: { id: true, name: true, email: true }
-          }
-        }
+            select: { id: true, name: true, email: true },
+          },
+        },
       });
-      
+
       console.log(`Activity log created for user ${userId}: ${action}`);
-      
+
       // Emit updates to specific rooms and all clients
       await broadcastActivityLogUpdates(userId);
-      
+
       return newLog;
     } catch (error) {
       console.error('Error creating activity log:', error);
@@ -60,10 +62,10 @@ export class ActivityLogService {
    * @param details - Optional details about the booking action
    */
   static async logBookingActivity(
-    user: User | number, 
+    user: User | number,
     action: string,
     bookingId: number,
-    details?: object
+    details?: object,
   ) {
     const userId = typeof user === 'number' ? user : user.id;
     return this.createLog(userId, action, details, bookingId);
@@ -82,14 +84,14 @@ export class ActivityLogService {
     paymentId: number,
     bookingId: number,
     status: string,
-    details?: object
+    details?: object,
   ) {
     const action = `Payment ${status} for booking ${bookingId}`;
     return this.createLog(userId, action, {
       paymentId,
       bookingId,
       status,
-      ...details
+      ...details,
     });
   }
 
@@ -100,7 +102,7 @@ export class ActivityLogService {
   static async broadcastActivityLogUpdates(userId?: number) {
     await broadcastActivityLogUpdates(userId);
   }
-  
+
   /**
    * Retrieve activity logs with optional user filtering
    * @param userId - Optional user ID to filter logs
@@ -114,13 +116,13 @@ export class ActivityLogService {
           select: {
             id: true,
             name: true,
-            email: true
-          }
-        }
+            email: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
   }
 
@@ -133,13 +135,13 @@ export class ActivityLogService {
     const deletedLog = await prisma.activityLog.delete({
       where: { id },
       include: {
-        user: { select: { id: true, name: true, email: true } }
-      }
+        user: { select: { id: true, name: true, email: true } },
+      },
     });
-    
+
     // Broadcast updates after deletion
     await this.broadcastActivityLogUpdates();
-    
+
     return deletedLog;
   }
 }

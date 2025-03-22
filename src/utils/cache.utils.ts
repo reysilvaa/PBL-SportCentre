@@ -20,7 +20,11 @@ export const getCachedData = <T>(key: string): T | undefined => {
  * @param data Data to be stored
  * @param ttl Time-to-live in seconds, defaults to stdTTL from cache configuration
  */
-export const setCachedData = <T>(key: string, data: T, ttl?: number): boolean => {
+export const setCachedData = <T>(
+  key: string,
+  data: T,
+  ttl?: number,
+): boolean => {
   return ttl !== undefined ? cache.set(key, data, ttl) : cache.set(key, data);
 };
 
@@ -38,8 +42,8 @@ export const deleteCachedData = (key: string): number => {
  */
 export const deleteCachedDataByPattern = (pattern: string): void => {
   const keys = cache.keys();
-  const keysToDelete = keys.filter(key => key.includes(pattern));
-  
+  const keysToDelete = keys.filter((key) => key.includes(pattern));
+
   if (keysToDelete.length > 0) {
     cache.del(keysToDelete);
   }
@@ -62,18 +66,18 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
     try {
       // Create key based on method, path, and query params
       const key = `${keyPrefix}:${req.method}:${req.originalUrl}`;
-      
+
       // Check if data exists in cache
       const cachedData = getCachedData<any>(key);
-      
+
       if (cachedData) {
         // If data exists in cache, send response directly using send instead of json
         return res.send(cachedData);
       }
-      
+
       // Override res.json method to store response in cache
       const originalJson = res.json;
-      res.json = function(data: any) {
+      res.json = function (data: any) {
         // Check if headers have been sent already
         if (!res.headersSent) {
           // Store data in cache
@@ -82,13 +86,13 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
           } else {
             setCachedData(key, data);
           }
-          
+
           // Return original function
           return originalJson.call(this, data);
         }
         return this;
       };
-      
+
       // Continue to next middleware
       next();
     } catch (error) {
@@ -107,7 +111,7 @@ export const getCacheStats = () => {
     hits: cache.getStats().hits,
     misses: cache.getStats().misses,
     ksize: cache.getStats().ksize,
-    vsize: cache.getStats().vsize
+    vsize: cache.getStats().vsize,
   };
 };
 

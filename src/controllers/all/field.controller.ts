@@ -8,11 +8,11 @@ export const getFields = async (req: Request, res: Response) => {
         branch: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
-        type: true
-      }
+        type: true,
+      },
     });
     res.json(fields);
   } catch (error) {

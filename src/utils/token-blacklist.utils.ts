@@ -3,8 +3,8 @@ import NodeCache from 'node-cache';
 // Membuat cache khusus untuk token blacklist
 const blacklistCache = new NodeCache({
   stdTTL: 24 * 60 * 60, // Default TTL: 24 jam
-  checkperiod: 10 * 60,  // Periksa expired tokens setiap 10 menit
-  useClones: false
+  checkperiod: 10 * 60, // Periksa expired tokens setiap 10 menit
+  useClones: false,
 });
 
 /**
@@ -12,7 +12,10 @@ const blacklistCache = new NodeCache({
  * @param token Token yang akan di-blacklist
  * @param expiryInSeconds Waktu dalam detik token tetap di blacklist (opsional)
  */
-export const blacklistToken = (token: string, expiryInSeconds?: number): void => {
+export const blacklistToken = (
+  token: string,
+  expiryInSeconds?: number,
+): void => {
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || 24 * 60 * 60;
   blacklistCache.set(token, true, ttl);
@@ -56,7 +59,10 @@ export const getBlacklistSize = (): number => {
  * @param tokens Set token yang akan di-blacklist
  * @param expiryInSeconds Waktu dalam detik token tetap di blacklist (opsional)
  */
-export const blacklistTokens = (tokens: string[], expiryInSeconds?: number): void => {
+export const blacklistTokens = (
+  tokens: string[],
+  expiryInSeconds?: number,
+): void => {
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || 24 * 60 * 60;
   tokens.forEach((token) => {
@@ -70,5 +76,5 @@ export default {
   removeFromBlacklist,
   clearBlacklist,
   getBlacklistSize,
-  blacklistTokens
-}; 
+  blacklistTokens,
+};

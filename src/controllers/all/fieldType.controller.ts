@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
-import { createFieldTypeSchema, updateFieldTypeSchema } from '../../zod-schemas/fieldType.schema';
+import {
+  createFieldTypeSchema,
+  updateFieldTypeSchema,
+} from '../../zod-schemas/fieldType.schema';
 import { deleteCachedDataByPattern } from '../../utils/cache.utils';
 
 export const getFieldTypes = async (req: Request, res: Response) => {
@@ -13,12 +16,12 @@ export const getFieldTypes = async (req: Request, res: Response) => {
             name: true,
             branch: {
               select: {
-                name: true
-              }
-            }
-          }
-        }
-      }
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
     res.json(fieldTypes);
   } catch (error) {
@@ -26,15 +29,18 @@ export const getFieldTypes = async (req: Request, res: Response) => {
   }
 };
 
-export const createFieldType = async (req: Request, res: Response): Promise<void> => {
+export const createFieldType = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     // Validasi data dengan Zod
     const result = createFieldTypeSchema.safeParse(req.body);
-    
+
     if (!result.success) {
-      res.status(400).json({ 
-        error: 'Validasi gagal', 
-        details: result.error.format() 
+      res.status(400).json({
+        error: 'Validasi gagal',
+        details: result.error.format(),
       });
       return;
     }
@@ -42,13 +48,13 @@ export const createFieldType = async (req: Request, res: Response): Promise<void
     // Simpan ke database
     const newFieldType = await prisma.fieldType.create({
       data: {
-        name: result.data.name
-      }
+        name: result.data.name,
+      },
     });
 
     // Hapus cache terkait tipe lapangan
     deleteCachedDataByPattern('field_types');
-    
+
     res.status(201).json(newFieldType);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
@@ -58,56 +64,59 @@ export const createFieldType = async (req: Request, res: Response): Promise<void
 export const updateFieldType = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     // Validasi data dengan Zod
     const result = updateFieldTypeSchema.safeParse(req.body);
-    
+
     if (!result.success) {
-      res.status(400).json({ 
-        error: 'Validasi gagal', 
-        details: result.error.format() 
+      res.status(400).json({
+        error: 'Validasi gagal',
+        details: result.error.format(),
       });
       return;
     }
-    
+
     const updatedFieldType = await prisma.fieldType.update({
       where: { id: parseInt(id) },
       data: {
-        name: result.data.name
-      }
+        name: result.data.name,
+      },
     });
 
     // Hapus cache terkait tipe lapangan
     deleteCachedDataByPattern('field_types');
-    
+
     res.json(updatedFieldType);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-export const deleteFieldType = async (req: Request, res: Response):Promise<void> => {
+export const deleteFieldType = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
     // Cek apakah ada lapangan yang menggunakan tipe ini
     const existingField = await prisma.field.findFirst({
-      where: { typeId: parseInt(id) }
+      where: { typeId: parseInt(id) },
     });
-    
+
     if (existingField) {
-      res.status(400).json({ 
-        error: 'Tidak dapat menghapus tipe lapangan yang sedang digunakan' 
+      res.status(400).json({
+        error: 'Tidak dapat menghapus tipe lapangan yang sedang digunakan',
       });
     }
-    
+
     await prisma.fieldType.delete({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
     });
 
     // Hapus cache terkait tipe lapangan
     deleteCachedDataByPattern('field_types');
-    
+
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });

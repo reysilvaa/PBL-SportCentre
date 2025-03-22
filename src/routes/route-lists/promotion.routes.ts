@@ -1,11 +1,14 @@
 import express from 'express';
-import { 
-  getPromotions, 
-  createPromotion, 
-  updatePromotion, 
-  deletePromotion 
+import {
+  getPromotions,
+  createPromotion,
+  updatePromotion,
+  deletePromotion,
 } from '../../controllers/all/promotion.controller';
-import { superAdminAuth, branchAdminAuth } from '../../middlewares/auth.middleware';
+import {
+  superAdminAuth,
+  branchAdminAuth,
+} from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();

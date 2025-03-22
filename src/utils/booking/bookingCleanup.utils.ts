@@ -11,9 +11,9 @@ export const cleanupPendingBookings = async (): Promise<void> => {
   try {
     // Find payments with 'pending' status that have passed their expiration date
     const currentTime = new Date();
-    
-    console.log("🧹 Processing expired pending bookings at:", currentTime);
-    
+
+    console.log('🧹 Processing expired pending bookings at:', currentTime);
+
     // Find expired pending payments
     // Only process ones that have an expiresDate set (meaning they've received Midtrans notification)
     const expiredPayments = await prisma.payment.findMany({
@@ -21,12 +21,12 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         status: PaymentStatus.pending,
         expiresDate: {
           not: null, // Only process payments that have an expiry date set
-          lt: currentTime // Only process expired payments
-        }
+          lt: currentTime, // Only process expired payments
+        },
       },
       include: {
-        booking: true
-      }
+        booking: true,
+      },
     });
 
     console.log(`🔍 Found ${expiredPayments.length} expired pending payments`);
@@ -35,20 +35,22 @@ export const cleanupPendingBookings = async (): Promise<void> => {
     for (const payment of expiredPayments) {
       await prisma.payment.update({
         where: { id: payment.id },
-        data: { 
-          status: PaymentStatus.failed
-        }
+        data: {
+          status: PaymentStatus.failed,
+        },
       });
 
-      console.log(`🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`);
-      
+      console.log(
+        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`,
+      );
+
       // You might want to add code here to update your notification system
       // to inform users that their booking has expired
     }
 
-    console.log("✅ Expired booking processing completed");
+    console.log('✅ Expired booking processing completed');
   } catch (error) {
-    console.error("❌ Error in cleanupPendingBookings:", error);
+    console.error('❌ Error in cleanupPendingBookings:', error);
   }
 };
 
@@ -59,13 +61,13 @@ export const cleanupPendingBookings = async (): Promise<void> => {
 export const startBookingCleanupJob = (): CronJob => {
   // Create a cron job that runs every 1 minute
   const job = new CronJob('*/1 * * * *', async () => {
-    console.log("⏰ Running automatic expired booking processing");
+    console.log('⏰ Running automatic expired booking processing');
     await cleanupPendingBookings();
   });
 
   // Start the cron job
   job.start();
-  console.log("🚀 Expired booking processing cron job started");
-  
+  console.log('🚀 Expired booking processing cron job started');
+
   return job;
 };

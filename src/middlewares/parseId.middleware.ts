@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 
-export const parseIds = (req: Request, res: Response, next: NextFunction): void => {
+export const parseIds = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
   const parseIntegerField = (field: string) => {
     if (req.body[field]) {
       const parsedId = parseInt(req.body[field], 10);
@@ -22,4 +26,3 @@ export const parseIds = (req: Request, res: Response, next: NextFunction): void 
 
   next();
 };
-;

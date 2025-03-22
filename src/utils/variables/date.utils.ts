@@ -3,13 +3,13 @@ export class DateUtils {
   static formatYearMonth(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   }
-  
+
   // Get current year-month
   static getCurrentYearMonth(): string {
     const date = new Date();
     return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
   }
-  
+
   // Get future month
   static getNextMonth(currentMonth: string, monthsToAdd: number): string {
     const [year, month] = currentMonth.split('-').map(Number);
@@ -17,17 +17,22 @@ export class DateUtils {
     date.setMonth(date.getMonth() + monthsToAdd);
     return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
   }
-  
+
   // Get year-week format
   static getYearWeek(date: Date): string {
     // Get ISO week number
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-    const week = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 4).getTime()) / 86400000 / 7) + 1;
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    const week =
+      Math.floor(
+        (d.getTime() - new Date(d.getFullYear(), 0, 4).getTime()) /
+          86400000 /
+          7,
+      ) + 1;
     return `${d.getFullYear()}-${String(week).padStart(2, '0')}`;
   }
-  
+
   // Get week start (Monday)
   static getWeekStart(date: Date): Date {
     const d = new Date(date);
@@ -71,7 +76,11 @@ export class DateUtils {
   // Get months between two dates
   static getMonthsBetween(startDate: Date, endDate: Date): string[] {
     const months: string[] = [];
-    const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const currentDate = new Date(
+      startDate.getFullYear(),
+      startDate.getMonth(),
+      1,
+    );
     const lastDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
 
     while (currentDate <= lastDate) {
@@ -85,9 +94,11 @@ export class DateUtils {
   // Check if date is today
   static isToday(date: Date): boolean {
     const today = new Date();
-    return date.getDate() === today.getDate() &&
+    return (
+      date.getDate() === today.getDate() &&
       date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear();
+      date.getFullYear() === today.getFullYear()
+    );
   }
 
   // Add days to date

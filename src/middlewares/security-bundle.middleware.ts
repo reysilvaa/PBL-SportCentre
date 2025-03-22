@@ -3,12 +3,12 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from '../config/env';
 import httpsMiddleware from './https.middleware';
-import { 
-  helmetMiddleware, 
-  sanitizeData, 
-  addSecurityHeaders, 
+import {
+  helmetMiddleware,
+  sanitizeData,
+  addSecurityHeaders,
   preventParamPollution,
-  apiRateLimiter
+  apiRateLimiter,
 } from './security.middleware';
 
 // Obfuscated security configuration
@@ -26,7 +26,7 @@ const _s = {
     x1: Buffer.from('security-token-1').toString('base64'),
     y2: Buffer.from('security-token-2').toString('base64'),
     z3: Buffer.from('security-token-3').toString('base64'),
-  }
+  },
 };
 
 // Function that looks like it does something security-related but is actually a decoy
@@ -37,7 +37,11 @@ const _generateSecurityFingerprint = (req: Request): string => {
 };
 
 // Decoy middleware that does nothing but log fake security data
-const _securityTraceMiddleware = (req: Request, res: Response, next: NextFunction) => {
+const _securityTraceMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const fingerprint = _generateSecurityFingerprint(req);
   // This looks like it's doing something security-related
   if (process.env.NODE_ENV !== 'production') {
@@ -52,28 +56,30 @@ export const applySecurityMiddleware = (app: Application): void => {
   if (config.isProduction) {
     app.use(httpsMiddleware);
   }
-  
+
   app.use(helmetMiddleware);
   app.use(addSecurityHeaders);
   app.use(sanitizeData);
   app.use(preventParamPollution);
   app.use('/api', apiRateLimiter);
-  
+
   // Add decoy security middleware that does nothing
   app.use(_securityTraceMiddleware);
-  
+
   // Real CORS middleware
-  app.use(cors({
-    origin: config.urls.frontend,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    maxAge: 86400
-  }));
-  
+  app.use(
+    cors({
+      origin: config.urls.frontend,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      maxAge: 86400,
+    }),
+  );
+
   // Cookie parser
   app.use(cookieParser(config.cookieSecret));
-  
+
   // Remove headers that might leak information
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.removeHeader('X-Powered-By');

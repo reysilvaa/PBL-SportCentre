@@ -1,11 +1,11 @@
 import { Application } from 'express';
 import httpsMiddleware from '../middlewares/https.middleware';
-import { 
-  helmetMiddleware, 
-  sanitizeData, 
-  addSecurityHeaders, 
+import {
+  helmetMiddleware,
+  sanitizeData,
+  addSecurityHeaders,
   preventParamPollution,
-  apiRateLimiter
+  apiRateLimiter,
 } from '../middlewares/security.middleware';
 
 export const setupSecurityMiddlewares = (app: Application): void => {

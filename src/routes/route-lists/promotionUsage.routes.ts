@@ -1,8 +1,8 @@
 import express from 'express';
-import { 
-  getPromotionUsages, 
-  createPromotionUsage, 
-  deletePromotionUsage 
+import {
+  getPromotionUsages,
+  createPromotionUsage,
+  deletePromotionUsage,
 } from '../../controllers/all/promotionUsage.controller';
 
 const router = express.Router();
