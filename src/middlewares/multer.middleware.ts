@@ -1,6 +1,6 @@
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import cloudinary from '../config/cloudinary';
+import cloudinary from '../config/services/cloudinary';
 import { NextFunction, Request } from 'express';
 
 // Define interfaces for Multer request types

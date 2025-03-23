@@ -1,12 +1,12 @@
 import { Response } from 'express';
-import prisma from '../../config/database';
-import { getIO } from '../../config/socket';
+import prisma from '../../config/services/database';
+import { getIO } from '../../config/server/socket';
 import { PaymentStatus, PaymentMethod } from '@prisma/client';
-import midtrans from '../../config/midtrans';
 import { isFieldAvailable } from './checkAvailability.utils';
 import { startBookingCleanupJob } from './bookingCleanup.utils';
 import { formatDateToWIB } from '../variables/timezone.utils';
 import { broadcastActivityLogUpdates } from '../../socket-handlers/activityLog.socket';
+import midtrans from '../../config/services/midtrans';
 
 // Initialize booking cleanup job when server starts
 startBookingCleanupJob();

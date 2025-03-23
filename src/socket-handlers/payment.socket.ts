@@ -3,7 +3,7 @@ import {
   getIO,
   applyAuthMiddleware,
   setupNamespaceEvents,
-} from '../config/socket';
+} from '../config/server/socket';
 
 /**
  * Handle payment status update

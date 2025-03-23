@@ -1,6 +1,6 @@
 // src/controllers/notification.controller.ts (simplified version)
 import { Request, Response } from 'express';
-import prisma from '../../config/database';
+import prisma from '../../config/services/database';
 
 export const getNotifications = async (
   req: Request,

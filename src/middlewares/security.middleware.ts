@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
 import { User } from './auth.middleware';
-import prisma from '../config/database';
+import prisma from '../config/services/database';
 
 // Cache untuk menyimpan percobaan booking yang gagal/pending per user dan IP
 const failedBookingCache = new NodeCache({

@@ -1,4 +1,4 @@
-import cloudinary from '../config/cloudinary';
+import cloudinary from '../config/services/cloudinary';
 // Helper function to extract public ID from Cloudinary URL
 export const extractPublicId = (cloudinaryUrl: string): string | null => {
   if (!cloudinaryUrl) return null;

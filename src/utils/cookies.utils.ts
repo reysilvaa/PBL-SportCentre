@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { config } from '../config/env';
+import { config } from '../config/app/env';
 
 /**
  * Mengatur cookie pada response

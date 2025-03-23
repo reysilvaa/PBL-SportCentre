@@ -1,4 +1,4 @@
-import prisma from '../../config/database';
+import prisma from '../../config/services/database';
 import { broadcastActivityLogUpdates } from '../../socket-handlers/activityLog.socket';
 import { User } from '@prisma/client';
 

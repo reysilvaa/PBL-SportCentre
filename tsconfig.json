@@ -18,11 +18,12 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "baseUrl": "./src",
+    "lib": ["ES2022", "DOM"],
 
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["node", "express"]
+    "types": ["node", "express", "socket.io"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

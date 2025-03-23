@@ -1,6 +1,6 @@
 // src/controllers/branchAdminUserController.ts
 import { Response } from 'express';
-import prisma from '../../../config/database';
+import prisma from '../../../config/services/database';
 import { hashPassword } from '../../../utils/password.utils';
 import { User } from '../../../middlewares/auth.middleware';
 

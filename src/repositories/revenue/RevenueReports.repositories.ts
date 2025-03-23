@@ -1,4 +1,4 @@
-import prisma from '../../config/database';
+import prisma from '../../config/services/database';
 
 export const getBookingsWithPayments = async (start: Date, end: Date) => {
   return prisma.booking.findMany({

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { config } from '../config/env';
+import { config } from '../config/app/env';
 
 /**
  * Middleware untuk memastikan penggunaan HTTPS di production
@@ -10,11 +10,17 @@ export const httpsMiddleware = (
   res: Response,
   next: NextFunction,
 ): void => {
-  // Skip jika bukan production atau jika sudah HTTPS
+  // Skip jika:
+  // 1. Bukan production
+  // 2. Sudah HTTPS
+  // 3. Localhost
+  // 4. FORCE_HTTPS diset false
   if (
     !config.isProduction ||
     req.secure ||
-    req.headers['x-forwarded-proto'] === 'https'
+    req.headers['x-forwarded-proto'] === 'https' ||
+    req.hostname === 'localhost' ||
+    process.env.FORCE_HTTPS === 'false'
   ) {
     return next();
   }

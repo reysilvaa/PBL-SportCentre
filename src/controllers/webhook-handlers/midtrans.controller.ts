@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import prisma from '../../config/database';
+import prisma from '../../config/services/database';
 import { PaymentStatus } from '@prisma/client';
 import { emitBookingEvents } from '../../utils/booking/booking.utils';
-import { getIO } from '../../config/socket';
+import { getIO } from '../../config/server/socket';
 import { sendPaymentNotification } from '../../socket-handlers/payment.socket';
 import { ActivityLogService } from '../../utils/activityLog/activityLog.utils';
 import {

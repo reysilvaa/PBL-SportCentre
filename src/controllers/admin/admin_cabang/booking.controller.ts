@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import prisma from '../../../config/database';
-import { getIO } from '../../../config/socket';
+import prisma from '../../../config/services/database';
+import { getIO } from '../../../config/server/socket';
 import {
   sendErrorResponse,
   verifyFieldBranch,

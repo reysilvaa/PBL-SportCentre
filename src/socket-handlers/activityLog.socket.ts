@@ -3,8 +3,8 @@ import {
   getIO,
   applyAuthMiddleware,
   setupNamespaceEvents,
-} from '../config/socket';
-import prisma from '../config/database';
+} from '../config/server/socket';
+import prisma from '../config/services/database';
 
 /**
  * Handle activity logs subscription

@@ -1,7 +1,7 @@
 // src/middlewares/auth.middleware.ts
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/env';
+import { config } from '../config/app/env';
 import { getAuthToken } from '../utils/cookies.utils';
 import { isTokenBlacklisted } from '../utils/token-blacklist.utils';
 

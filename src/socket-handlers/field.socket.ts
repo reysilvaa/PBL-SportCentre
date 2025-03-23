@@ -1,9 +1,5 @@
 import { Socket } from 'socket.io';
-import {
-  getIO,
-  applyAuthMiddleware,
-  setupNamespaceEvents,
-} from '../config/socket';
+import { getIO, applyAuthMiddleware, setupNamespaceEvents } from '../config/';
 import {
   isFieldAvailable,
   getAllFieldsAvailability,

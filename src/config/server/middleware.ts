@@ -1,14 +1,18 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { config } from './env';
-import { logger } from './logger';
+import { config } from '../app/env';
+import { logger } from '../app/logger';
 
 export const setupMiddlewares = (app: Application): void => {
   // Middleware dasar
   app.use(
     cors({
-      origin: config.urls.frontend,
+      origin: [
+        config.urls.frontend,
+        'http://localhost:3000',
+        'http://localhost:3001',
+      ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
       allowedHeaders: ['Content-Type', 'Authorization'],

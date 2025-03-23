@@ -1,7 +1,7 @@
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { Namespace } from 'socket.io';
-import { authMiddleware } from '../middlewares/auth.middleware';
+import { authMiddleware } from '../../middlewares/auth.middleware';
 
 declare global {
   var io: SocketServer | any;

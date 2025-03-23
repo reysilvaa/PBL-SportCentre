@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import prisma from '../config/database';
+import prisma from '../config/services/database';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/env';
+import { config } from '../config/app/env';
 import { registerSchema, loginSchema } from '../zod-schemas/auth.schema';
 import { blacklistToken } from '../utils/token-blacklist.utils';
 import {

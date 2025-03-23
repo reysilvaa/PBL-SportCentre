@@ -1,6 +1,6 @@
 // src/controllers/superAdminUserController.ts
 import { Request, Response } from 'express';
-import prisma from '../../../config/database';
+import prisma from '../../../config/services/database';
 import { hashPassword } from '../../../utils/password.utils';
 import { User } from '../../../middlewares/auth.middleware';
 import { deleteCachedDataByPattern } from '../../../utils/cache.utils';

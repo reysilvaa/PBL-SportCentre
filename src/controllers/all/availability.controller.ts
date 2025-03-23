@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getIO } from '../../config/socket';
+import { getIO } from '../../config/server/socket';
 import {
   isFieldAvailable,
   getAllFieldsAvailability,

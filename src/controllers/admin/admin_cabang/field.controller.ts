@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import prisma from '../../../config/database';
+import prisma from '../../../config/services/database';
 import {
   createFieldSchema,
   updateFieldSchema,

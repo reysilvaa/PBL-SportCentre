@@ -1,7 +1,7 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { config } from '../config/env';
+import { config } from '../config/app/env';
 import httpsMiddleware from './https.middleware';
 import {
   helmetMiddleware,

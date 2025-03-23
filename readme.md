@@ -51,6 +51,7 @@
 - **File Storage**: Cloudinary
 - **Security**: Helmet, CORS, Rate Limiting
 - **Logging**: Winston
+- **Deployment**: PM2 dengan clustering
 
 ## 🚀 Quick Start
 
@@ -121,6 +122,161 @@ MySQL >= 8.0
 
    Server berjalan di `http://localhost:3000`
 
+## 🚀 Deployment dengan PM2
+
+1. **Build aplikasi**:
+
+   ```bash
+   npm run build
+   ```
+
+2. **Jalankan dengan PM2**:
+
+   ```bash
+   npm run start:prod
+   ```
+
+3. **Perintah pengelolaan**:
+
+   ```bash
+   # Menghentikan aplikasi
+   npm run stop:prod
+
+   # Restart aplikasi
+   npm run restart:prod
+
+   # Monitoring
+   npm run monitor:prod
+
+   # Membersihkan log
+   pm2 flush
+
+   # Reset PM2
+   pm2 reset all
+   ```
+
+## 🔄 Panduan Menjalankan Aplikasi
+
+### 💻 Mode Development
+
+Mode development dioptimalkan untuk kecepatan pengembangan dan debugging:
+
+1. **Jalankan dalam mode development**:
+
+   ```bash
+   npm run dev
+   ```
+
+2. **Fitur mode development**:
+
+   - Hot-reload dengan nodemon
+   - Debugging lebih detail
+   - Tidak ada kompresi response untuk memudahkan debugging
+   - HTTPS enforcement dinonaktifkan
+   - Automatic Prisma Client generation
+
+3. **Debugging**:
+
+   ```bash
+   # Jalankan dengan inspeksi node
+   node --inspect src/app.ts
+
+   # Atau dengan lebih banyak log
+   DEBUG=* npm run dev
+   ```
+
+### 🏭 Mode Production
+
+Mode production dioptimalkan untuk performa dan keamanan maksimal:
+
+1. **Build aplikasi**:
+
+   ```bash
+   npm run build
+   ```
+
+2. **Jalankan dalam cluster mode dengan PM2**:
+
+   ```bash
+   npm run start:prod
+   ```
+
+3. **Fitur mode production**:
+
+   - Clustering untuk pemanfaatan multi-core
+   - Kompresi response untuk kecepatan loading
+   - Rate limiting untuk keamanan
+   - Optimasi memori dengan garbage collection otomatis
+   - HTTPS enforcement diaktifkan
+   - Caching API selama 5 menit
+
+4. **Monitoring dan pengelolaan**:
+
+   ```bash
+   # Monitoring real-time
+   npm run monitor:prod
+
+   # Lihat log aplikasi
+   pm2 logs
+
+   # Tampilkan status instansi
+   pm2 status
+   ```
+
+5. **Skalabilitas**:
+   - Aplikasi akan otomatis menyesuaikan jumlah instansi berdasarkan beban CPU
+   - Port akan dialokasikan secara dinamis untuk setiap instansi
+   - Batas memori dikontrol untuk mencegah overload server
+
+### 📊 Perbandingan Mode
+
+| Fitur         | Development    | Production        |
+| ------------- | -------------- | ----------------- |
+| Hot-reload    | ✅             | ❌                |
+| Debugging     | Detail tinggi  | Minimal           |
+| Kompresi      | ❌             | ✅                |
+| Clustering    | ❌             | ✅ (Auto-scaling) |
+| Caching       | ❌             | ✅ (5 menit)      |
+| HTTPS         | Opsional       | Wajib             |
+| Memory Limit  | Tidak dibatasi | 200MB/instance    |
+| GC Manual     | ❌             | ✅ (2 menit)      |
+| Rate Limiting | Longgar        | Ketat (100/15min) |
+
+## 💪 Optimasi Performa
+
+Aplikasi telah dioptimalkan untuk performa maksimal dengan:
+
+### 🧠 Manajemen Memori
+
+- **Batas memori**: Maksimal 200MB per instance
+- **Garbage Collection**: Otomatis setiap 2 menit
+- **V8 Engine**: `--max-old-space-size=200`, `--max-semi-space-size=64`
+- **Optimasi Flag**: `--optimize-for-size`, `--gc-interval=50`
+
+### 🔄 Clustering & Scaling
+
+- **Mode Cluster PM2**: Pemanfaatan multi-core CPU
+- **Auto-scaling**: Berdasarkan beban CPU
+- **Instance**: Minimum 1, maksimum 2 untuk penggunaan memori optimal
+
+### 🌐 Network Optimization
+
+- **Kompresi**: Dengan middleware `compression`
+- **Caching**: API responses selama 5 menit
+- **WebSocket**: Payload maksimum 50KB, optimasi ping interval
+
+### 🔒 Keamanan & Pembatasan
+
+- **Rate Limiting**: 100 request per 15 menit
+- **Headers Keamanan**: Dengan `helmet`
+- **HTTPS Enforcement**: Otomatis di production
+
+### ⚡ Runtime Performance
+
+- **Timeout**: Listen timeout 5000ms, kill timeout 2000ms
+- **Restart**: Eksponensial backoff 50ms
+- **Tracing**: `--trace-warnings`, `--trace-uncaught`, `--trace-sync-io`
+
 ## 📁 Struktur Project
 
 ```
@@ -142,8 +298,30 @@ backend/
 │   ├── zod-schemas/      # Request validation
 │   └── app.ts           # App entry point
 ├── .env                  # Environment variables
+├── ecosystem.config.js   # Konfigurasi PM2
 └── package.json         # Dependencies
 ```
+
+## ❓ Troubleshooting & FAQ
+
+### Masalah Umum
+
+1. **🐛 Aplikasi tidak dapat dimulai**
+
+   - Periksa port 3000 sudah digunakan atau tidak
+   - Periksa status database MySQL
+   - Cek file log di `logs/err.log`
+
+2. **📈 Memori tinggi**
+
+   - Jalankan `npm run monitor:prod` untuk memantau penggunaan
+   - Turunkan nilai `max_instances` jika diperlukan
+   - Cek bottleneck dengan monitoring
+
+3. **🐢 Performa lambat**
+   - Optimasi query database
+   - Kurangi jumlah instance pada server dengan CPU terbatas
+   - Cek logs untuk blocking operations
 
 ## 📚 API Documentation
 
@@ -205,11 +383,14 @@ http://localhost:3000/api/v1
 
 ```json
 {
-  "dev": "ts-node-dev src/app.ts",
+  "dev": "npx prisma generate && nodemon src/app.ts",
   "build": "tsc",
   "start": "node dist/app.js",
-  "lint": "eslint src/**/*.ts",
-  "format": "prettier --write src/**/*.ts"
+  "lint": "eslint . --ext .ts --fix",
+  "start:prod": "pm2 start ecosystem.config.js --node-args='--expose-gc'",
+  "stop:prod": "pm2 stop ecosystem.config.js",
+  "restart:prod": "pm2 restart ecosystem.config.js",
+  "monitor:prod": "pm2 monit"
 }
 ```
 

@@ -1,4 +1,4 @@
-import prisma from '../../config/database';
+import prisma from '../../config/services/database';
 import { convertBigIntToNumber } from '../../utils/variables/bigInt.utils';
 import { DateUtils } from '../../utils/variables/date.utils';
 import * as RevenueRepository from './RevenueReports.repositories';

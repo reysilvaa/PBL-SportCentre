@@ -1,4 +1,4 @@
-import prisma from '../../config/database';
+import prisma from '../../config/services/database';
 import { addHours } from 'date-fns';
 
 // Types

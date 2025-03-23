@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import prisma from '../../config/database';
+import prisma from '../../config/services/database';
 import { createBookingSchema } from '../../zod-schemas/booking.schema';
 import {
   sendErrorResponse,
