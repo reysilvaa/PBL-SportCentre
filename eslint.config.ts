@@ -13,9 +13,13 @@ export default [
   },
   js.configs.recommended,
   {
+    files: ['**/*.ts'],
     languageOptions: {
       parser: tsParser,
-      sourceType: 'module',
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
       globals: {
         process: 'readonly',
         __dirname: 'readonly',
