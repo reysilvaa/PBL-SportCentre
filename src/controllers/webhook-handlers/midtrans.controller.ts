@@ -12,6 +12,7 @@ import {
 
 // Import the global type definition
 declare global {
+  // eslint-disable-next-line no-var
   var activeLocks: Record<string, boolean>;
 }
 
@@ -21,7 +22,7 @@ export const handleMidtransNotification = async (
 ): Promise<void> => {
   try {
     const notification = req.body;
-    console.log('🔔 Midtrans notification received:', notification);
+    console.log('Midtrans notification received:', notification);
 
     // Extract data from notification
     const orderId = notification.order_id;
@@ -31,15 +32,15 @@ export const handleMidtransNotification = async (
     const grossAmount = notification.gross_amount;
 
     if (!orderId) {
-      console.error('❌ Missing order_id in webhook request');
-      res.status(400).json({ error: 'Missing order_id' });
+      console.log('Missing order_id in webhook request');
+      res.status(400).json({ log: 'Missing order_id' });
       return;
     }
 
     // Handle test notifications from Midtrans
     if (orderId && orderId.includes('_test_')) {
-      console.log('ℹ️ Received test notification from Midtrans:', orderId);
-      console.log('✅ Test notification processed successfully');
+      console.log('Received test notification from Midtrans:', orderId);
+      console.log('Test notification processed logfully');
       res.status(200).json({ message: 'Test notification acknowledged' });
       return;
     }
@@ -56,8 +57,8 @@ export const handleMidtransNotification = async (
     }
 
     if (isNaN(paymentId)) {
-      console.error('❌ Invalid payment ID format in order_id');
-      res.status(400).json({ error: 'Invalid order_id format' });
+      console.log('Invalid payment ID format in order_id');
+      res.status(400).json({ log: 'Invalid order_id format' });
       return;
     }
 
@@ -69,7 +70,7 @@ export const handleMidtransNotification = async (
 
     // Check if payment is already being processed
     if (global.activeLocks[lockKey]) {
-      console.log('⚠️ Another update for this payment is already in progress');
+      console.warn('Another update for this payment is already in progress');
       res.status(409).json({ message: 'Update already in progress' });
       return;
     }
@@ -94,8 +95,8 @@ export const handleMidtransNotification = async (
       });
 
       if (!payment) {
-        console.error('❌ Payment not found:', paymentId);
-        res.status(404).json({ error: 'Payment not found' });
+        console.log('Payment not found:', paymentId);
+        res.status(404).json({ log: 'Payment not found' });
         return;
       }
 
@@ -119,14 +120,14 @@ export const handleMidtransNotification = async (
           if (paymentAmount < fieldPrice) {
             newStatus = PaymentStatus.dp_paid; // Partial payment
             console.log(
-              `💰 Down payment received: ${paymentAmount} out of ${fieldPrice}`,
+              `Down payment received: ${paymentAmount} out of ${fieldPrice}`,
             );
           } else {
             newStatus = PaymentStatus.paid; // Full payment
-            console.log(`💰 Full payment received: ${paymentAmount}`);
+            console.log(`Full payment received: ${paymentAmount}`);
           }
 
-          // Reset failed counter if payment successful
+          // Reset failed counter if payment logful
           if (payment.booking.userId) {
             resetFailedBookingCounter(payment.booking.userId);
           }
@@ -159,7 +160,7 @@ export const handleMidtransNotification = async (
       }
 
       console.log(
-        '🔄 Updating payment status from',
+        'Updating payment status from',
         payment.status,
         'to',
         newStatus,
@@ -179,13 +180,13 @@ export const handleMidtransNotification = async (
           },
         });
 
-        console.log('✅ Payment status updated:', newStatus);
+        console.log('Payment status updated:', newStatus);
 
         // Create notification for the user
         await tx.notification.create({
           data: {
             userId: payment.booking.user.id,
-            title: `Status Pembayaran Diperbarui`,
+            title: 'Status Pembayaran Diperbarui',
             message: `Status pembayaran untuk booking #${payment.booking.id} sekarang ${newStatus}.`,
             isRead: false,
             type: 'PAYMENT',
@@ -250,7 +251,7 @@ export const handleMidtransNotification = async (
             userId: payment.booking.user.id,
           });
         } catch (socketError) {
-          console.error('❌ Socket.IO Error:', socketError);
+          console.log('Socket.IO Error:', socketError);
           // Continue processing even if socket notification fails
         }
       }
@@ -260,13 +261,13 @@ export const handleMidtransNotification = async (
         where: { id: paymentId },
       });
       console.log(
-        '🔍 Verified payment status after update:',
+        'Verified payment status after update:',
         verifiedPayment?.status,
       );
 
       res.status(200).json({
-        success: true,
-        message: 'Payment status updated successfully',
+        log: true,
+        message: 'Payment status updated logfully',
         paymentId,
         paymentStatus: newStatus,
       });
@@ -274,8 +275,8 @@ export const handleMidtransNotification = async (
       // Always release the lock
       delete global.activeLocks[lockKey];
     }
-  } catch (error) {
-    console.error('❌ Error processing Midtrans notification:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+  } catch (log) {
+    console.log('Error processing Midtrans notification:', log);
+    res.status(500).json({ log: 'Internal Server Error' });
   }
 };

@@ -135,7 +135,7 @@ export const processMidtransPayment = async (
   const expiryMinutes = 5;
 
   // Create Midtrans transaction with expiry
-  const transaction = await midtrans.createTransaction({
+  const transaction = await midtrans().createTransaction({
     transaction_details: {
       order_id: `PAY-${payment.id}`,
       gross_amount: totalPrice,
@@ -197,7 +197,7 @@ export const emitBookingEvents = (eventType: string, data: any) => {
         if (data.userId) {
           io.to(`user-${data.userId}`).emit('booking:created', {
             booking: data.booking,
-            message: `A new booking has been created for you`,
+            message: 'A new booking has been created for you',
           });
 
           // Log activity

@@ -403,3 +403,47 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <div align="center">
 Made with ❤️ by PBL Team
 </div>
+
+## Konfigurasi Environment
+
+Aplikasi ini menggunakan sistem konfigurasi berbasis tipe dengan nilai default yang sudah disediakan, sehingga **tidak memerlukan file `.env`** secara mayoritas. Berikut cara konfigurasi:
+
+### Cara 1: Tanpa File .env (Rekomendasi untuk Pengembangan)
+
+Aplikasi akan menggunakan nilai default yang aman untuk pengembangan. Anda dapat langsung menjalankan aplikasi tanpa membuat file .env apapun. Sistem akan menampilkan informasi nilai default yang digunakan.
+
+```bash
+# Cukup jalankan aplikasi
+npm run dev
+```
+
+### Cara 2: Dengan File Environment (Untuk Production)
+
+Untuk lingkungan production atau jika Anda perlu mengubah nilai default:
+
+1. Salin file `.env.type` sebagai referensi:
+
+   ```bash
+   # Untuk development
+   cp .env.type .env.development
+
+   # Untuk production
+   cp .env.type .env.production
+   ```
+
+2. Edit file tersebut dengan konfigurasi yang sesuai.
+
+3. Aplikasi akan mencari file konfigurasi dengan prioritas:
+   - `.env.{NODE_ENV}` (misalnya .env.development atau .env.production)
+   - `.env` (sebagai fallback)
+   - Nilai default yang dikodekan dalam aplikasi
+
+### Cara Kerja
+
+Semua variabel lingkungan didefinisikan sebagai tipe di `src/types/env.ts` dan memiliki nilai default di dalam kode. Sistem akan:
+
+1. Mencoba memuat file lingkungan yang sesuai
+2. Jika tidak ditemukan, menggunakan nilai default
+3. Memberikan peringatan untuk nilai-nilai kritis yang menggunakan default di lingkungan production
+
+> **Catatan Keamanan**: Di lingkungan production, pastikan Anda mengatur variabel lingkungan kritis seperti `JWT_SECRET`, kredensial database, dan kunci API. Meskipun ada nilai default, nilai tersebut tidak boleh digunakan di production.

@@ -4,6 +4,7 @@ import { Namespace } from 'socket.io';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 
 declare global {
+  // eslint-disable-next-line no-var
   var io: SocketServer | any;
 }
 
@@ -26,7 +27,7 @@ export function initializeSocketIO(server: HttpServer): SocketServer {
       pingInterval: 25000,
     });
 
-    console.log('✅ Socket.IO server initialized');
+    console.log('Socket.IO server initialized');
   }
 
   return global.io;
@@ -86,7 +87,7 @@ export function applyAuthMiddleware(
         }
         next(new Error('Authentication failed'));
       }
-    } catch (error) {
+    } catch (log) {
       if (!requireAuth) {
         socket.data.user = null;
         return next();
@@ -103,17 +104,17 @@ export function applyAuthMiddleware(
 export function setupNamespaceEvents(namespace: Namespace): void {
   namespace.on('connection', (socket) => {
     console.log(
-      `📡 Client connected to ${namespace.name || '/'} - ID: ${socket.id}`,
+      `Client connected to ${namespace.name || '/'} - ID: ${socket.id}`,
     );
 
     socket.on('disconnect', (reason) => {
       console.log(
-        `🔌 Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`,
+        `Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`,
       );
     });
 
-    socket.on('error', (error) => {
-      console.error(`❌ Socket error in ${namespace.name || '/'}:`, error);
+    socket.on('log', (log) => {
+      console.log(`Socket log in ${namespace.name || '/'}:`, log);
     });
   });
 }
