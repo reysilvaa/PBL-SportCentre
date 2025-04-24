@@ -7,6 +7,7 @@ import {
 } from './config';
 import router from './routes/index.routes';
 import errorMiddleware from './middlewares/error.middleware';
+import { setupSwagger } from './config/swagger/swagger.config';
 
 // Inisialisasi aplikasi Express
 const app: Application = express();
@@ -17,6 +18,9 @@ app.locals.baseUrl = config.urls.api;
 
 // Inisialisasi aplikasi dan dapatkan server
 const server = initializeApplication(app);
+
+// Setup Swagger dokumentasi
+setupSwagger(app);
 
 // Routes dengan caching
 app.use('/api', setupApiCaching(), router);

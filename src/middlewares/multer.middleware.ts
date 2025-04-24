@@ -141,20 +141,3 @@ export const dynamicUpload = (folderType: FolderPath = 'other') => {
     fileFilter: imageFileFilter,
   });
 };
-
-// Error handling middleware for multer errors
-// export const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
-//   if (err instanceof multer.MulterError) {
-//     return res.status(400).json({
-//       status: false,
-//       message: 'File upload error',
-//       error: err.message
-//     });
-//   } else if (err) {
-//     return res.status(400).json({
-//       status: false,
-//       message: err.message || 'Unknown file upload error'
-//     });
-//   }
-//   next();
-// };

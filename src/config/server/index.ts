@@ -12,6 +12,7 @@ import { initializeSocketIO } from '../server/socket';
 import { initializeAllSocketHandlers } from '../../socket-handlers';
 import { startFieldAvailabilityUpdates } from '../../controllers/all/availability.controller';
 import { logServerStartup, setupPeriodicHealthCheck } from './monitoring';
+import { setupSwagger } from '../swagger/swagger.config';
 
 /**
  * Inisialisasi semua komponen sebelum server dimulai
@@ -31,6 +32,9 @@ export const initializeApplication = (app: Application): http.Server => {
 
   // Setup basic middlewares
   setupMiddlewares(app);
+
+  setupSwagger(app);
+
 
   // Initialize Socket.IO dan optimalkan
   const io = initializeSocketIO(server);
@@ -68,6 +72,7 @@ export const startServer = (server: http.Server): void => {
 
     // Setup periodic health checks (setiap 15 menit)
     setupPeriodicHealthCheck(15);
+    
 
     // Kirim sinyal ready ke PM2
     if (process.send) {

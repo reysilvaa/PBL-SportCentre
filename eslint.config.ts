@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import noCommentsPlugin from 'eslint-plugin-no-comments';
 import { config } from './src/config/app/env';
 
 // Menentukan environment: development atau production
@@ -38,10 +39,12 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint,
+      'no-comments': noCommentsPlugin,
     },
     rules: {
       '@typescript-eslint/no-unused-vars': 'warn',
       'no-unused-vars': 'off',
+      'no-comments/no-comments': 'error',
       // Aturan console khusus untuk development vs production
       'no-console': isDevelopment
         ? ['warn', { allow: ['warn', 'error', 'info'] }]
