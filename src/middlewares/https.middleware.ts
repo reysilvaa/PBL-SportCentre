@@ -8,7 +8,7 @@ import { config } from '../config/app/env';
 export const httpsMiddleware = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void => {
   // Skip jika:
   // 1. Bukan production

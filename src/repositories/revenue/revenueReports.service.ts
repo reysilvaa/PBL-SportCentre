@@ -16,12 +16,12 @@ import {
 export const generateRevenueReport = async (
   start: Date,
   end: Date,
-  type: string = 'monthly',
+  type: string = 'monthly'
 ) => {
   // Get booking data with payments
   const bookingsWithPayments = await RevenueRepository.getBookingsWithPayments(
     start,
-    end,
+    end
   );
 
   // Process time series data based on requested grouping
@@ -43,7 +43,7 @@ export const generateRevenueReport = async (
   // Calculate totals
   const totalRevenue = bookingsWithPayments.reduce(
     (sum, booking) => sum + Number(booking.payment?.amount || 0),
-    0,
+    0
   );
 
   const totals: TotalStats = {
@@ -62,13 +62,13 @@ export const generateRevenueReport = async (
 export const generateOccupancyReport = async (
   start: Date,
   end: Date,
-  branchId?: number,
+  branchId?: number
 ) => {
   // Get field bookings
   const bookings = await RevenueRepository.getBookingsForOccupancy(
     start,
     end,
-    branchId,
+    branchId
   );
 
   // Get all fields
@@ -79,7 +79,7 @@ export const generateOccupancyReport = async (
     allFields,
     bookings,
     start,
-    end,
+    end
   );
 
   // Get time slot popularity
@@ -107,7 +107,7 @@ export const generateBusinessPerformanceReport = async () => {
   const branches = await prisma.branch.findMany();
   const branchPerformance = await calculateBranchPerformance(
     branches,
-    bookings,
+    bookings
   );
 
   // Calculate customer retention
@@ -331,7 +331,7 @@ function calculateFieldOccupancy(
   fields: any[],
   bookings: any[],
   start: Date,
-  end: Date,
+  end: Date
 ) {
   return fields.map((field) => {
     const fieldBookings = bookings.filter((b) => b.fieldId === field.id);
@@ -348,7 +348,7 @@ function calculateFieldOccupancy(
 
     // Calculate potential available hours (12 hours per day * days in range)
     const daysDiff = Math.ceil(
-      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
     );
     const potentialHours = daysDiff * 12; // Assuming 12 operating hours per day
 
@@ -430,12 +430,12 @@ function processMonthlyBookingTrends(bookings: any[]): MonthlyStats[] {
 
 async function calculateBranchPerformance(
   branches: any[],
-  bookings: any[],
+  bookings: any[]
 ): Promise<BranchPerformance[]> {
   return branches
     .map((branch) => {
       const branchBookings = bookings.filter(
-        (b) => b.field?.branchId === branch.id,
+        (b) => b.field?.branchId === branch.id
       );
 
       // Get unique customers
@@ -474,11 +474,11 @@ function calculateCustomerRetention(bookings: any[]): CustomerRetention {
 
   const totalCustomers = userBookingsMap.size;
   const returningCustomers = Array.from(userBookingsMap.values()).filter(
-    (count) => count > 1,
+    (count) => count > 1
   ).length;
   const totalBookings = Array.from(userBookingsMap.values()).reduce(
     (sum, count) => sum + count,
-    0,
+    0
   );
   const avgBookingsPerCustomer =
     totalCustomers > 0 ? totalBookings / totalCustomers : 0;
@@ -495,24 +495,24 @@ function calculateMonthComparison(bookings: any[]) {
   const firstDayCurrentMonth = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth(),
-    1,
+    1
   );
   const firstDayPreviousMonth = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth() - 1,
-    1,
+    1
   );
 
   // Current month bookings
   const currentMonthBookings = bookings.filter(
-    (b) => b.bookingDate >= firstDayCurrentMonth,
+    (b) => b.bookingDate >= firstDayCurrentMonth
   );
 
   // Previous month bookings
   const previousMonthBookings = bookings.filter(
     (b) =>
       b.bookingDate >= firstDayPreviousMonth &&
-      b.bookingDate < firstDayCurrentMonth,
+      b.bookingDate < firstDayCurrentMonth
   );
 
   // Calculate stats
@@ -616,7 +616,7 @@ function calculateGrowthMetrics(historicalData: MonthlyStats[]) {
 
 function generateForecast(
   historicalData: MonthlyStats[],
-  growthMetrics: { bookingGrowth: number; revenueGrowth: number },
+  growthMetrics: { bookingGrowth: number; revenueGrowth: number }
 ): MonthlyStats[] {
   const forecast: MonthlyStats[] = [];
   const lastMonth =
@@ -635,10 +635,10 @@ function generateForecast(
     const forecastMonth = DateUtils.getNextMonth(lastMonth.month, i);
 
     forecastBookings = Math.round(
-      forecastBookings * (1 + growthMetrics.bookingGrowth),
+      forecastBookings * (1 + growthMetrics.bookingGrowth)
     );
     forecastRevenue = Math.round(
-      forecastRevenue * (1 + growthMetrics.revenueGrowth),
+      forecastRevenue * (1 + growthMetrics.revenueGrowth)
     );
 
     forecast.push({

@@ -26,9 +26,7 @@ export class DateUtils {
     d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
     const week =
       Math.floor(
-        (d.getTime() - new Date(d.getFullYear(), 0, 4).getTime()) /
-          86400000 /
-          7,
+        (d.getTime() - new Date(d.getFullYear(), 0, 4).getTime()) / 86400000 / 7
       ) + 1;
     return `${d.getFullYear()}-${String(week).padStart(2, '0')}`;
   }
@@ -79,7 +77,7 @@ export class DateUtils {
     const currentDate = new Date(
       startDate.getFullYear(),
       startDate.getMonth(),
-      1,
+      1
     );
     const lastDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
 

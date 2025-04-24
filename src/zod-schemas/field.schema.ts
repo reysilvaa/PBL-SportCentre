@@ -12,7 +12,7 @@ export const createFieldSchema = z.object({
     ],
     {
       message: 'ID cabang harus berupa angka',
-    },
+    }
   ),
   typeId: z.union(
     [
@@ -24,7 +24,7 @@ export const createFieldSchema = z.object({
     ],
     {
       message: 'ID tipe lapangan harus berupa angka',
-    },
+    }
   ),
   name: z
     .string({
@@ -44,7 +44,7 @@ export const createFieldSchema = z.object({
       })
       .min(0, {
         message: 'Harga siang tidak boleh negatif',
-      }),
+      })
   ),
   priceNight: z.preprocess(
     (val) => (typeof val === 'string' ? parseInt(val) : val),
@@ -54,7 +54,7 @@ export const createFieldSchema = z.object({
       })
       .min(0, {
         message: 'Harga malam tidak boleh negatif',
-      }),
+      })
   ),
   status: z
     .enum(['available', 'maintenance', 'booked'])

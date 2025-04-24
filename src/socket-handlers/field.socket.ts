@@ -12,7 +12,7 @@ import {
 export const handleCheckAllFieldsAvailability = async (
   socket: Socket,
   data: any,
-  callback?: Function,
+  callback?: Function
 ) => {
   try {
     const results = await getAllFieldsAvailability();
@@ -42,7 +42,7 @@ export const handleCheckAllFieldsAvailability = async (
 export const handleCheckFieldAvailability = async (
   socket: Socket,
   data: any,
-  callback?: Function,
+  callback?: Function
 ) => {
   try {
     const { fieldId, bookingDate, startTime, endTime } = data;
@@ -62,7 +62,7 @@ export const handleCheckFieldAvailability = async (
       Number(fieldId),
       date,
       start,
-      end,
+      end
     );
 
     if (typeof callback === 'function') {
@@ -82,7 +82,7 @@ export const handleCheckFieldAvailability = async (
 export const handleGetAvailableTimeSlots = async (
   socket: Socket,
   data: any,
-  callback?: Function,
+  callback?: Function
 ) => {
   try {
     const { fieldId, date } = data;
@@ -96,7 +96,7 @@ export const handleGetAvailableTimeSlots = async (
 
     const availableSlots = await getAvailableTimeSlots(
       Number(fieldId),
-      new Date(date),
+      new Date(date)
     );
 
     if (typeof callback === 'function') {
@@ -129,17 +129,17 @@ export const setupFieldSocketHandlers = (): void => {
 
     // Handle requests for all fields availability
     socket.on('checkAllFieldsAvailability', (data, callback) =>
-      handleCheckAllFieldsAvailability(socket, data, callback),
+      handleCheckAllFieldsAvailability(socket, data, callback)
     );
 
     // Handle requests for specific field availability
     socket.on('checkFieldAvailability', (data, callback) =>
-      handleCheckFieldAvailability(socket, data, callback),
+      handleCheckFieldAvailability(socket, data, callback)
     );
 
     // Handle requests for available time slots
     socket.on('getAvailableTimeSlots', (data, callback) =>
-      handleGetAvailableTimeSlots(socket, data, callback),
+      handleGetAvailableTimeSlots(socket, data, callback)
     );
 
     // Handle disconnection

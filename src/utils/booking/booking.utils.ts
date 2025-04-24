@@ -16,7 +16,7 @@ export const sendErrorResponse = (
   res: Response,
   status: number,
   message: any,
-  details?: any,
+  details?: any
 ): void => {
   res.status(status).json({ error: message, ...(details && { details }) });
 };
@@ -38,7 +38,7 @@ export const validateBookingTime = async (
   fieldId: number,
   bookingDate: Date,
   startTime: Date,
-  endTime: Date,
+  endTime: Date
 ) => {
   // Validate start and end times
   if (startTime >= endTime) {
@@ -57,7 +57,7 @@ export const validateBookingTime = async (
     fieldId,
     bookingDate,
     startTime,
-    endTime,
+    endTime
   );
 
   if (!isAvailable) {
@@ -85,7 +85,7 @@ export const createBookingWithPayment = async (
   endTime: Date,
   paymentStatus: PaymentStatus = 'pending',
   paymentMethod: PaymentMethod = 'cash',
-  amount?: any,
+  amount?: any
 ) => {
   // Create booking record
   const booking = await prisma.booking.create({
@@ -129,7 +129,7 @@ export const processMidtransPayment = async (
   payment: any,
   field: any,
   user: any,
-  totalPrice: number,
+  totalPrice: number
 ) => {
   // Define the expiry time in Midtrans (5 minutes)
   const expiryMinutes = 5;
@@ -189,7 +189,7 @@ export const emitBookingEvents = (eventType: string, data: any) => {
         if (data.branchId) {
           io.to(`branch-${data.branchId}`).emit(
             'booking:created',
-            data.booking,
+            data.booking
           );
         }
 
@@ -236,7 +236,7 @@ export const emitBookingEvents = (eventType: string, data: any) => {
         if (data.branchId) {
           io.to(`branch-${data.branchId}`).emit(
             'booking:updated',
-            data.booking,
+            data.booking
           );
         }
 

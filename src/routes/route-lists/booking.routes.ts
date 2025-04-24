@@ -3,143 +3,172 @@ import * as userBookingController from '../../controllers/user/booking.controlle
 import * as branchAdminBookingController from '../../controllers/admin/admin_cabang/booking.controller';
 import * as superAdminBookingController from '../../controllers/admin/super_admin/booking.controller';
 import * as ownerBookingController from '../../controllers/owner/booking.controller';
-import {
-  superAdminAuth,
-  branchAdminAuth,
-  ownerAuth,
-  userAuth,
-} from '../../middlewares/auth.middleware';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { roleBasedController } from '../../middlewares/role.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { bookingRateLimiter } from '../../middlewares/security.middleware';
 
 const router = Router();
 
-// ======== USER ROUTES ========
-// Endpoint pembuatan booking dengan rate limiter
+// Pembuatan booking
 router.post(
   '/',
-  userAuth,
+  authMiddleware(['user']),
   bookingRateLimiter,
-  userBookingController.createBooking,
+  roleBasedController({
+    user: userBookingController.createBooking,
+  })
 );
 
-// Endpoint mendapatkan booking dengan caching
+// Mendapatkan booking pengguna berdasarkan userId
 router.get(
   '/users/:userId/bookings',
-  userAuth,
+  authMiddleware(['user']),
   cacheMiddleware('user_bookings', 120),
-  userBookingController.getUserBookings,
+  roleBasedController({
+    user: userBookingController.getUserBookings,
+  })
 );
 
-// Detail booking (GET)
+// Detail booking berdasarkan ID
 router.get(
   '/bookings/:id/user',
-  userAuth,
+  authMiddleware(['user']),
   cacheMiddleware('booking_detail', 120),
-  userBookingController.getBookingById,
+  roleBasedController({
+    user: userBookingController.getBookingById,
+  })
 );
 
-// Pembatalan booking (DELETE)
-router.delete('/bookings/:id', userAuth, userBookingController.cancelBooking);
+// Pembatalan booking
+router.delete(
+  '/bookings/:id',
+  authMiddleware(['user']),
+  roleBasedController({
+    user: userBookingController.cancelBooking,
+  })
+);
 
-// ======== BRANCH ADMIN ROUTES ========
 // Daftar booking di cabang
 router.get(
   '/branches/:branchId/bookings',
-  branchAdminAuth,
+  authMiddleware(['admin_cabang']),
   cacheMiddleware('branch_bookings', 60),
-  branchAdminBookingController.getBranchBookings,
+  roleBasedController({
+    branchAdmin: branchAdminBookingController.getBranchBookings,
+  })
 );
 
 // Detail booking di cabang
 router.get(
   '/branches/:branchId/bookings/:id',
-  branchAdminAuth,
+  authMiddleware(['admin_cabang']),
   cacheMiddleware('branch_booking_detail', 60),
-  branchAdminBookingController.getBranchBookingById,
+  roleBasedController({
+    branchAdmin: branchAdminBookingController.getBranchBookingById,
+  })
 );
 
 // Update status booking
 router.put(
   '/branches/:branchId/bookings/:id/status',
-  branchAdminAuth,
-  branchAdminBookingController.updateBranchBookingStatus,
+  authMiddleware(['admin_cabang']),
+  roleBasedController({
+    branchAdmin: branchAdminBookingController.updateBranchBookingStatus,
+  })
 );
 
 // Buat booking manual
 router.post(
   '/branches/:branchId/bookings/manual',
-  branchAdminAuth,
-  branchAdminBookingController.createManualBooking,
+  authMiddleware(['admin_cabang']),
+  roleBasedController({
+    branchAdmin: branchAdminBookingController.createManualBooking,
+  })
 );
 
-// ======== SUPER ADMIN ROUTES ========
-// Daftar semua booking
+// Daftar semua booking (admin)
 router.get(
   '/admin/bookings',
-  superAdminAuth,
+  authMiddleware(['super_admin']),
   cacheMiddleware('admin_all_bookings', 120),
-  superAdminBookingController.getAllBookings,
+  roleBasedController({
+    superAdmin: superAdminBookingController.getAllBookings,
+  })
 );
 
 // Detail booking admin
 router.get(
   '/admin/bookings/:id',
-  superAdminAuth,
+  authMiddleware(['super_admin']),
   cacheMiddleware('admin_booking_detail', 60),
-  superAdminBookingController.getBookingById,
+  roleBasedController({
+    superAdmin: superAdminBookingController.getBookingById,
+  })
 );
 
 // Update pembayaran booking
 router.put(
   '/admin/bookings/:id/payment',
-  superAdminAuth,
-  superAdminBookingController.updateBookingPayment,
+  authMiddleware(['super_admin']),
+  roleBasedController({
+    superAdmin: superAdminBookingController.updateBookingPayment,
+  })
 );
 
 // Hapus booking
 router.delete(
   '/admin/bookings/:id',
-  superAdminAuth,
-  superAdminBookingController.deleteBooking,
+  authMiddleware(['super_admin']),
+  roleBasedController({
+    superAdmin: superAdminBookingController.deleteBooking,
+  })
 );
 
 // Statistik booking
 router.get(
   '/admin/bookings/stats',
-  superAdminAuth,
+  authMiddleware(['super_admin']),
   cacheMiddleware('admin_booking_stats', 300),
-  superAdminBookingController.getBookingStats,
+  roleBasedController({
+    superAdmin: superAdminBookingController.getBookingStats,
+  })
 );
 
-// ======== OWNER ROUTES ========
-// Laporan pendapatan
-// contoh: http://localhost:3000/api/bookings/owner/reports/revenue?type=daily&startDate=2025-03-01&endDate=2025-03-07
+// Laporan pendapatan untuk owner
 router.get(
   '/owner/reports/revenue',
-  ownerAuth,
-  ownerBookingController.getRevenueReports,
+  authMiddleware(['owner_cabang']),
+  roleBasedController({
+    owner: ownerBookingController.getRevenueReports,
+  })
 );
 
 // Laporan okupansi
 router.get(
   '/owner/reports/occupancy',
-  ownerAuth,
-  ownerBookingController.getOccupancyReports,
+  authMiddleware(['owner_cabang']),
+  roleBasedController({
+    owner: ownerBookingController.getOccupancyReports,
+  })
 );
 
 // Laporan performa bisnis
 router.get(
   '/owner/reports/performance',
-  ownerAuth,
-  ownerBookingController.getBusinessPerformance,
+  authMiddleware(['owner_cabang']),
+  roleBasedController({
+    owner: ownerBookingController.getBusinessPerformance,
+  })
 );
 
 // Prediksi booking
 router.get(
   '/owner/reports/forecast',
-  ownerAuth,
-  ownerBookingController.getBookingForecast,
+  authMiddleware(['owner_cabang']),
+  roleBasedController({
+    owner: ownerBookingController.getBookingForecast,
+  })
 );
 
 export default router;

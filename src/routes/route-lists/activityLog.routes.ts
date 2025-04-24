@@ -4,19 +4,37 @@ import {
   createActivityLog,
   deleteActivityLog,
 } from '../../controllers/admin/super_admin/activityLog.controller';
-import { parseIds } from '../../middlewares/parseId.middleware'; // parse into integer karena dto kirimkan string untuk userId (dto minta number)
-import { superAdminAuth } from '../../middlewares/auth.middleware';
+import { parseIds } from '../../middlewares/parseId.middleware';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { roleBasedController } from '../../middlewares/role.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 
 router.get(
   '/',
-  superAdminAuth,
+  authMiddleware(['super_admin']),
   cacheMiddleware('activity_logs', 300),
-  getActivityLogs,
+  roleBasedController({
+    superAdmin: getActivityLogs,
+  })
 );
-router.post('/', superAdminAuth, parseIds, createActivityLog);
-router.delete('/:id', superAdminAuth, deleteActivityLog);
+
+router.post(
+  '/',
+  authMiddleware(['super_admin']),
+  parseIds,
+  roleBasedController({
+    superAdmin: createActivityLog,
+  })
+);
+
+router.delete(
+  '/:id',
+  authMiddleware(['super_admin']),
+  roleBasedController({
+    superAdmin: deleteActivityLog,
+  })
+);
 
 export default router;

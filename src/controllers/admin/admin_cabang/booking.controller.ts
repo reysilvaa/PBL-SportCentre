@@ -25,7 +25,7 @@ import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
 export const getBranchBookings = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { branchId } = req.params;
@@ -54,7 +54,7 @@ export const getBranchBookings = async (
 
 export const getBranchBookingById = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id, branchId } = req.params;
@@ -86,7 +86,7 @@ export const getBranchBookingById = async (
 
 export const updateBranchBookingStatus = async (
   req: User,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id, branchId } = req.params;
@@ -146,7 +146,7 @@ export const updateBranchBookingStatus = async (
 
 export const createManualBooking = async (
   req: User,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { branchId } = req.params;
@@ -156,7 +156,7 @@ export const createManualBooking = async (
     // Verify the field belongs to this branch
     const field = await verifyFieldBranch(
       parseInt(fieldId.toString()),
-      parseInt(branchId),
+      parseInt(branchId)
     );
 
     if (!field) {
@@ -174,7 +174,7 @@ export const createManualBooking = async (
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -182,7 +182,7 @@ export const createManualBooking = async (
         res,
         400,
         timeValidation.message,
-        timeValidation.details,
+        timeValidation.details
       );
     }
 
@@ -195,7 +195,7 @@ export const createManualBooking = async (
       endDateTime,
       paymentStatus || 'paid',
       'cash',
-      field.priceDay,
+      field.priceDay
     );
 
     // Get complete booking with relations

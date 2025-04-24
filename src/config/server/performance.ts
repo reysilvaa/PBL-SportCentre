@@ -74,7 +74,7 @@ export const setupApiCaching = () => {
   return (
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction,
+    next: express.NextFunction
   ) => {
     // Cache selama 5 menit
     res.set('Cache-Control', 'public, max-age=300');
@@ -102,7 +102,7 @@ export const getMemoryUsage = (): {
  * Setup availability updates dengan interval optimum
  */
 export const createAvailabilityUpdateInterval = (
-  updateFunction: Function,
+  updateFunction: Function
 ): any => {
   const AVAILABILITY_UPDATE_INTERVAL = 60000; // 60 detik
   return setInterval(updateFunction, AVAILABILITY_UPDATE_INTERVAL);

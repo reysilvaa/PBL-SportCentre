@@ -48,21 +48,21 @@ const createRateLimiter = (windowMs: number, max: number, message: string) => {
 export const loginRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
   10, // 10 permintaan per IP
-  'Terlalu banyak percobaan login, coba lagi nanti',
+  'Terlalu banyak percobaan login, coba lagi nanti'
 );
 
 // Rate limiter untuk endpoint register
 export const registerRateLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 jam
   5, // 5 permintaan per IP
-  'Terlalu banyak percobaan register, coba lagi nanti',
+  'Terlalu banyak percobaan register, coba lagi nanti'
 );
 
 // Rate limiter untuk endpoint booking
 export const bookingRateLimiter = createRateLimiter(
   10 * 60 * 1000, // 10 menit
   10, // 10 permintaan per IP
-  'Terlalu banyak percobaan booking, coba lagi nanti',
+  'Terlalu banyak percobaan booking, coba lagi nanti'
 );
 
 /**
@@ -80,7 +80,7 @@ const _checkBlockedUser = (req: User, res: Response, next: NextFunction) => {
   if (blockedUsersCache.has(userId)) {
     const remainingTime = blockedUsersCache.getTtl(userId) || 0;
     const minutesRemaining = Math.ceil(
-      (remainingTime - Date.now()) / 1000 / 60,
+      (remainingTime - Date.now()) / 1000 / 60
     );
 
     return res.status(403).json({
@@ -94,7 +94,7 @@ const _checkBlockedUser = (req: User, res: Response, next: NextFunction) => {
   if (blockedIPsCache.has(clientIP)) {
     const remainingTime = blockedIPsCache.getTtl(clientIP) || 0;
     const minutesRemaining = Math.ceil(
-      (remainingTime - Date.now()) / 1000 / 60,
+      (remainingTime - Date.now()) / 1000 / 60
     );
 
     return res.status(403).json({
@@ -113,7 +113,7 @@ const _checkBlockedUser = (req: User, res: Response, next: NextFunction) => {
 export const checkBlockedUser = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   return _checkBlockedUser(req as User, res, next);
 };
@@ -124,7 +124,7 @@ export const checkBlockedUser = (
 export const trackFailedBooking = async (
   userId: number,
   bookingId: number,
-  clientIP: string,
+  clientIP: string
 ) => {
   const userKey = `user_${userId}`;
   const ipKey = `ip_${clientIP}`;
@@ -213,7 +213,7 @@ export const resetFailedBookingCounter = (userId: number) => {
 export const apiRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
   100, // 100 permintaan per IP
-  'Terlalu banyak permintaan, coba lagi nanti',
+  'Terlalu banyak permintaan, coba lagi nanti'
 );
 
 /**
@@ -222,7 +222,7 @@ export const apiRateLimiter = createRateLimiter(
 export const globalRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
   500, // 500 permintaan per IP
-  'Terlalu banyak permintaan, coba lagi nanti',
+  'Terlalu banyak permintaan, coba lagi nanti'
 );
 
 /**
@@ -231,7 +231,7 @@ export const globalRateLimiter = createRateLimiter(
 export const sanitizeData = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   if (req.body) {
     // Fungsi rekursif untuk sanitasi objek
@@ -274,7 +274,7 @@ export const sanitizeData = (
 export const addSecurityHeaders = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   // Hapus header yang berpotensi membocorkan informasi
   res.removeHeader('X-Powered-By');
@@ -289,7 +289,7 @@ export const addSecurityHeaders = (
   if (req.method === 'GET') {
     res.setHeader(
       'Cache-Control',
-      'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'no-store, no-cache, must-revalidate, proxy-revalidate'
     );
   }
 
@@ -302,7 +302,7 @@ export const addSecurityHeaders = (
 export const preventParamPollution = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   if (req.query) {
     for (const [key, value] of Object.entries(req.query)) {

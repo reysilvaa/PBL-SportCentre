@@ -90,7 +90,7 @@ const createStorage = (folderType: FolderPath) => {
 const imageFileFilter = (
   req: Request,
   file: Express.Multer.File,
-  cb: multer.FileFilterCallback,
+  cb: multer.FileFilterCallback
 ) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);

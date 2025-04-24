@@ -43,7 +43,7 @@ export const getPromotionUsages = async (req: Request, res: Response) => {
 
 export const createPromotionUsage = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { userId, bookingId, promoId } = req.body;

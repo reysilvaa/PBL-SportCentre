@@ -35,7 +35,6 @@ export const initializeApplication = (app: Application): http.Server => {
 
   setupSwagger(app);
 
-
   // Initialize Socket.IO dan optimalkan
   const io = initializeSocketIO(server);
   setupSocketOptimizations(io);
@@ -56,7 +55,7 @@ export const startAvailabilityUpdates = (): any => {
   const AVAILABILITY_UPDATE_INTERVAL = 60000; // 60 detik
   return setInterval(
     startFieldAvailabilityUpdates,
-    AVAILABILITY_UPDATE_INTERVAL,
+    AVAILABILITY_UPDATE_INTERVAL
   );
 };
 
@@ -72,7 +71,6 @@ export const startServer = (server: http.Server): void => {
 
     // Setup periodic health checks (setiap 15 menit)
     setupPeriodicHealthCheck(15);
-    
 
     // Kirim sinyal ready ke PM2
     if (process.send) {

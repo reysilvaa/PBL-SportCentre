@@ -44,8 +44,8 @@ export const getUsers = async (req: User, res: Response): Promise<void> => {
         bookings.map((booking: { userId: number; user: any }) => [
           booking.userId,
           booking.user,
-        ]),
-      ).values(),
+        ])
+      ).values()
     );
 
     res.json({

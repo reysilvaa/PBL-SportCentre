@@ -96,7 +96,7 @@ export const authMiddleware = (allowedRoles: string[] = []) => {
 export const superAdminAuth = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   return authMiddleware(['super_admin'])(req, res, next);
 };
@@ -105,7 +105,7 @@ export const superAdminAuth = (
 export const branchAdminAuth = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   return authMiddleware(['admin_cabang'])(req, res, next);
 };

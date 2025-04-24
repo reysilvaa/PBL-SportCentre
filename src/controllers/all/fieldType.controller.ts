@@ -31,7 +31,7 @@ export const getFieldTypes = async (req: Request, res: Response) => {
 
 export const createFieldType = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     // Validasi data dengan Zod
@@ -94,7 +94,7 @@ export const updateFieldType = async (req: Request, res: Response) => {
 
 export const deleteFieldType = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;

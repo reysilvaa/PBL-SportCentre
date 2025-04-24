@@ -30,7 +30,7 @@ for (const envPath of envPaths) {
 // Jika tidak ada file env yang ditemukan, tampilkan peringatan
 if (!envFileLoaded) {
   console.warn(
-    '⚠️ Tidak menemukan file environment. Menggunakan nilai default.',
+    '⚠️ Tidak menemukan file environment. Menggunakan nilai default.'
   );
 }
 
@@ -40,14 +40,14 @@ type SameSiteOption = boolean | 'none' | 'lax' | 'strict';
 // Fungsi untuk memberikan nilai default dengan tipe yang tepat
 function getEnvValue<K extends keyof EnvConfig>(
   key: K,
-  defaultValue: string,
+  defaultValue: string
 ): string {
   const value = process.env[key] || defaultValue;
 
   if (!process.env[key]) {
     if (env === 'production') {
       console.warn(
-        `⚠️ Variabel lingkungan ${key} tidak diatur, menggunakan nilai default`,
+        `⚠️ Variabel lingkungan ${key} tidak diatur, menggunakan nilai default`
       );
     } else {
       console.info(`ℹ️ Menggunakan nilai default untuk ${key}`);
@@ -86,11 +86,11 @@ export const config = {
   jwtSecret: getEnvValue('JWT_SECRET', defaultValues.JWT_SECRET),
   midtransServerKey: getEnvValue(
     'MIDTRANS_SERVER_KEY',
-    defaultValues.MIDTRANS_SERVER_KEY,
+    defaultValues.MIDTRANS_SERVER_KEY
   ),
   midtransClientKey: getEnvValue(
     'MIDTRANS_CLIENT_KEY',
-    defaultValues.MIDTRANS_CLIENT_KEY,
+    defaultValues.MIDTRANS_CLIENT_KEY
   ),
   db: {
     url: getEnvValue('DATABASE_URL', defaultValues.DATABASE_URL),
@@ -108,7 +108,7 @@ export const config = {
   cookies: {
     secret: getEnvValue('COOKIE_SECRET', defaultValues.COOKIE_SECRET),
     maxAge: parseInt(
-      getEnvValue('COOKIE_MAX_AGE', defaultValues.COOKIE_MAX_AGE),
+      getEnvValue('COOKIE_MAX_AGE', defaultValues.COOKIE_MAX_AGE)
     ),
     httpOnly: true,
     secure: env === 'production',
@@ -119,12 +119,12 @@ export const config = {
   cloudinary: {
     cloudName: getEnvValue(
       'CLOUDINARY_CLOUD_NAME',
-      defaultValues.CLOUDINARY_CLOUD_NAME,
+      defaultValues.CLOUDINARY_CLOUD_NAME
     ),
     apiKey: getEnvValue('CLOUDINARY_API_KEY', defaultValues.CLOUDINARY_API_KEY),
     apiSecret: getEnvValue(
       'CLOUDINARY_API_SECRET',
-      defaultValues.CLOUDINARY_API_SECRET,
+      defaultValues.CLOUDINARY_API_SECRET
     ),
   },
   frontendUrl: getEnvValue('FRONTEND_URL', defaultValues.FRONTEND_URL),
@@ -140,7 +140,7 @@ function validateConfig(): void {
     // JWT Secret harus diubah di production
     if (config.jwtSecret === defaultValues.JWT_SECRET) {
       console.warn(
-        '❌ JWT Secret menggunakan nilai default, harap ubah untuk keamanan',
+        '❌ JWT Secret menggunakan nilai default, harap ubah untuk keamanan'
       );
     }
 
@@ -150,14 +150,14 @@ function validateConfig(): void {
       config.midtransServerKey === defaultValues.MIDTRANS_SERVER_KEY
     ) {
       console.warn(
-        '⚠️ Konfigurasi Midtrans tidak lengkap, pembayaran mungkin tidak akan berfungsi',
+        '⚠️ Konfigurasi Midtrans tidak lengkap, pembayaran mungkin tidak akan berfungsi'
       );
     }
 
     // Konfigurasi cloudinary harus diisi di production
     if (config.cloudinary.apiKey === defaultValues.CLOUDINARY_API_KEY) {
       console.warn(
-        '⚠️ Konfigurasi Cloudinary tidak lengkap, upload gambar mungkin tidak akan berfungsi',
+        '⚠️ Konfigurasi Cloudinary tidak lengkap, upload gambar mungkin tidak akan berfungsi'
       );
     }
   }
@@ -165,7 +165,7 @@ function validateConfig(): void {
   // Cek koneksi database
   if (config.db.url === defaultValues.DATABASE_URL && env !== 'test') {
     console.warn(
-      '⚠️ Menggunakan konfigurasi database default, pastikan database tersedia',
+      '⚠️ Menggunakan konfigurasi database default, pastikan database tersedia'
     );
   }
 }

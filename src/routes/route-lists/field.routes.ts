@@ -1,11 +1,8 @@
 import express from 'express';
 import { getFields } from '../../controllers/all/field.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
-import {
-  superAdminAuth,
-  branchAdminAuth,
-  ownerAuth,
-} from '../../middlewares/auth.middleware';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { roleBasedController } from '../../middlewares/role.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { checkAllFieldsAvailability } from '../../controllers/all/availability.controller';
 import {
@@ -20,75 +17,59 @@ import { fieldUpload } from '../../middlewares/multer.middleware';
 
 const router = express.Router();
 
-// Public or general access routes
+// Public atau general access routes
 router.get('/', cacheMiddleware('fields', 300), getFields);
 
-// Public or general routes
-router.get(
-  '/availability',
-  cacheMiddleware('fields_availability', 60),
-  checkAllFieldsAvailability,
-);
+// Routes untuk memeriksa ketersediaan lapangan
+router.get('/availability', cacheMiddleware('fields_availability', 60), checkAllFieldsAvailability);
 
-// Admin cabang specific routes
+// Routes untuk admin dan owner
 router.get(
   '/admin',
-  branchAdminAuth,
+  authMiddleware(['admin_cabang', 'owner_cabang']),
   adminBranchMiddleware,
   cacheMiddleware('admin_fields', 300),
-  getAdminFields,
-);
-router.post(
-  '/admin',
-  branchAdminAuth,
-  adminBranchMiddleware,
-  fieldUpload.single('imageUrl'),
-  parseIds,
-  createField,
+  roleBasedController({
+    branchAdmin: getAdminFields,
+    owner: getAdminFields,
+  })
 );
 
-router.put(
-  '/admin/:id',
-  branchAdminAuth,
-  adminBranchMiddleware,
-  fieldUpload.single('imageUrl'),
-  parseIds,
-  updateField,
-);
-router.delete(
-  '/admin/:id',
-  branchAdminAuth,
-  adminBranchMiddleware,
-  deleteField,
-);
-
-// Owner cabang routes
-router.get(
-  '/owner',
-  ownerAuth,
-  adminBranchMiddleware,
-  cacheMiddleware('owner_fields', 300),
-  getAdminFields,
-);
-
-// Super Admin routes - menggunakan controller yang sama dengan admin cabang tapi tanpa middleware cabang
+// Pembuatan lapangan - admin atau super admin
 router.post(
   '/',
-  superAdminAuth,
+  authMiddleware(['super_admin', 'admin_cabang']),
   fieldUpload.single('imageUrl'),
   parseIds,
-  createField,
+  roleBasedController({
+    superAdmin: createField,
+    branchAdmin: createField,
+  })
 );
+
+// Update lapangan - admin, owner, atau super admin
 router.put(
   '/:id',
-  superAdminAuth,
+  authMiddleware(['super_admin', 'admin_cabang']),
   fieldUpload.single('imageUrl'),
   parseIds,
-  updateField,
+  roleBasedController({
+    superAdmin: updateField,
+    branchAdmin: updateField,
+  })
 );
-router.delete('/:id', superAdminAuth, deleteField);
 
-// Detail field berdasarkan ID - letakkan di bagian akhir untuk menghindari konflik
+// Hapus lapangan - admin atau super admin
+router.delete(
+  '/:id',
+  authMiddleware(['super_admin', 'admin_cabang']),
+  roleBasedController({
+    superAdmin: deleteField,
+    branchAdmin: deleteField,
+  })
+);
+
+// Detail lapangan berdasarkan ID - public
 router.get('/:id', cacheMiddleware('field_detail', 300), getFieldById);
 
 export default router;

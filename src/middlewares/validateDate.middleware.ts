@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 export function validateDateMiddleware(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void {
   try {
     const { bookingDate, startTime, endTime } = req.body;

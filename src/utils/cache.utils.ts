@@ -23,7 +23,7 @@ export const getCachedData = <T>(key: string): T | undefined => {
 export const setCachedData = <T>(
   key: string,
   data: T,
-  ttl?: number,
+  ttl?: number
 ): boolean => {
   return ttl !== undefined ? cache.set(key, data, ttl) : cache.set(key, data);
 };

@@ -17,7 +17,7 @@ export const setupMiddlewares = (app: Application): void => {
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       maxAge: 86400,
-    }),
+    })
   );
 
   app.use(express.json({ limit: '10kb' }));

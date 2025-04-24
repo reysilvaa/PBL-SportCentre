@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 export const parseIds = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): void => {
   const parseIntegerField = (field: string) => {
     if (req.body[field]) {

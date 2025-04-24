@@ -8,7 +8,7 @@ import {
 
 export const checkAllFieldsAvailability = async (
   req: Request,
-  res: Response,
+  res: Response
 ) => {
   try {
     const results = await getAllFieldsAvailability();

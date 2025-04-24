@@ -41,7 +41,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       });
 
       console.log(
-        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`,
+        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`
       );
 
       // You might want to add code here to update your notification system

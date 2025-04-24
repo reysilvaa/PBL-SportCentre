@@ -8,7 +8,7 @@ export function createImageWorker(imageData: string): Promise<string> {
       path.join(__dirname, '../workers/imageWorker.ts'),
       {
         workerData: { imageData } as ImageWorkerData,
-      },
+      }
     );
 
     worker.on('message', (result: WorkerResponse<string>) => {

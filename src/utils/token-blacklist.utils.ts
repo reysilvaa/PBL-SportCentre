@@ -14,7 +14,7 @@ const blacklistCache = new NodeCache({
  */
 export const blacklistToken = (
   token: string,
-  expiryInSeconds?: number,
+  expiryInSeconds?: number
 ): void => {
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || 24 * 60 * 60;
@@ -61,7 +61,7 @@ export const getBlacklistSize = (): number => {
  */
 export const blacklistTokens = (
   tokens: string[],
-  expiryInSeconds?: number,
+  expiryInSeconds?: number
 ): void => {
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || 24 * 60 * 60;

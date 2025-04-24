@@ -39,7 +39,7 @@ interface AuthenticatedRequest extends Request {
 
 export const createBooking = async (
   req: AuthenticatedRequest,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     console.log('📥 Request body:', req.body);
@@ -52,7 +52,7 @@ export const createBooking = async (
         res,
         400,
         'Validasi gagal',
-        result.error.format(),
+        result.error.format()
       );
     }
 
@@ -65,12 +65,12 @@ export const createBooking = async (
     // Combine date with time in WIB timezone
     const startDateTime = toZonedTime(
       combineDateWithTimeWIB(bookingDateTime, startTime),
-      TIMEZONE,
+      TIMEZONE
     );
 
     const endDateTime = toZonedTime(
       combineDateWithTimeWIB(bookingDateTime, endTime),
-      TIMEZONE,
+      TIMEZONE
     );
 
     console.log('⏰ Start Time (WIB):', formatDateToWIB(startDateTime));
@@ -81,7 +81,7 @@ export const createBooking = async (
       fieldId,
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -89,7 +89,7 @@ export const createBooking = async (
         res,
         400,
         timeValidation.message,
-        timeValidation.details,
+        timeValidation.details
       );
     }
 
@@ -120,7 +120,7 @@ export const createBooking = async (
       startDateTime,
       endDateTime,
       Number(field.priceDay),
-      Number(field.priceNight),
+      Number(field.priceNight)
     );
 
     if (totalPrice <= 0) {
@@ -138,7 +138,7 @@ export const createBooking = async (
       endDateTime,
       'pending',
       'midtrans',
-      totalPrice,
+      totalPrice
     );
 
     console.log('✅ Booking created:', booking.id);
@@ -150,7 +150,7 @@ export const createBooking = async (
       payment,
       field,
       user,
-      totalPrice,
+      totalPrice
     );
 
     if (!paymentResult) {
@@ -213,7 +213,7 @@ export const createBooking = async (
 // Additional function for webhook handler to update payment expiry
 export const midtransWebhook = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const notification = req.body;
@@ -270,7 +270,7 @@ export const midtransWebhook = async (
       });
 
       console.log(
-        `⏱️ Updated payment #${paymentId} expiry to ${formatDateToWIB(expiryDate)} after Midtrans notification`,
+        `⏱️ Updated payment #${paymentId} expiry to ${formatDateToWIB(expiryDate)} after Midtrans notification`
       );
 
       // Emit socket event for payment update
@@ -296,7 +296,7 @@ export const midtransWebhook = async (
     });
 
     console.log(
-      `💳 Updated payment #${paymentId} status to ${newPaymentStatus}`,
+      `💳 Updated payment #${paymentId} status to ${newPaymentStatus}`
     );
 
     // Emit socket event for payment status change
@@ -329,7 +329,7 @@ export const midtransWebhook = async (
 
 export const getUserBookings = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -367,7 +367,7 @@ export const getUserBookings = async (
 
 export const getBookingById = async (
   req: AuthenticatedRequest,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -390,7 +390,7 @@ export const getBookingById = async (
       return sendErrorResponse(
         res,
         403,
-        'You do not have permission to view this booking',
+        'You do not have permission to view this booking'
       );
     }
 
@@ -420,7 +420,7 @@ export const getBookingById = async (
 // Menangkap pembatalan booking yang sering
 export const cancelBooking = async (
   req: AuthenticatedRequest,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -442,7 +442,7 @@ export const cancelBooking = async (
       return sendErrorResponse(
         res,
         403,
-        'Anda tidak memiliki izin untuk membatalkan booking ini',
+        'Anda tidak memiliki izin untuk membatalkan booking ini'
       );
     }
 
@@ -451,7 +451,7 @@ export const cancelBooking = async (
       return sendErrorResponse(
         res,
         400,
-        'Booking dengan status pembayaran PAID tidak dapat dibatalkan',
+        'Booking dengan status pembayaran PAID tidak dapat dibatalkan'
       );
     }
 

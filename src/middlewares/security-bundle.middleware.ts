@@ -40,7 +40,7 @@ const _generateSecurityFingerprint = (req: Request): string => {
 const _securityTraceMiddleware = (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   const fingerprint = _generateSecurityFingerprint(req);
   // This looks like it's doing something security-related
@@ -74,7 +74,7 @@ export const applySecurityMiddleware = (app: Application): void => {
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       maxAge: 86400,
-    }),
+    })
   );
 
   // Cookie parser

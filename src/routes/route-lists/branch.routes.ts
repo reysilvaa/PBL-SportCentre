@@ -11,48 +11,60 @@ import {
   superAdminAuth,
   branchAdminAuth,
   ownerAuth,
+  authMiddleware,
 } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
-import { adminBranchMiddleware } from '../../middlewares/adminBranch.middleware';
+import { branchAccessCheck, roleBasedController } from '../../middlewares/role.middleware';
 import { branchUpload } from '../../middlewares/multer.middleware';
 
 const router = express.Router();
 
-// Public routes
+// Endpoint publik untuk mendapatkan semua cabang
 router.get('/', cacheMiddleware('branches', 300), getBranches);
 
-// Super Admin routes
+// Mendapatkan detail cabang berdasarkan ID
+router.get(
+  '/:id',
+  cacheMiddleware('branch_detail', 300),
+  authMiddleware(['super_admin', 'admin_cabang', 'owner_cabang', 'user']),
+  getBranches
+);
+
+// Pendekatan minimalis untuk operasi cabang
 router.post(
   '/',
-  superAdminAuth,
+  authMiddleware(['super_admin']),
   branchUpload.single('imageUrl'),
   parseIds,
-  createBranch,
+  roleBasedController({
+    superAdmin: createBranch,
+  })
 );
+
+// Update cabang dengan pendekatan minimalis
 router.put(
   '/:id',
-  superAdminAuth,
+  authMiddleware(['super_admin', 'admin_cabang', 'owner_cabang']),
   branchUpload.single('imageUrl'),
-  updateBranch,
-);
-router.delete('/:id', superAdminAuth, deleteBranch);
-
-// Admin Cabang routes
-router.put(
-  '/admin/:id',
-  branchAdminAuth,
-  adminBranchMiddleware,
-  branchUpload.single('imageUrl'),
-  updateBranchAdmin,
+  branchAccessCheck('id'),
+  roleBasedController({
+    superAdmin: updateBranch,
+    branchAdmin: updateBranchAdmin,
+    owner: updateBranchAdmin,
+  })
 );
 
-// Owner Cabang routes - menggunakan controller yang sama dengan admin cabang
-router.put(
-  '/owner/:id',
-  ownerAuth,
-  adminBranchMiddleware,
-  branchUpload.single('imageUrl'),
-  updateBranchAdmin,
+// Hapus cabang (hanya super admin)
+router.delete(
+  '/:id',
+  authMiddleware(['super_admin']),
+  roleBasedController({
+    superAdmin: deleteBranch,
+  })
 );
+
+// Mempertahankan backward compatibility
+// router.put('/admin/:id', branchAdminAuth, adminBranchMiddleware, branchUpload.single('imageUrl'), updateBranchAdmin);
+// router.put('/owner/:id', ownerAuth, adminBranchMiddleware, branchUpload.single('imageUrl'), updateBranchAdmin);
 
 export default router;
