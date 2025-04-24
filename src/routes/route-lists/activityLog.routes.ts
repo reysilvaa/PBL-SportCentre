@@ -22,7 +22,6 @@ router.get(
 
 router.post(
   '/',
-  authMiddleware(['super_admin']),
   parseIds,
   roleBasedController({
     superAdmin: createActivityLog,
