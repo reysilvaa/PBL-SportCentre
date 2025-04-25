@@ -13,11 +13,70 @@
 
 </div>
 
+## 📊 Arsitektur Cloud
+
+Sistem ini didesain untuk dijalankan di infrastruktur cloud Azure dengan mempertimbangkan high availability, keamanan, dan skalabilitas.
+
+![Arsitektur Cloud](image.png)
+
+### ☁️ Komponen Utama
+
+- **Frontend Tier (High Availability)**
+  - Multiple VM untuk redundansi dan load balancing
+  - NGINX untuk hosting UI dan proxy ke API
+
+- **Backend Tier (High Availability)**
+  - Multiple VM untuk redundansi dan load balancing
+  - Express.js API dengan Node.js
+  - Clustering dengan PM2 untuk memanfaatkan multi-core
+
+- **Komponen Express Application**
+  - Routes - Mengelola endpoint API
+  - Controllers - Logika bisnis untuk autentikasi, pengguna, admin, dan owner
+  - Middlewares - Validasi, autentikasi, dan error handling
+  - Repositories - Akses data dengan Prisma ORM
+  - Socket Handlers - Manajemen koneksi real-time
+  - Zod Schemas - Validasi request
+  - Utils - Helper functions
+
+- **Data Storage**
+  - Azure MySQL Database - Menyimpan data aplikasi
+  - Azure Blob Storage - Menyimpan file dan gambar
+  - NodeCache - Caching di memori aplikasi
+
+- **Keamanan**
+  - Application Gateway
+  - Network Security Groups
+  - Azure Firewall
+  - Key Vault untuk credential management
+
+- **Monitoring**
+  - Azure Monitor
+  - Application Insights
+
+- **DevOps Services**
+  - CI/CD Pipeline
+  - Source Repositories
+  - Project Management
+
+### 🔄 High Availability & Scaling
+
+- Load balancer untuk mendistribusikan traffic
+- Multiple VM instance untuk redundansi
+- Auto-scaling berdasarkan CPU usage
+- Clustering dengan PM2 di setiap VM
+
+### 🔒 Keamanan
+
+- Virtual Network (VCN) untuk isolasi
+- Network Security Groups untuk kontrol akses
+- Key Vault untuk penyimpanan kredensial
+- HTTPS enforcement di semua endpoint publik
+
 ## 🌟 Fitur Utama
 
 - 🔒 **Autentikasi & Otorisasi**
-  oda - JWT-based authentication
-
+  - JWT-based authentication
   - Role-based access control (Super Admin/Branch Admin/User)
   - Secure password hashing dengan bcrypt
 
