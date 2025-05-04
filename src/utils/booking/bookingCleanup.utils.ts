@@ -1,6 +1,7 @@
 import { PaymentStatus } from '@prisma/client';
 import prisma from '../../config/services/database';
 import { bookingCleanupQueue } from '../../config/services/queue';
+import { emitBookingEvents } from './booking.utils';
 
 // Define PaymentStatus enum to match Prisma schema
 /**
@@ -25,7 +26,12 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         },
       },
       include: {
-        booking: true,
+        booking: {
+          include: {
+            field: true,
+            user: true
+          }
+        },
       },
     });
 
@@ -44,8 +50,31 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`
       );
 
-      // You might want to add code here to update your notification system
-      // to inform users that their booking has expired
+      // Emit event for booking cancellation to update field availability
+      if (payment.booking) {
+        const booking = payment.booking;
+        
+        // Emit event to notify system that booking is canceled
+        emitBookingEvents('cancel-booking', {
+          bookingId: booking.id,
+          fieldId: booking.fieldId,
+          userId: booking.userId,
+          branchId: booking.field?.branchId,
+          bookingDate: booking.bookingDate,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+        });
+        
+        // Emit notification to user
+        emitBookingEvents('booking:updated', {
+          booking: booking,
+          userId: booking.userId,
+          branchId: booking.field?.branchId,
+          paymentStatus: 'failed',
+        });
+        
+        console.log(`🔔 Notified system about canceled booking #${booking.id} due to payment expiry`);
+      }
     }
 
     console.log('✅ Expired booking processing completed');
