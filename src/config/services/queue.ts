@@ -1,9 +1,13 @@
 import Queue from 'bull';
 import { config } from '../index';
 
+// Prefix untuk semua queue
+const QUEUE_PREFIX = 'sportcenter';
+
 // Queue untuk membersihkan booking yang kedaluwarsa
-export const bookingCleanupQueue = new Queue('booking-cleanup', {
+export const bookingCleanupQueue = new Queue('cleanup-expired-bookings', {
   redis: config.redis.url,
+  prefix: QUEUE_PREFIX,
   defaultJobOptions: {
     attempts: 3,
     removeOnComplete: true,
@@ -12,8 +16,9 @@ export const bookingCleanupQueue = new Queue('booking-cleanup', {
 });
 
 // Queue untuk memperbarui ketersediaan lapangan secara real-time
-export const fieldAvailabilityQueue = new Queue('field-availability', {
+export const fieldAvailabilityQueue = new Queue('field-availability-updates', {
   redis: config.redis.url,
+  prefix: QUEUE_PREFIX,
   defaultJobOptions: {
     attempts: 3,
     removeOnComplete: true,
