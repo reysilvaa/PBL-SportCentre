@@ -8,6 +8,7 @@ import {
 import router from './routes/index.routes';
 import errorMiddleware from './middlewares/error.middleware';
 import { setupSwagger } from './config/swagger/swagger.config';
+import { setupGracefulShutdown } from './utils/gracefulShutdown.utils';
 
 // Inisialisasi aplikasi Express
 const app: Application = express();
@@ -27,6 +28,9 @@ app.use('/api', setupHttpCaching(), router);
 
 // Error handling middleware
 app.use(errorMiddleware as express.ErrorRequestHandler);
+
+// Setup graceful shutdown
+setupGracefulShutdown(server);
 
 // Mulai server
 startServer(server);

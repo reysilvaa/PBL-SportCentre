@@ -5,6 +5,7 @@ import {
   getAllFieldsAvailability,
   getAvailableTimeSlots,
 } from '../../utils/booking/checkAvailability.utils';
+import { fieldAvailabilityQueue } from '../../config/services/queue';
 
 export const checkAllFieldsAvailability = async (
   req: Request,
@@ -22,34 +23,47 @@ export const checkAllFieldsAvailability = async (
   }
 };
 
-// Variable to store update interval reference
-let updateIntervalId: NodeJS.Timeout | null = null;
+/**
+ * Setup processor untuk field availability queue
+ */
+export const setupFieldAvailabilityProcessor = (): void => {
+  // Proses job
+  fieldAvailabilityQueue.process(async (job) => {
+    try {
+      const io = getIO();
+      const results = await getAllFieldsAvailability();
+      io.of('/fields').emit('fieldsAvailabilityUpdate', results);
+      console.log('🔄 Emitted real-time field availability update');
+      return { success: true, timestamp: new Date() };
+    } catch (error) {
+      console.error('Error in scheduled field availability update:', error);
+      throw error;
+    }
+  });
+  
+  console.log('✅ Field availability processor didaftarkan');
+};
 
 /**
- * Start the interval for real-time hourly updates
+ * Start Bull Queue jobs untuk pembaruan ketersediaan lapangan
  */
-export const startFieldAvailabilityUpdates = () => {
-  // Set up interval for real-time hourly updates
-  if (!updateIntervalId) {
-    updateIntervalId = setInterval(async () => {
-      try {
-        const io = getIO();
-        const results = await getAllFieldsAvailability();
-        io.of('/fields').emit('fieldsAvailabilityUpdate', results);
-        console.log('🔄 Emitted real-time field availability update');
-      } catch (error) {
-        console.error('Error in scheduled field availability update:', error);
-      }
-    }, 60 * 1000); // Check every minute
-  }
+export const startFieldAvailabilityUpdates = (): void => {
+  // Jalankan pembaruan pertama segera
+  fieldAvailabilityQueue.add({}, { jobId: 'initial-update' });
+  
+  // Tambahkan recurring job (setiap 1 menit)
+  fieldAvailabilityQueue.add({}, {
+    jobId: 'availability-recurring',
+    repeat: { cron: '*/1 * * * *' }
+  });
+  
+  console.log('🚀 Field availability Bull Queue job started');
 };
 
 /**
  * Clean up resources when shutting down
  */
-export const cleanupFieldAvailabilityUpdates = () => {
-  if (updateIntervalId) {
-    clearInterval(updateIntervalId);
-    updateIntervalId = null;
-  }
+export const cleanupFieldAvailabilityUpdates = async (): Promise<void> => {
+  await fieldAvailabilityQueue.close();
+  console.log('🛑 Field availability Bull Queue job stopped');
 };

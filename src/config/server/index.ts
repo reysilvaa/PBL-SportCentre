@@ -10,9 +10,16 @@ import { setupSecurityMiddlewares } from '../server/security';
 import { setupMiddlewares } from '../server/middleware';
 import { initializeSocketIO } from '../server/socket';
 import { initializeAllSocketHandlers } from '../../socket-handlers';
-import { startFieldAvailabilityUpdates } from '../../controllers/all/availability.controller';
+import { 
+  startFieldAvailabilityUpdates, 
+  setupFieldAvailabilityProcessor 
+} from '../../controllers/all/availability.controller';
 import { logServerStartup, setupPeriodicHealthCheck } from './monitoring';
 import { setupSwagger } from '../swagger/swagger.config';
+import { 
+  startBookingCleanupJob, 
+  setupBookingCleanupProcessor 
+} from '../../utils/booking/bookingCleanup.utils';
 
 /**
  * Inisialisasi semua komponen sebelum server dimulai
@@ -42,21 +49,39 @@ export const initializeApplication = (app: Application): http.Server => {
   // Initialize all socket handlers
   initializeAllSocketHandlers();
 
-  // Start field availability updates dengan interval yang ditentukan
-  startAvailabilityUpdates();
+  // Setup Bull Queue processors
+  setupQueueProcessors();
+  
+  // Mulai Bull Queue jobs
+  startBackgroundJobs();
 
   return server;
 };
 
 /**
- * Memulai interval update ketersediaan lapangan
+ * Setup Bull Queue processors
  */
-export const startAvailabilityUpdates = (): any => {
-  const AVAILABILITY_UPDATE_INTERVAL = 60000; // 60 detik
-  return setInterval(
-    startFieldAvailabilityUpdates,
-    AVAILABILITY_UPDATE_INTERVAL
-  );
+export const setupQueueProcessors = (): void => {
+  // Setup processor untuk Field Availability queue
+  setupFieldAvailabilityProcessor();
+  
+  // Setup processor untuk Booking Cleanup queue
+  setupBookingCleanupProcessor();
+  
+  console.log('✅ Bull Queue processors telah didaftarkan');
+};
+
+/**
+ * Memulai background jobs dengan Bull Queue
+ */
+export const startBackgroundJobs = (): void => {
+  // Mulai job untuk memperbarui ketersediaan lapangan
+  startFieldAvailabilityUpdates();
+  
+  // Mulai job untuk membersihkan booking yang kedaluwarsa
+  startBookingCleanupJob();
+  
+  console.log('🚀 Background jobs dimulai dengan Bull Queue');
 };
 
 /**

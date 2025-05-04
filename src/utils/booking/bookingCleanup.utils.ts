@@ -1,6 +1,6 @@
 import { PaymentStatus } from '@prisma/client';
 import prisma from '../../config/services/database';
-import { CronJob } from 'cron';
+import { bookingCleanupQueue } from '../../config/services/queue';
 
 // Define PaymentStatus enum to match Prisma schema
 /**
@@ -55,19 +55,40 @@ export const cleanupPendingBookings = async (): Promise<void> => {
 };
 
 /**
- * Function to start a cron job that will automatically process expired bookings
- * Runs every 1 minute
+ * Definisi processor untuk booking cleanup job
  */
-export const startBookingCleanupJob = (): CronJob => {
-  // Create a cron job that runs every 1 minute
-  const job = new CronJob('*/1 * * * *', async () => {
+export const setupBookingCleanupProcessor = (): void => {
+  // Proses job
+  bookingCleanupQueue.process(async (job) => {
     console.log('⏰ Running automatic expired booking processing');
     await cleanupPendingBookings();
+    return { success: true, timestamp: new Date() };
   });
+  
+  console.log('✅ Booking cleanup processor didaftarkan');
+};
 
-  // Start the cron job
-  job.start();
-  console.log('🚀 Expired booking processing cron job started');
+/**
+ * Function to start a Bull Queue job that will automatically process expired bookings
+ * Runs every 1 minute
+ */
+export const startBookingCleanupJob = (): void => {
+  // Menjalankan proses cleanup segera
+  bookingCleanupQueue.add({}, { jobId: 'initial-cleanup' });
+  
+  // Tambahkan recurring job (setiap 1 menit)
+  bookingCleanupQueue.add({}, {
+    jobId: 'cleanup-recurring',
+    repeat: { cron: '*/1 * * * *' } // Sama dengan cron: setiap 1 menit
+  });
+  
+  console.log('🚀 Expired booking cleanup Bull Queue job started');
+};
 
-  return job;
+/**
+ * Function to stop the booking cleanup job
+ */
+export const stopBookingCleanupJob = async (): Promise<void> => {
+  await bookingCleanupQueue.close();
+  console.log('🛑 Expired booking cleanup Bull Queue job stopped');
 };
