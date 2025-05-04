@@ -5,7 +5,7 @@ import {
   setupMemoryOptimization,
   setupPerformanceOptimizations,
   setupSocketOptimizations,
-} from './performance';
+} from './serverOptimizations';
 import { setupSecurityMiddlewares } from '../server/security';
 import { setupMiddlewares } from '../server/middleware';
 import { initializeSocketIO } from '../server/socket';

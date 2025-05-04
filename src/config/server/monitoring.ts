@@ -1,5 +1,5 @@
 import { getInstanceCount } from '../app/port';
-import { getMemoryUsage } from './performance';
+import { getMemoryUsage } from './serverOptimizations';
 import { config } from '../app/env';
 
 /**

@@ -68,9 +68,9 @@ export const setupCluster = (): void => {
 };
 
 /**
- * Setup caching untuk API routes
+ * Setup HTTP caching untuk API routes (browser caching)
  */
-export const setupApiCaching = () => {
+export const setupHttpCaching = () => {
   return (
     req: express.Request,
     res: express.Response,
@@ -106,4 +106,4 @@ export const createAvailabilityUpdateInterval = (
 ): any => {
   const AVAILABILITY_UPDATE_INTERVAL = 60000; // 60 detik
   return setInterval(updateFunction, AVAILABILITY_UPDATE_INTERVAL);
-};
+}; 

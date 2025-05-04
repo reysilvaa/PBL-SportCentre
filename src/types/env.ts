@@ -19,6 +19,11 @@ export interface EnvConfig {
 
   // Cache Configuration
   CACHE_TTL: string;
+  
+  // Redis Configuration
+  REDIS_URL: string;
+  REDIS_PASSWORD: string;
+  REDIS_TTL: string;
 
   // Cookie Configuration
   COOKIE_SECRET: string;

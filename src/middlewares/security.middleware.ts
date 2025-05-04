@@ -1,28 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import NodeCache from 'node-cache';
+import redisClient from '../config/services/redis';
 import { User } from './auth.middleware';
 import prisma from '../config/services/database';
 
-// Cache untuk menyimpan percobaan booking yang gagal/pending per user dan IP
-const failedBookingCache = new NodeCache({
-  stdTTL: 60 * 60, // 1 jam
-  checkperiod: 10 * 60, // Periksa setiap 10 menit
-  useClones: false,
-});
-
-// Cache untuk menyimpan pengguna dan IP yang diblokir
-const blockedUsersCache = new NodeCache({
-  stdTTL: 30 * 60, // 30 menit block by default
-  checkperiod: 5 * 60, // Periksa setiap 5 menit
-  useClones: false,
-});
-
-const blockedIPsCache = new NodeCache({
-  stdTTL: 15 * 60, // 15 menit block by default
-  checkperiod: 5 * 60, // Periksa setiap 5 menit
-  useClones: false,
-});
+// Prefix untuk kunci Redis
+const FAILED_BOOKING_PREFIX = 'failed_booking:';
+const BLOCKED_USER_PREFIX = 'blocked_user:';
+const BLOCKED_IP_PREFIX = 'blocked_ip:';
 
 // Konfigurasi untuk jumlah maksimum percobaan
 const MAX_FAILED_BOOKINGS = 5; // Maksimum booking gagal/pending dalam periode
@@ -69,41 +54,46 @@ export const bookingRateLimiter = createRateLimiter(
  * Middleware untuk memeriksa apakah pengguna diblokir
  * Fungsi internal untuk penggunaan langsung
  */
-const _checkBlockedUser = (req: User, res: Response, next: NextFunction) => {
+const _checkBlockedUser = async (req: User, res: Response, next: NextFunction) => {
   if (!req.user?.id) {
     return next();
   }
 
   const userId = req.user.id.toString();
 
-  // Periksa apakah pengguna diblokir
-  if (blockedUsersCache.has(userId)) {
-    const remainingTime = blockedUsersCache.getTtl(userId) || 0;
-    const minutesRemaining = Math.ceil(
-      (remainingTime - Date.now()) / 1000 / 60
-    );
+  try {
+    // Periksa apakah pengguna diblokir
+    const userIsBlocked = await redisClient.exists(`${BLOCKED_USER_PREFIX}${userId}`);
+    if (userIsBlocked) {
+      // Dapatkan sisa waktu blokir
+      const ttl = await redisClient.ttl(`${BLOCKED_USER_PREFIX}${userId}`);
+      const minutesRemaining = Math.ceil(ttl / 60);
 
-    return res.status(403).json({
-      status: false,
-      message: `Akun Anda diblokir sementara karena aktivitas mencurigakan. Silakan coba lagi dalam ${minutesRemaining} menit.`,
-    });
+      return res.status(403).json({
+        status: false,
+        message: `Akun Anda diblokir sementara karena aktivitas mencurigakan. Silakan coba lagi dalam ${minutesRemaining} menit.`,
+      });
+    }
+
+    // Periksa apakah IP diblokir
+    const clientIP = req.ip || req.socket.remoteAddress || '';
+    const ipIsBlocked = await redisClient.exists(`${BLOCKED_IP_PREFIX}${clientIP}`);
+    if (ipIsBlocked) {
+      // Dapatkan sisa waktu blokir
+      const ttl = await redisClient.ttl(`${BLOCKED_IP_PREFIX}${clientIP}`);
+      const minutesRemaining = Math.ceil(ttl / 60);
+
+      return res.status(403).json({
+        status: false,
+        message: `Akses diblokir sementara karena aktivitas mencurigakan. Silakan coba lagi dalam ${minutesRemaining} menit.`,
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking blocked status:', error);
+    next();
   }
-
-  // Periksa apakah IP diblokir
-  const clientIP = req.ip || req.socket.remoteAddress || '';
-  if (blockedIPsCache.has(clientIP)) {
-    const remainingTime = blockedIPsCache.getTtl(clientIP) || 0;
-    const minutesRemaining = Math.ceil(
-      (remainingTime - Date.now()) / 1000 / 60
-    );
-
-    return res.status(403).json({
-      status: false,
-      message: `Akses diblokir sementara karena aktivitas mencurigakan. Silakan coba lagi dalam ${minutesRemaining} menit.`,
-    });
-  }
-
-  next();
 };
 
 /**
@@ -126,87 +116,104 @@ export const trackFailedBooking = async (
   bookingId: number,
   clientIP: string
 ) => {
-  const userKey = `user_${userId}`;
-  const ipKey = `ip_${clientIP}`;
+  const userKey = `${FAILED_BOOKING_PREFIX}user_${userId}`;
+  const ipKey = `${FAILED_BOOKING_PREFIX}ip_${clientIP}`;
 
-  // Tambah counter untuk user
-  let userFailCount = failedBookingCache.get<number>(userKey) || 0;
-  userFailCount++;
-  failedBookingCache.set(userKey, userFailCount);
-
-  // Tambah counter untuk IP
-  let ipFailCount = failedBookingCache.get<number>(ipKey) || 0;
-  ipFailCount++;
-  failedBookingCache.set(ipKey, ipFailCount);
-
-  // Log ke database (opsional)
   try {
-    await prisma.activityLog.create({
-      data: {
-        userId,
-        action: 'FAILED_BOOKING',
-        details: JSON.stringify({
-          bookingId,
-          ipAddress: clientIP,
-          failCount: userFailCount,
-        }),
-      },
-    });
-  } catch (error) {
-    console.error('Error logging failed booking:', error);
-  }
-
-  // Jika melewati batas, blokir user dan IP
-  if (userFailCount >= MAX_FAILED_BOOKINGS) {
-    blockedUsersCache.set(`${userId}`, true, BLOCK_USER_TIME);
-
-    // Log pemblokiran ke database (opsional)
-    try {
-      await prisma.activityLog.create({
-        data: {
-          userId,
-          action: 'USER_BLOCKED',
-          details: JSON.stringify({
-            reason: 'Terlalu banyak booking gagal/pending',
-            blockDuration: BLOCK_USER_TIME,
-          }),
-        },
-      });
-    } catch (error) {
-      console.error('Error logging user block:', error);
+    // Tambah counter untuk user
+    let userFailCount = 0;
+    const userFailStr = await redisClient.get(userKey);
+    if (userFailStr) {
+      userFailCount = parseInt(userFailStr);
     }
-  }
+    userFailCount++;
+    await redisClient.setEx(userKey, 60 * 60, userFailCount.toString()); // 1 jam TTL
 
-  if (ipFailCount >= MAX_FAILED_BOOKINGS) {
-    blockedIPsCache.set(clientIP, true, BLOCK_IP_TIME);
+    // Tambah counter untuk IP
+    let ipFailCount = 0;
+    const ipFailStr = await redisClient.get(ipKey);
+    if (ipFailStr) {
+      ipFailCount = parseInt(ipFailStr);
+    }
+    ipFailCount++;
+    await redisClient.setEx(ipKey, 60 * 60, ipFailCount.toString()); // 1 jam TTL
 
-    // Log pemblokiran IP ke database (opsional)
+    // Log ke database (opsional)
     try {
       await prisma.activityLog.create({
         data: {
           userId,
-          action: 'IP_BLOCKED',
+          action: 'FAILED_BOOKING',
           details: JSON.stringify({
+            bookingId,
             ipAddress: clientIP,
-            reason: 'Terlalu banyak booking gagal/pending',
-            blockDuration: BLOCK_IP_TIME,
+            failCount: userFailCount,
           }),
         },
       });
     } catch (error) {
-      console.error('Error logging IP block:', error);
+      console.error('Error logging failed booking:', error);
     }
-  }
 
-  return { userFailCount, ipFailCount };
+    // Jika melewati batas, blokir user dan IP
+    if (userFailCount >= MAX_FAILED_BOOKINGS) {
+      await redisClient.setEx(`${BLOCKED_USER_PREFIX}${userId}`, BLOCK_USER_TIME, '1');
+
+      // Log pemblokiran ke database (opsional)
+      try {
+        await prisma.activityLog.create({
+          data: {
+            userId,
+            action: 'USER_BLOCKED',
+            details: JSON.stringify({
+              reason: 'Terlalu banyak booking gagal/pending',
+              blockDuration: BLOCK_USER_TIME,
+            }),
+          },
+        });
+      } catch (error) {
+        console.error('Error logging user block:', error);
+      }
+    }
+
+    if (ipFailCount >= MAX_FAILED_BOOKINGS) {
+      await redisClient.setEx(`${BLOCKED_IP_PREFIX}${clientIP}`, BLOCK_IP_TIME, '1');
+
+      // Log pemblokiran IP ke database (opsional)
+      try {
+        await prisma.activityLog.create({
+          data: {
+            userId,
+            action: 'IP_BLOCKED',
+            details: JSON.stringify({
+              ipAddress: clientIP,
+              reason: 'Terlalu banyak booking gagal/pending',
+              blockDuration: BLOCK_IP_TIME,
+            }),
+          },
+        });
+      } catch (error) {
+        console.error('Error logging IP block:', error);
+      }
+    }
+
+    return { userFailCount, ipFailCount };
+  } catch (error) {
+    console.error('Error tracking failed booking:', error);
+    return { userFailCount: 0, ipFailCount: 0 };
+  }
 };
 
 /**
  * Reset failed booking counter setelah booking berhasil
  */
-export const resetFailedBookingCounter = (userId: number) => {
-  const userKey = `user_${userId}`;
-  failedBookingCache.del(userKey);
+export const resetFailedBookingCounter = async (userId: number) => {
+  try {
+    const userKey = `${FAILED_BOOKING_PREFIX}user_${userId}`;
+    await redisClient.del(userKey);
+  } catch (error) {
+    console.error('Error resetting failed booking counter:', error);
+  }
 };
 
 // Rate limiter untuk API

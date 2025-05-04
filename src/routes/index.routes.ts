@@ -11,7 +11,7 @@ import promotionUsageRoutes from './route-lists/promotionUsage.routes';
 import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
 import notificationRoutes from './route-lists/notification.routes';
-import cache, { getCacheStats } from '../utils/cache.utils';
+import redisClient, { getCacheStats } from '../utils/cache.utils';
 import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = express.Router();
@@ -36,14 +36,26 @@ router.get('/health', (req, res) => {
 });
 
 // Endpoint untuk statistik cache (admin only)
-router.get('/cache-stats', authMiddleware(['super_admin']), (req, res) => {
+router.get('/cache-stats', authMiddleware(['super_admin']), async (req, res) => {
   try {
-    const stats = getCacheStats();
+    const stats = await getCacheStats();
     const pattern = req.query.pattern as string;
 
     let keys: string[] = [];
     if (pattern) {
-      keys = cache.keys().filter((key) => key.includes(pattern));
+      // Cari keys dengan pattern
+      let cursor = 0;
+      do {
+        const result = await redisClient.scan(cursor, {
+          MATCH: `*${pattern}*`,
+          COUNT: 100
+        });
+        
+        cursor = result.cursor;
+        if (result.keys.length > 0) {
+          keys.push(...result.keys);
+        }
+      } while (cursor !== 0);
     }
 
     res.json({

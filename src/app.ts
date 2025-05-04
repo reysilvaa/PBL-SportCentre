@@ -1,7 +1,7 @@
 import express, { Application } from 'express';
 import {
   config,
-  setupApiCaching,
+  setupHttpCaching,
   initializeApplication,
   startServer,
 } from './config';
@@ -22,8 +22,8 @@ const server = initializeApplication(app);
 // Setup Swagger dokumentasi
 setupSwagger(app);
 
-// Routes dengan caching
-app.use('/api', setupApiCaching(), router);
+// Routes dengan HTTP browser caching (header Cache-Control)
+app.use('/api', setupHttpCaching(), router);
 
 // Error handling middleware
 app.use(errorMiddleware as express.ErrorRequestHandler);

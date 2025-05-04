@@ -15,8 +15,8 @@ export * from './server/socket';
 export * from './server/middleware';
 export * from './server/security';
 
-// Performance dan monitoring
-export * from './server/performance';
+// Server Optimizations (caching, memori, dll)
+export * from './server/serverOptimizations';
 export * from './server/monitoring';
 export * from './server/index';
 

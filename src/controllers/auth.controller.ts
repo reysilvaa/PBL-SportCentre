@@ -150,7 +150,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
         const expiryInSeconds = decoded.exp - now;
 
         // Tambahkan token ke blacklist dengan waktu expired yang sama
-        blacklistToken(
+        await blacklistToken(
           token,
           expiryInSeconds > 0 ? expiryInSeconds : undefined
         );

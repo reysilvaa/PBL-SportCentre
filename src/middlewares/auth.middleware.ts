@@ -29,7 +29,7 @@ export type AuthenticatedRequestHandler = RequestHandler<
 >;
 
 export const authMiddleware = (allowedRoles: string[] = []) => {
-  return (req: User, res: Response, next: NextFunction): void => {
+  return async (req: User, res: Response, next: NextFunction): Promise<void> => {
     // Coba ambil token dari header Authorization
     const headerToken = req.header('Authorization')?.split(' ')[1];
 
@@ -47,16 +47,17 @@ export const authMiddleware = (allowedRoles: string[] = []) => {
       return;
     }
 
-    // Periksa jika token ada di blacklist
-    if (isTokenBlacklisted(token)) {
-      res.status(401).json({
-        status: false,
-        message: 'Unauthorized: Token telah dicabut atau tidak valid',
-      });
-      return;
-    }
-
     try {
+      // Periksa jika token ada di blacklist
+      const isBlacklisted = await isTokenBlacklisted(token);
+      if (isBlacklisted) {
+        res.status(401).json({
+          status: false,
+          message: 'Unauthorized: Token telah dicabut atau tidak valid',
+        });
+        return;
+      }
+
       const decoded = jwt.verify(token, config.jwtSecret) as {
         id: number;
         role: string;
