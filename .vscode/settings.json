@@ -6,7 +6,7 @@
     "**/cache/": true
   },
   "git.autofetch": true,
-  "git.autoStaging": true,
   "git.enableSmartCommit": true,
+  "git.autoStaging": true,
 
 }
