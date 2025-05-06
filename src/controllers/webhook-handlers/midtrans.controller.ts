@@ -177,6 +177,10 @@ export const handleMidtransNotification = async (
             ...(notification.transaction_id && {
               transactionId: notification.transaction_id,
             }),
+            // Add payment URL if available
+            ...(notification.payment_url && {
+              paymentUrl: notification.payment_url,
+            }),
           },
         });
 

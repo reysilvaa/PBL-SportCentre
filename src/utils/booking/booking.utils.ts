@@ -137,7 +137,7 @@ export const processMidtransPayment = async (
   // Create Midtrans transaction with expiry
   const transaction = await midtrans().createTransaction({
     transaction_details: {
-      order_id: `PAY-${payment.id}`,
+      order_id: `PAY-${payment.id}-${Date.now()}`,
       gross_amount: totalPrice,
     },
     customer_details: {
@@ -169,10 +169,14 @@ export const processMidtransPayment = async (
     expiryDate.setMinutes(expiryDate.getMinutes() + expiryMinutes);
   }
 
-  // Update the payment record with the expiry date
+  // Update the payment record with the expiry date, payment URL, and transaction ID
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { expiresDate: expiryDate },
+    data: { 
+      expiresDate: expiryDate,
+      paymentUrl: transaction.redirect_url,
+      transactionId: transaction.transaction_id
+    },
   });
 
   return { transaction, expiryDate };
