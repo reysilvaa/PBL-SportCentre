@@ -36,7 +36,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 // Create user as super admin
 export const createUser = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { name, email, password, role } = req.body;
@@ -102,7 +102,7 @@ export const createUser = async (
 // Update user as super admin
 export const updateUser = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -182,7 +182,7 @@ export const updateUser = async (
 // Delete user as super admin
 export const deleteUser = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;

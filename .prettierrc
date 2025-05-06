@@ -4,12 +4,12 @@
   "useTabs": false,
   "semi": true,
   "singleQuote": true,
-  "trailingComma": "all",
+  "trailingComma": "es5",
   "bracketSpacing": true,
   "arrowParens": "always",
   "endOfLine": "lf",
   "proseWrap": "preserve",
-  "quoteProps": "consistent",
+  "quoteProps": "as-needed",
   "jsxSingleQuote": false,
   "embeddedLanguageFormatting": "auto",
   "overrides": [
@@ -17,6 +17,18 @@
       "files": ["*.ts", "*.tsx"],
       "options": {
         "parser": "typescript"
+      }
+    },
+    {
+      "files": ["*.route.js", "*.routes.js", "*.route.ts", "*.routes.ts"],
+      "options": {
+        "printWidth": 100
+      }
+    },
+    {
+      "files": ["*.json"],
+      "options": {
+        "parser": "json"
       }
     }
   ]

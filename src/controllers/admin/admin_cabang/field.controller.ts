@@ -62,7 +62,7 @@ export const getFields = async (req: User, res: Response): Promise<void> => {
 // Create field with image upload
 export const createField = async (
   req: MulterRequest & User,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   if (res.headersSent) return;
 
@@ -161,7 +161,7 @@ export const createField = async (
 // Update field with image upload
 export const updateField = async (
   req: MulterRequest & User,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   if (res.headersSent) return;
 

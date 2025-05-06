@@ -18,7 +18,7 @@ declare global {
 
 export const handleMidtransNotification = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const notification = req.body;
@@ -120,7 +120,7 @@ export const handleMidtransNotification = async (
           if (paymentAmount < fieldPrice) {
             newStatus = PaymentStatus.dp_paid; // Partial payment
             console.log(
-              `Down payment received: ${paymentAmount} out of ${fieldPrice}`,
+              `Down payment received: ${paymentAmount} out of ${fieldPrice}`
             );
           } else {
             newStatus = PaymentStatus.paid; // Full payment
@@ -150,7 +150,7 @@ export const handleMidtransNotification = async (
           await trackFailedBooking(
             payment.booking.userId,
             payment.booking.id,
-            clientIP,
+            clientIP
           );
         }
       } else if (transactionStatus === 'refund') {
@@ -163,7 +163,7 @@ export const handleMidtransNotification = async (
         'Updating payment status from',
         payment.status,
         'to',
-        newStatus,
+        newStatus
       );
 
       // Use transaction to ensure all database operations complete together
@@ -204,7 +204,7 @@ export const handleMidtransNotification = async (
         {
           transactionStatus,
           amount: grossAmount,
-        },
+        }
       );
 
       // Get complete booking with updated payment for emitting events
@@ -262,7 +262,7 @@ export const handleMidtransNotification = async (
       });
       console.log(
         'Verified payment status after update:',
-        verifiedPayment?.status,
+        verifiedPayment?.status
       );
 
       res.status(200).json({

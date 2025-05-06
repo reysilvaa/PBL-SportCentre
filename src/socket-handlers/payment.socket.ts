@@ -51,7 +51,7 @@ export const sendPaymentNotification = (data: {
 
     if (!io) {
       console.warn(
-        '⚠️ Socket.IO not initialized, skipping real-time notification',
+        '⚠️ Socket.IO not initialized, skipping real-time notification'
       );
       return;
     }
@@ -75,7 +75,7 @@ export const sendPaymentNotification = (data: {
     });
 
     console.log(
-      `📢 Sent real-time payment updates to ${userRoomId} and /payments namespace`,
+      `📢 Sent real-time payment updates to ${userRoomId} and /payments namespace`
     );
   } catch (error) {
     console.error('❌ Socket.IO Error:', error);
@@ -101,7 +101,7 @@ export const setupPaymentSocketHandlers = (): void => {
 
     // Handle payment status update
     socket.on('status_change', (data) =>
-      handlePaymentStatusUpdate(socket, data),
+      handlePaymentStatusUpdate(socket, data)
     );
 
     // Handle client leaving

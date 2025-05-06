@@ -5,7 +5,7 @@ import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
 export const getActivityLogs = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const userId = req.query.userId
@@ -27,7 +27,7 @@ export const getActivityLogs = async (
 
 export const createActivityLog = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     // Validasi data dengan Zod
@@ -47,7 +47,7 @@ export const createActivityLog = async (
       userId,
       action,
       details,
-      relatedId === null ? undefined : relatedId,
+      relatedId === null ? undefined : relatedId
     );
 
     // Hapus cache activity logs
@@ -62,7 +62,7 @@ export const createActivityLog = async (
 
 export const deleteActivityLog = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;

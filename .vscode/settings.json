@@ -4,5 +4,9 @@
     "**/*.rpa": true,
     "**/*.rpymc": true,
     "**/cache/": true
-  }
+  },
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+  "git.autoStaging": true,
+
 }

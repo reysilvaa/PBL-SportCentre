@@ -4,7 +4,7 @@ import prisma from '../../config/services/database';
 
 export const getNotifications = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -26,7 +26,7 @@ export const getNotifications = async (
 
 export const readNotification = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;

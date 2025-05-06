@@ -59,7 +59,7 @@ export const handleBookingSearch = async (socket: Socket, data: any) => {
  */
 export const handleFieldAvailabilityCheck = async (
   socket: Socket,
-  data: any,
+  data: any
 ) => {
   try {
     const { fieldId, bookingDate, startTime, endTime } = data;
@@ -76,7 +76,7 @@ export const handleFieldAvailabilityCheck = async (
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -177,7 +177,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
     // Verify the field belongs to this branch
     const field = await verifyFieldBranch(
       parseInt(fieldId.toString()),
-      parseInt(branchId),
+      parseInt(branchId)
     );
 
     if (!field) {
@@ -199,7 +199,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -219,7 +219,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
       endDateTime,
       paymentStatus || 'paid',
       'cash',
-      field.priceDay,
+      field.priceDay
     );
 
     // Get complete booking with relations
@@ -253,7 +253,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
 export const handleAuthentication = async (
   socket: Socket,
   data: any,
-  callback: Function,
+  callback: Function
 ) => {
   try {
     const { token } = data;
@@ -333,7 +333,7 @@ export const setupBranchSocketHandlers = (): void => {
         const user = await authMiddleware(token);
         if (!user) {
           console.log(
-            `Branch client connected with invalid token: ${socket.id}`,
+            `Branch client connected with invalid token: ${socket.id}`
           );
           socket.data.user = null;
           socket.data.authenticated = false;
@@ -343,7 +343,7 @@ export const setupBranchSocketHandlers = (): void => {
         socket.data.user = user;
         socket.data.authenticated = true;
         console.log(
-          `Branch client authenticated: ${socket.id}, User: ${user.id}, Role: ${user.role}`,
+          `Branch client authenticated: ${socket.id}, User: ${user.id}, Role: ${user.role}`
         );
         next();
       } catch (authError) {
@@ -381,15 +381,15 @@ export const setupBranchSocketHandlers = (): void => {
 
     // Register event handlers
     socket.on('auth:login', (data, callback) =>
-      handleAuthentication(socket, data, callback),
+      handleAuthentication(socket, data, callback)
     );
     socket.on('booking:search', (data) => handleBookingSearch(socket, data));
     socket.on('field:check-availability', (data) =>
-      handleFieldAvailabilityCheck(socket, data),
+      handleFieldAvailabilityCheck(socket, data)
     );
     socket.on('booking:stats', (data) => handleBookingStats(socket, data));
     socket.on('booking:create-manual', (data) =>
-      handleCreateManualBooking(socket, data),
+      handleCreateManualBooking(socket, data)
     );
 
     // Handle admin leaving

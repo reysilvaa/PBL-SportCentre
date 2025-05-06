@@ -9,7 +9,7 @@ import { User } from './auth.middleware';
 export const adminBranchMiddleware = async (
   req: User,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): Promise<void> => {
   try {
     // User should already be attached from the authMiddleware

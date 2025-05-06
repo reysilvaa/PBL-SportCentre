@@ -17,7 +17,7 @@ export class ActivityLogService {
     userId: number,
     action: string,
     details?: string | object,
-    relatedId?: number,
+    relatedId?: number
   ) {
     try {
       // Convert object to string if details is provided as an object
@@ -65,7 +65,7 @@ export class ActivityLogService {
     user: User | number,
     action: string,
     bookingId: number,
-    details?: object,
+    details?: object
   ) {
     const userId = typeof user === 'number' ? user : user.id;
     return this.createLog(userId, action, details, bookingId);
@@ -84,7 +84,7 @@ export class ActivityLogService {
     paymentId: number,
     bookingId: number,
     status: string,
-    details?: object,
+    details?: object
   ) {
     const action = `Payment ${status} for booking ${bookingId}`;
     return this.createLog(userId, action, {

@@ -9,7 +9,7 @@ import { updateBookingPaymentSchema } from '../../../zod-schemas/bookingPayment.
 
 export const getAllBookings = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { startDate, endDate, branchId, status } = req.query;
@@ -55,7 +55,7 @@ export const getAllBookings = async (
 
 export const getBookingById = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -83,7 +83,7 @@ export const getBookingById = async (
 
 export const updateBookingPayment = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -140,7 +140,7 @@ export const updateBookingPayment = async (
 
 export const deleteBooking = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -178,7 +178,7 @@ export const deleteBooking = async (
 // Additional admin functions for reporting
 export const getBookingStats = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { startDate, endDate, branchId } = req.query;

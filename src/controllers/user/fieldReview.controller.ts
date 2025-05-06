@@ -45,7 +45,7 @@ export const getFieldReviews = async (req: Request, res: Response) => {
 
 export const createFieldReview = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     // Validasi data dengan Zod

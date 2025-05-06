@@ -20,7 +20,7 @@ export const setCookie = (
     sameSite?: boolean | 'none' | 'lax' | 'strict';
     domain?: string;
     path?: string;
-  },
+  }
 ) => {
   // Gabungkan dengan konfigurasi default
   const cookieOptions = {
@@ -44,7 +44,7 @@ export const setCookie = (
 export const getCookie = (
   req: Request,
   name: string,
-  signed = false,
+  signed = false
 ): string | undefined => {
   return signed ? req.signedCookies[name] : req.cookies[name];
 };
@@ -61,7 +61,7 @@ export const clearCookie = (
   options?: {
     path?: string;
     domain?: string;
-  },
+  }
 ) => {
   const cookieOptions = {
     path: '/',
@@ -136,7 +136,7 @@ export const clearRefreshTokenCookie = (res: Response) => {
  */
 export const setUserPreferencesCookie = (
   res: Response,
-  preferences: object,
+  preferences: object
 ) => {
   setCookie(res, 'user_preferences', JSON.stringify(preferences), {
     httpOnly: false, // Dapat diakses oleh JavaScript client-side

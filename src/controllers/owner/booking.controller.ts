@@ -4,7 +4,7 @@ import { validateDateRange } from '../../repositories/revenue/validation.utils';
 
 export const getRevenueReports = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { startDate, endDate, type } = req.query;
@@ -17,7 +17,7 @@ export const getRevenueReports = async (
     const result = await RevenueService.generateRevenueReport(
       start,
       end,
-      type as string,
+      type as string
     );
     res.json(result);
   } catch (error) {
@@ -28,7 +28,7 @@ export const getRevenueReports = async (
 
 export const getOccupancyReports = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const { startDate, endDate, branchId } = req.query;
@@ -42,7 +42,7 @@ export const getOccupancyReports = async (
     const result = await RevenueService.generateOccupancyReport(
       start,
       end,
-      branch,
+      branch
     );
     res.json(result);
   } catch (error) {
@@ -53,7 +53,7 @@ export const getOccupancyReports = async (
 
 export const getBusinessPerformance = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const result = await RevenueService.generateBusinessPerformanceReport();
@@ -66,7 +66,7 @@ export const getBusinessPerformance = async (
 
 export const getBookingForecast = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const result = await RevenueService.generateBookingForecast();

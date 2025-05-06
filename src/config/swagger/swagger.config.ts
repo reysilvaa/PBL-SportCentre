@@ -11,7 +11,9 @@ export const setupSwagger = (app: Application): void => {
   try {
     // Membaca file swagger.json dari root proyek
     const swaggerJsonPath = path.resolve(process.cwd(), 'swagger.json');
-    const swaggerDocument = JSON.parse(fs.readFileSync(swaggerJsonPath, 'utf8'));
+    const swaggerDocument = JSON.parse(
+      fs.readFileSync(swaggerJsonPath, 'utf8')
+    );
 
     // Mengatur opsi untuk Swagger UI
     const options = {
@@ -21,10 +23,14 @@ export const setupSwagger = (app: Application): void => {
     };
 
     // Menetapkan endpoint untuk dokumentasi Swagger
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
+    app.use(
+      '/api-docs',
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerDocument, options)
+    );
 
     console.log('Swagger dokumentasi berhasil dimuat di /api-docs');
   } catch (error) {
     console.error('Gagal memuat dokumentasi Swagger:', error);
   }
-}; 
+};

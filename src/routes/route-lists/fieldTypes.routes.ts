@@ -6,17 +6,39 @@ import {
   deleteFieldType,
 } from '../../controllers/all/fieldType.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
-import { superAdminAuth } from '../../middlewares/auth.middleware';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { roleBasedController } from '../../middlewares/role.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 
-// Public routes or routes that don't need specific role
+// Rute publik yang tidak memerlukan peran spesifik
 router.get('/', cacheMiddleware('field_types', 600), getFieldTypes);
 
-// Admin only routes
-router.post('/', superAdminAuth, parseIds, createFieldType);
-router.put('/:id', superAdminAuth, updateFieldType);
-router.delete('/:id', superAdminAuth, deleteFieldType);
+// Rute khusus admin
+router.post(
+  '/',
+  authMiddleware(['super_admin']),
+  parseIds,
+  roleBasedController({
+    superAdmin: createFieldType,
+  })
+);
+
+router.put(
+  '/:id',
+  authMiddleware(['super_admin']),
+  roleBasedController({
+    superAdmin: updateFieldType,
+  })
+);
+
+router.delete(
+  '/:id',
+  authMiddleware(['super_admin']),
+  roleBasedController({
+    superAdmin: deleteFieldType,
+  })
+);
 
 export default router;

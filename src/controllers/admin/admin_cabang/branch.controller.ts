@@ -8,7 +8,7 @@ import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
 export const updateBranch = async (
   req: MulterRequest & User,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   if (res.headersSent) return;
 

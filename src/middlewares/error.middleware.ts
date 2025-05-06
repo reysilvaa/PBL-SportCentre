@@ -15,7 +15,7 @@ const errorMiddleware = (
   err: any,
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   console.error('Error Middleware:', err);
 

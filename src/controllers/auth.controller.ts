@@ -22,7 +22,7 @@ const generateTokens = (user: { id: number; email: string; role: string }) => {
       role: user.role,
     },
     config.jwtSecret,
-    { expiresIn: '1h' },
+    { expiresIn: '1h' }
   );
 
   // Refresh token (masa aktif panjang)
@@ -150,9 +150,9 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
         const expiryInSeconds = decoded.exp - now;
 
         // Tambahkan token ke blacklist dengan waktu expired yang sama
-        blacklistToken(
+        await blacklistToken(
           token,
-          expiryInSeconds > 0 ? expiryInSeconds : undefined,
+          expiryInSeconds > 0 ? expiryInSeconds : undefined
         );
       } catch (error) {
         console.error('Error adding token to blacklist:', error);
@@ -174,7 +174,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 // Endpoint untuk refresh token
 export const refreshToken = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     // Ambil refresh token dari cookies yang signed (ditandatangani)

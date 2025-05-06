@@ -1,0 +1,131 @@
+@startuml
+
+' Diagram Arsitektur Cloud untuk Sistem Reservasi Sport Center
+title Arsitektur Cloud Computing - Sport Center Reservation System
+
+actor "User" as user
+actor "Admin" as admin
+actor "Owner" as owner
+
+node "Azure Cloud Platform" {
+  frame "Virtual Network (VCN)" {
+    node "Security Components" {
+      [Application Gateway] as gateway
+      [Network Security Group] as nsg
+      [Azure Firewall] as firewall
+    }
+    
+    node "Frontend Tier (High Availability)" {
+      [VM 1 - Web] as web1
+      [VM 2 - Web] as web2
+      note right of web2
+        Multiple VM untuk high availability
+        dan load balancing
+      end note
+    }
+    
+    node "Backend Tier (High Availability)" {
+      frame "Express Application" {
+        [Routes] as routes
+        [Controllers] as controllers
+        [Middlewares] as middlewares
+        [Repositories] as repositories
+        [Socket Handlers] as socket
+        [Zod Schemas] as zod
+        [Utils] as utils
+      }
+      
+      node "API Instances" {
+        [VM 1 - API] as api1
+        [VM 2 - API] as api2
+        note right of api2
+          Multiple VM untuk high availability
+          dan load balancing
+        end note
+      }
+    }
+    
+    database "Data Storage" {
+      database "Azure MySQL Database" as mysql
+      [User Model] as user_model
+      [Branch Model] as branch_model
+      [Field Model] as field_model
+      [Booking Model] as booking_model
+      [Payment Model] as payment_model
+      [Promotion Model] as promotion_model
+      [Notification Model] as notification_model
+      
+      [Azure Blob Storage] as blob
+    }
+    
+    node "Monitoring" {
+      [Azure Monitor] as monitor
+      [App Insights] as insights
+      [Azure Key Vault] as vault
+    }
+  }
+  
+  node "DevOps Services" {
+    [CI/CD Pipeline] as cicd
+    [Source Repositories] as repos
+    [Project Management] as project
+  }
+}
+
+' Relasi database models dengan mysql
+mysql -- user_model
+mysql -- branch_model
+mysql -- field_model
+mysql -- booking_model
+mysql -- payment_model
+mysql -- promotion_model
+mysql -- notification_model
+
+' Relasi dengan sintaks sederhana
+user --> gateway
+admin --> gateway
+owner --> gateway
+gateway --> web1
+gateway --> web2
+web1 --> api1
+web2 --> api2
+
+api1 --> routes
+api2 --> routes
+routes --> controllers
+controllers --> middlewares
+controllers --> repositories
+controllers --> socket
+controllers --> zod
+controllers --> utils
+
+repositories --> mysql
+api1 --> blob
+api2 --> blob
+
+monitor --> api1
+monitor --> api2
+monitor --> mysql
+monitor --> insights
+
+cicd --> web1
+cicd --> api1
+
+note bottom of mysql
+  Menyimpan data pengguna, booking, cabang olahraga, pembayaran, dan promosi
+end note
+
+note bottom of blob
+  Menyimpan gambar lapangan dan dokumen pendukung
+end note
+
+note bottom of controllers
+  Menangani logika bisnis: auth, user, admin, owner, webhook
+end note
+
+note bottom
+  Caching menggunakan NodeCache di memori aplikasi
+  bukan Redis external
+end note
+
+@enduml 
