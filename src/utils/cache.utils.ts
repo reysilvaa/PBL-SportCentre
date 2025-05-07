@@ -1,7 +1,33 @@
 import redisClient from '../config/services/redis';
 
 // Waktu TTL default yang lebih rendah untuk responsivitas
-const DEFAULT_TTL = 30; // 30 detik (lebih responsif)
+const DEFAULT_TTL = Number(process.env.CACHE_TTL || 30); // 30 detik (lebih responsif)
+
+// Daftar endpoint yang memerlukan data terbaru
+const DYNAMIC_ENDPOINTS = [
+  'branch', 'field', 'booking', 'payment', 
+  'notification', 'dashboard', 'stats', 'reports'
+];
+
+/**
+ * Fungsi untuk mengatur header cache control sesuai jenis endpoint
+ * @param req Request object
+ * @param res Response object
+ */
+export const setCacheControlHeaders = (req: any, res: any): void => {
+  const url = req.originalUrl?.toLowerCase() || '';
+  
+  // Untuk endpoint dinamis, cache hanya 2 detik
+  if (DYNAMIC_ENDPOINTS.some(endpoint => url.includes(endpoint))) {
+    res.setHeader('Cache-Control', 'public, max-age=2');
+  } else {
+    // Untuk endpoint statis yang jarang berubah, izinkan cache lebih lama
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1800');
+  }
+  
+  // Tambahkan Vary header untuk mencegah berbagi cache antar pengguna berbeda
+  res.setHeader('Vary', 'Accept, Authorization');
+};
 
 /**
  * Get data from cache
@@ -160,6 +186,9 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
   
   return async (req: any, res: any, next: any) => {
     try {
+      // Atur header cache control sesuai jenis endpoint
+      setCacheControlHeaders(req, res);
+      
       // Skip cache completely if DISABLE_CACHE query param exists
       if (req.query.noCache === 'true' || req.query.refresh === 'true') {
         console.log(`[CACHE] Cache disabled via query param for: ${req.originalUrl}`);
@@ -186,6 +215,19 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
       const cachedData = await getCachedData<any>(key);
 
       if (cachedData) {
+        // Hitung ETag berdasarkan konten data dengan MD5
+        const crypto = require('crypto');
+        const etag = `W/"${crypto.createHash('md5').update(JSON.stringify(cachedData)).digest('hex')}"`;
+        res.setHeader('ETag', etag);
+        
+        // Periksa If-None-Match untuk validasi cache
+        const clientEtag = req.headers['if-none-match'];
+        if (clientEtag === etag) {
+          // Data tidak berubah, kirim 304 Not Modified
+          console.log(`[CACHE] ETag match, sending 304 Not Modified: ${key}`);
+          return res.status(304).end();
+        }
+        
         // Log hit ratio untuk monitoring
         console.log(`[CACHE] Serving from cache: ${key}`);
         
@@ -202,6 +244,11 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
       res.json = async function (data: any) {
         // Check if headers have been sent already
         if (!res.headersSent) {
+          // Hitung dan kirim ETag untuk respons baru
+          const crypto = require('crypto');
+          const etag = `W/"${crypto.createHash('md5').update(JSON.stringify(data)).digest('hex')}"`;
+          this.setHeader('ETag', etag);
+          
           // Only cache successful responses
           if (res.statusCode >= 200 && res.statusCode < 300) {
             // Store data in cache

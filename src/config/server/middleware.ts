@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from '../app/env';
 import { logger } from '../app/logger';
+import { setCacheControlHeaders } from '../../utils/cache.utils';
 
 export const setupMiddlewares = (app: Application): void => {
   // Middleware dasar
@@ -16,8 +17,8 @@ export const setupMiddlewares = (app: Application): void => {
       ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-      exposedHeaders: ['Content-Length', 'Content-Type'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'If-None-Match'],
+      exposedHeaders: ['Content-Length', 'Content-Type', 'ETag', 'Cache-Control'],
       maxAge: 86400,
       preflightContinue: false,
       optionsSuccessStatus: 204
@@ -29,10 +30,12 @@ export const setupMiddlewares = (app: Application): void => {
   app.use(cookieParser(config.cookieSecret));
   app.use(logger);
 
-  // Security headers pada semua respons
+  // Security headers dan cache headers pada semua respons
   app.use((req, res, next) => {
-    // Hapus header yang berpotensi membocorkan informasi
     res.removeHeader('X-Powered-By');
+    
+    setCacheControlHeaders(req, res);
+    
     next();
   });
 };
