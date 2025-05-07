@@ -2,8 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../../config/services/database';
 import { hashPassword } from '../../../utils/password.utils';
-import { User } from '../../../middlewares/auth.middleware';
-import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
+import { invalidateUserCache } from '../../../utils/cache/cacheInvalidation.utils';
 
 // Get all users without branch restrictions
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
@@ -78,7 +77,7 @@ export const createUser = async (
     });
 
     // Hapus cache yang terkait user
-    deleteCachedDataByPattern('users_');
+    await invalidateUserCache();
 
     res.status(201).json({
       status: true,
@@ -107,10 +106,11 @@ export const updateUser = async (
   try {
     const { id } = req.params;
     const { name, email, password, role } = req.body;
+    const userId = Number(id);
 
     // Cek apakah user ada
     const existingUser = await prisma.user.findUnique({
-      where: { id: Number(id) },
+      where: { id: userId },
     });
 
     if (!existingUser) {
@@ -131,7 +131,7 @@ export const updateUser = async (
         const emailExists = await prisma.user.findFirst({
           where: {
             email,
-            id: { not: Number(id) },
+            id: { not: userId },
           },
         });
 
@@ -155,12 +155,12 @@ export const updateUser = async (
 
     // Update user
     const updatedUser = await prisma.user.update({
-      where: { id: Number(id) },
+      where: { id: userId },
       data: updateData,
     });
 
     // Hapus cache yang terkait user
-    deleteCachedDataByPattern('users_');
+    await invalidateUserCache(userId);
 
     // Hapus password dari response
     const { password: _, ...userWithoutPassword } = updatedUser;
@@ -274,7 +274,7 @@ export const deleteUser = async (
 
     // Setelah berhasil delete
     // Hapus cache yang terkait user
-    deleteCachedDataByPattern('users_');
+    await invalidateUserCache(userId);
 
     res.status(200).json({
       status: true,

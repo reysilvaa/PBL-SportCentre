@@ -5,7 +5,7 @@ import {
   updateFieldSchema,
 } from '../../../zod-schemas/field.schema';
 import { User } from '../../../middlewares/auth.middleware';
-import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
+import { invalidateFieldCache } from '../../../utils/cache/cacheInvalidation.utils';
 import { MulterRequest } from '../../../middlewares/multer.middleware';
 import { cleanupUploadedFile } from '../../../utils/cloudinary.utils';
 
@@ -124,9 +124,7 @@ export const createField = async (
     console.log(req.FOLDER?.path); // Path folder yang digunakan
 
     // Hapus cache yang relevan
-    await deleteCachedDataByPattern('fields');
-    await deleteCachedDataByPattern('admin_fields');
-    await deleteCachedDataByPattern('fields_availability');
+    await invalidateFieldCache();
 
     // Log activity
     await prisma.activityLog.create({
@@ -285,10 +283,7 @@ export const updateField = async (
     });
 
     // Hapus cache yang relevan
-    await deleteCachedDataByPattern('fields');
-    await deleteCachedDataByPattern('admin_fields');
-    await deleteCachedDataByPattern('admin_field_detail');
-    await deleteCachedDataByPattern('fields_availability');
+    await invalidateFieldCache();
 
     // Log activity
     await prisma.activityLog.create({
@@ -395,10 +390,7 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     });
 
     // Hapus cache yang relevan
-    await deleteCachedDataByPattern('fields');
-    await deleteCachedDataByPattern('admin_fields');
-    await deleteCachedDataByPattern('admin_field_detail');
-    await deleteCachedDataByPattern('fields_availability');
+    await invalidateFieldCache();
 
     // Log activity
     await prisma.activityLog.create({

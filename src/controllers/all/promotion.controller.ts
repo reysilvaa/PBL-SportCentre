@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/services/database';
-import { deleteCachedDataByPattern } from '../../utils/cache.utils';
+import { invalidatePromotionCache } from '../../utils/cache/cacheInvalidation.utils';
 
 export const getPromotions = async (req: Request, res: Response) => {
   try {
@@ -50,7 +50,7 @@ export const createPromotion = async (req: Request, res: Response) => {
     });
 
     // Hapus cache promotions
-    deleteCachedDataByPattern('promotions');
+    await invalidatePromotionCache();
 
     res.status(201).json(newPromotion);
   } catch (error) {
@@ -85,7 +85,7 @@ export const updatePromotion = async (req: Request, res: Response) => {
     });
 
     // Hapus cache promotions
-    deleteCachedDataByPattern('promotions');
+    await invalidatePromotionCache();
 
     res.json(updatedPromotion);
   } catch (error) {
@@ -101,7 +101,7 @@ export const deletePromotion = async (req: Request, res: Response) => {
     });
 
     // Hapus cache promotions
-    deleteCachedDataByPattern('promotions');
+    await invalidatePromotionCache();
 
     res.status(204).send();
   } catch (error) {

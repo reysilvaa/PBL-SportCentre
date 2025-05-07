@@ -6,6 +6,19 @@ import { cleanupUploadedFile } from '../../../utils/cloudinary.utils';
 import { User } from '../../../middlewares/auth.middleware';
 import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
 
+/**
+ * Menghapus cache branch dan cache terkait sehingga perubahan segera terlihat
+ */
+const invalidateBranchCache = async () => {
+  // Hapus semua pola cache yang berkaitan dengan branches
+  await deleteCachedDataByPattern('branch');  // Singular pattern
+  await deleteCachedDataByPattern('branches'); // Plural pattern
+  await deleteCachedDataByPattern('field');   // Fields juga terpengaruh oleh perubahan branch
+  await deleteCachedDataByPattern('admin_branches'); // Cache admin branches
+  
+  console.log('[CACHE] Invalidated all branch and related caches from admin controller');
+};
+
 export const updateBranch = async (
   req: MulterRequest & User,
   res: Response
@@ -120,9 +133,8 @@ export const updateBranch = async (
       data: updateData,
     });
 
-    // Clear relevant cache
-    await deleteCachedDataByPattern('branches');
-    await deleteCachedDataByPattern('admin_branches');
+    // Invalidasi cache secara komprehensif
+    await invalidateBranchCache();
 
     // Log activity
     await prisma.activityLog.create({

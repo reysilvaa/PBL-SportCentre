@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../../config/services/database';
 import { updateBookingPaymentSchema } from '../../../zod-schemas/bookingPayment.schema';
+import { invalidateBookingCache, invalidatePaymentCache } from '../../../utils/cache/cacheInvalidation.utils';
 
 /**
  * Super Admin Booking Controller
@@ -48,7 +49,7 @@ export const getAllBookings = async (
 
     res.json(bookings);
   } catch (error) {
-    console.error(error);
+    console.error('Error in getAllBookings:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -76,7 +77,7 @@ export const getBookingById = async (
 
     res.json(booking);
   } catch (error) {
-    console.error(error);
+    console.error('Error in getBookingById:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -87,6 +88,7 @@ export const updateBookingPayment = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    const bookingId = parseInt(id);
 
     // Validasi data dengan Zod
     const result = updateBookingPaymentSchema.safeParse(req.body);
@@ -100,8 +102,11 @@ export const updateBookingPayment = async (
     }
 
     const booking = await prisma.booking.findUnique({
-      where: { id: parseInt(id) },
-      include: { payment: true },
+      where: { id: bookingId },
+      include: { 
+        payment: true,
+        field: { select: { id: true, branchId: true } }
+      },
     });
 
     if (!booking) {
@@ -128,12 +133,21 @@ export const updateBookingPayment = async (
       },
     });
 
+    // Invalidasi cache setelah update
+    await invalidatePaymentCache(
+      booking.payment.id,
+      bookingId,
+      booking.field.id,
+      booking.field.branchId,
+      booking.userId
+    );
+
     res.json({
       booking,
       payment: updatedPayment,
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in updateBookingPayment:', error);
     res.status(400).json({ error: 'Gagal memperbarui pembayaran booking' });
   }
 };
@@ -144,17 +158,27 @@ export const deleteBooking = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    const bookingId = parseInt(id);
 
     // First check if booking exists and has a payment
     const booking = await prisma.booking.findUnique({
-      where: { id: parseInt(id) },
-      include: { payment: true },
+      where: { id: bookingId },
+      include: { 
+        payment: true,
+        field: { select: { id: true, branchId: true } }
+      },
     });
 
     if (!booking) {
       res.status(404).json({ error: 'Booking tidak ditemukan' });
       return;
     }
+
+    // Save IDs for cache invalidation
+    const fieldId = booking.field.id;
+    const branchId = booking.field.branchId;
+    const userId = booking.userId;
+    const paymentId = booking.payment?.id;
 
     // If there's a payment, delete it first (transaction would be better)
     if (booking.payment) {
@@ -165,12 +189,18 @@ export const deleteBooking = async (
 
     // Then delete the booking
     await prisma.booking.delete({
-      where: { id: parseInt(id) },
+      where: { id: bookingId },
     });
+
+    // Invalidasi cache setelah delete
+    await invalidateBookingCache(bookingId, fieldId, branchId, userId);
+    if (paymentId) {
+      await invalidatePaymentCache(paymentId);
+    }
 
     res.status(204).send();
   } catch (error) {
-    console.error(error);
+    console.error('Error in deleteBooking:', error);
     res.status(400).json({ error: 'Gagal menghapus booking' });
   }
 };
@@ -229,7 +259,7 @@ export const getBookingStats = async (
       totalRevenue: revenue._sum.amount || 0,
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in getBookingStats:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

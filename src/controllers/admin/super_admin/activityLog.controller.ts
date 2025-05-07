@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { createActivityLogSchema } from '../../../zod-schemas/activityLog.schema';
 import { ActivityLogService } from '../../../utils/activityLog/activityLog.utils';
-import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
+import { invalidateActivityLogCache } from '../../../utils/cache/cacheInvalidation.utils';
 
 export const getActivityLogs = async (
   req: Request,
@@ -51,7 +51,7 @@ export const createActivityLog = async (
     );
 
     // Hapus cache activity logs
-    deleteCachedDataByPattern('activity_logs');
+    await invalidateActivityLogCache(userId);
 
     res.status(201).json(newLog);
   } catch (error) {
@@ -66,11 +66,12 @@ export const deleteActivityLog = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    const logId = parseInt(id);
+    
+    await ActivityLogService.deleteLog(logId);
 
-    await ActivityLogService.deleteLog(parseInt(id));
-
-    // Hapus cache activity logs
-    deleteCachedDataByPattern('activity_logs');
+    // Hapus cache activity logs (tanpa memberikan userId spesifik)
+    await invalidateActivityLogCache();
 
     res.status(204).send();
   } catch (error) {

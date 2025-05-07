@@ -11,7 +11,7 @@ import {
 } from '../../../utils/booking/booking.utils';
 import { combineDateWithTime } from '../../../utils/booking/calculateBooking.utils';
 import { User } from '../../../middlewares/auth.middleware';
-import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
+import { invalidateBookingCache } from '../../../utils/cache/cacheInvalidation.utils';
 // import {
 //   checkBookingConflict,
 //   isValidTimeRange,
@@ -131,11 +131,12 @@ export const updateBranchBookingStatus = async (
     });
 
     // Hapus cache yang terkait booking
-    deleteCachedDataByPattern('booking');
-    deleteCachedDataByPattern('fields_availability');
-    deleteCachedDataByPattern('user_bookings');
-    deleteCachedDataByPattern('branch_bookings');
-    deleteCachedDataByPattern('admin_all_bookings');
+    await invalidateBookingCache(
+      parseInt(id),
+      booking.fieldId,
+      parseInt(branchId),
+      booking.userId
+    );
 
     res.json(updatedBooking);
   } catch (error) {
@@ -213,11 +214,12 @@ export const createManualBooking = async (
     });
 
     // Hapus cache yang terkait booking
-    deleteCachedDataByPattern('booking');
-    deleteCachedDataByPattern('fields_availability');
-    deleteCachedDataByPattern('user_bookings');
-    deleteCachedDataByPattern('branch_bookings');
-    deleteCachedDataByPattern('admin_all_bookings');
+    await invalidateBookingCache(
+      booking.id,
+      parseInt(fieldId.toString()),
+      parseInt(branchId),
+      parseInt(userId.toString())
+    );
 
     res.status(201).json({ booking, payment });
   } catch (error) {

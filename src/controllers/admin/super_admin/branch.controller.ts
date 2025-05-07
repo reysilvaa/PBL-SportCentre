@@ -4,7 +4,12 @@ import {
   branchSchema,
   updateBranchSchema,
 } from '../../../zod-schemas/branch.schema';
-import { deleteCachedDataByPattern } from '../../../utils/cache.utils';
+import { invalidateBranchCache } from '../../../utils/cache/cacheInvalidation.utils';
+
+/**
+ * Super Admin Branch Controller
+ * Handles operations that super admins can perform
+ */
 
 export const getBranches = async (
   req: Request,
@@ -120,11 +125,12 @@ export const createBranch = async (
       },
     });
 
-    // Hapus cache yang relevan
-    deleteCachedDataByPattern('branches');
+    // Hapus cache secara komprehensif
+    await invalidateBranchCache(newBranch.id);
 
     res.status(201).json(newBranch);
   } catch (error) {
+    console.error('Error in createBranch:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -132,6 +138,7 @@ export const createBranch = async (
 export const updateBranch = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const branchId = parseInt(id);
 
     // Validasi data dengan Zod
     const result = updateBranchSchema.safeParse(req.body);
@@ -145,15 +152,16 @@ export const updateBranch = async (req: Request, res: Response) => {
     }
 
     const updatedBranch = await prisma.branch.update({
-      where: { id: parseInt(id) },
+      where: { id: branchId },
       data: result.data,
     });
 
-    // Hapus cache yang relevan
-    deleteCachedDataByPattern('branches');
+    // Hapus cache secara komprehensif
+    await invalidateBranchCache(branchId);
 
     res.json(updatedBranch);
   } catch (error) {
+    console.error('Error in updateBranch:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -164,27 +172,30 @@ export const deleteBranch = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    const branchId = parseInt(id);
 
     // Cek apakah cabang memiliki lapangan
     const fields = await prisma.field.findFirst({
-      where: { branchId: parseInt(id) },
+      where: { branchId: branchId },
     });
 
     if (fields) {
       res.status(400).json({
         error: 'Tidak dapat menghapus cabang yang memiliki lapangan',
       });
+      return;
     }
 
     await prisma.branch.delete({
-      where: { id: parseInt(id) },
+      where: { id: branchId },
     });
 
-    // Hapus cache yang relevan
-    deleteCachedDataByPattern('branches');
+    // Hapus cache secara komprehensif
+    await invalidateBranchCache(branchId);
 
     res.status(204).send();
   } catch (error) {
+    console.error('Error in deleteBranch:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

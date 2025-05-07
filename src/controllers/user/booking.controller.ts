@@ -18,7 +18,7 @@ import {
   formatDateToWIB,
   combineDateWithTimeWIB,
 } from '../../utils/variables/timezone.utils';
-import { deleteCachedDataByPattern } from '../../utils/cache.utils';
+import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
 import {
   trackFailedBooking,
   resetFailedBookingCounter,
@@ -183,7 +183,7 @@ export const createBooking = async (
     emitBookingEvents('booking:created', { booking, payment });
 
     // Clear any cached data that might be affected by this new booking
-    await deleteCachedDataByPattern(`field:${fieldId}:availability:*`);
+    await invalidateBookingCache(booking.id, fieldId, field.branchId, userId);
 
     // Return response with booking and payment details
     res.status(201).json({
@@ -474,7 +474,7 @@ export const cancelBooking = async (
     emitBookingEvents('booking:canceled', { booking });
 
     // Clear any cached data that might be affected
-    await deleteCachedDataByPattern(`field:${booking.fieldId}:availability:*`);
+    await invalidateBookingCache(bookingId, booking.fieldId, booking.field.branchId, booking.userId);
 
     res.json({ message: 'Booking telah dibatalkan' });
   } catch (error) {

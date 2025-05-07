@@ -4,7 +4,7 @@ import {
   createFieldTypeSchema,
   updateFieldTypeSchema,
 } from '../../zod-schemas/fieldType.schema';
-import { deleteCachedDataByPattern } from '../../utils/cache.utils';
+import { invalidateFieldTypeCache } from '../../utils/cache/cacheInvalidation.utils';
 
 export const getFieldTypes = async (req: Request, res: Response) => {
   try {
@@ -53,7 +53,7 @@ export const createFieldType = async (
     });
 
     // Hapus cache terkait tipe lapangan
-    deleteCachedDataByPattern('field_types');
+    await invalidateFieldTypeCache();
 
     res.status(201).json(newFieldType);
   } catch (error) {
@@ -84,7 +84,7 @@ export const updateFieldType = async (req: Request, res: Response) => {
     });
 
     // Hapus cache terkait tipe lapangan
-    deleteCachedDataByPattern('field_types');
+    await invalidateFieldTypeCache();
 
     res.json(updatedFieldType);
   } catch (error) {
@@ -115,7 +115,7 @@ export const deleteFieldType = async (
     });
 
     // Hapus cache terkait tipe lapangan
-    deleteCachedDataByPattern('field_types');
+    await invalidateFieldTypeCache();
 
     res.status(204).send();
   } catch (error) {

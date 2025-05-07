@@ -4,7 +4,7 @@ import {
   createFieldReviewSchema,
   updateFieldReviewSchema,
 } from '../../zod-schemas/fieldReview.schema';
-import { deleteCachedDataByPattern } from '../../utils/cache.utils';
+import { invalidateFieldReviewCache } from '../../utils/cache/cacheInvalidation.utils';
 
 export const getFieldReviews = async (req: Request, res: Response) => {
   try {
@@ -70,7 +70,7 @@ export const createFieldReview = async (
     });
 
     // Hapus cache field reviews
-    deleteCachedDataByPattern('field_reviews');
+    await invalidateFieldReviewCache();
 
     res.status(201).json(newReview);
   } catch (error) {
@@ -99,7 +99,7 @@ export const updateFieldReview = async (req: Request, res: Response) => {
     });
 
     // Hapus cache field reviews
-    deleteCachedDataByPattern('field_reviews');
+    await invalidateFieldReviewCache();
 
     res.json(updatedReview);
   } catch (error) {
@@ -115,7 +115,7 @@ export const deleteFieldReview = async (req: Request, res: Response) => {
     });
 
     // Hapus cache field reviews
-    deleteCachedDataByPattern('field_reviews');
+    await invalidateFieldReviewCache();
 
     res.status(204).send();
   } catch (error) {

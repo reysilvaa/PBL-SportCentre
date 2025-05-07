@@ -19,13 +19,13 @@ import { branchUpload } from '../../middlewares/multer.middleware';
 
 const router = express.Router();
 
-// Endpoint publik untuk mendapatkan semua cabang
-router.get('/', cacheMiddleware('branches', 300), getBranches);
+// Endpoint publik untuk mendapatkan semua cabang - dengan TTL sangat rendah
+router.get('/', cacheMiddleware('branches', 10), getBranches);
 
-// Mendapatkan detail cabang berdasarkan ID
+// Mendapatkan detail cabang berdasarkan ID - dengan TTL sangat rendah
 router.get(
   '/:id',
-  cacheMiddleware('branch_detail', 300),
+  cacheMiddleware('branch_detail', 10),
   authMiddleware(['super_admin', 'admin_cabang', 'owner_cabang', 'user']),
   getBranches
 );

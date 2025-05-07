@@ -12,11 +12,15 @@ export const setupMiddlewares = (app: Application): void => {
         config.urls.frontend,
         'http://localhost:3000',
         'http://localhost:3001',
+        '*',
       ],
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+      exposedHeaders: ['Content-Length', 'Content-Type'],
       maxAge: 86400,
+      preflightContinue: false,
+      optionsSuccessStatus: 204
     })
   );
 
