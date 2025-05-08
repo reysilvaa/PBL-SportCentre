@@ -3,37 +3,34 @@ import {
   getActivityLogs,
   createActivityLog,
   deleteActivityLog,
-} from '../../controllers/admin/super_admin/activityLog.controller';
-import { parseIds } from '../../middlewares/parseId.middleware';
-import { authMiddleware } from '../../middlewares/auth.middleware';
-import { roleBasedController } from '../../middlewares/role.middleware';
+} from '../../controllers/activityLog.controller';
+import { auth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 
+// Mendapatkan log aktivitas - semua user bisa akses, tapi role menentukan scope data
 router.get(
   '/',
-  authMiddleware(['super_admin']),
-  cacheMiddleware('activity_logs', 300),
-  roleBasedController({
-    superAdmin: getActivityLogs,
-  })
+  auth(),
+  cacheMiddleware('activity_logs', 120),
+  getActivityLogs
 );
 
+// Membuat log aktivitas - tetap menggunakan otentikasi
 router.post(
   '/',
-  parseIds,
-  roleBasedController({
-    superAdmin: createActivityLog,
-  })
+  auth(),
+  createActivityLog
 );
 
+// Menghapus log aktivitas - hanya super admin
 router.delete(
   '/:id',
-  authMiddleware(['super_admin']),
-  roleBasedController({
-    superAdmin: deleteActivityLog,
-  })
+  auth({
+    allowedRoles: ['super_admin']
+  }),
+  deleteActivityLog
 );
 
 export default router;

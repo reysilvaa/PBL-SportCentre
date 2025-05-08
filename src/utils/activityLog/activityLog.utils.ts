@@ -12,12 +12,14 @@ export class ActivityLogService {
    * @param action - Description of the action performed
    * @param details - Optional details about the action (as JSON string or object)
    * @param relatedId - Optional ID of related entity (booking, field, etc.)
+   * @param ipAddress - Optional IP address of the user
    */
   static async createLog(
     userId: number,
     action: string,
     details?: string | object,
-    relatedId?: number
+    relatedId?: number,
+    ipAddress?: string
   ) {
     try {
       // Convert object to string if details is provided as an object
@@ -34,6 +36,7 @@ export class ActivityLogService {
           action,
           details: detailsStr,
           ...(relatedId && { relatedId }),
+          ...(ipAddress && { ipAddress }),
         },
         include: {
           user: {
@@ -60,15 +63,17 @@ export class ActivityLogService {
    * @param action - Description of the action
    * @param bookingId - ID of the booking
    * @param details - Optional details about the booking action
+   * @param ipAddress - Optional IP address of the user
    */
   static async logBookingActivity(
     user: User | number,
     action: string,
     bookingId: number,
-    details?: object
+    details?: object,
+    ipAddress?: string
   ) {
     const userId = typeof user === 'number' ? user : user.id;
-    return this.createLog(userId, action, details, bookingId);
+    return this.createLog(userId, action, details, bookingId, ipAddress);
   }
 
   /**
@@ -78,13 +83,15 @@ export class ActivityLogService {
    * @param bookingId - Booking ID
    * @param status - Payment status
    * @param details - Additional payment details
+   * @param ipAddress - Optional IP address of the user
    */
   static async logPaymentActivity(
     userId: number,
     paymentId: number,
     bookingId: number,
     status: string,
-    details?: object
+    details?: object,
+    ipAddress?: string
   ) {
     const action = `Payment ${status} for booking ${bookingId}`;
     return this.createLog(userId, action, {
@@ -92,7 +99,7 @@ export class ActivityLogService {
       bookingId,
       status,
       ...details,
-    });
+    }, undefined, ipAddress);
   }
 
   /**

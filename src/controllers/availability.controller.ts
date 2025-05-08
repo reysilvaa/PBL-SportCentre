@@ -1,11 +1,16 @@
 import { Request, Response } from 'express';
-import { getIO } from '../../config/server/socket';
+import { getIO } from '../config/server/socket';
 import {
   isFieldAvailable,
   getAllFieldsAvailability,
   getAvailableTimeSlots,
-} from '../../utils/booking/checkAvailability.utils';
-import { fieldAvailabilityQueue } from '../../config/services/queue';
+} from '../utils/booking/checkAvailability.utils';
+import { fieldAvailabilityQueue } from '../config/services/queue';
+
+/**
+ * Unified Availability Controller
+ * Mengelola endpoint terkait ketersediaan lapangan
+ */
 
 export const checkAllFieldsAvailability = async (
   req: Request,
@@ -66,4 +71,4 @@ export const startFieldAvailabilityUpdates = (): void => {
 export const cleanupFieldAvailabilityUpdates = async (): Promise<void> => {
   await fieldAvailabilityQueue.close();
   console.log('🛑 Field availability Bull Queue job stopped');
-};
+}; 

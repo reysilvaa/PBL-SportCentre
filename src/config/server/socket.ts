@@ -1,7 +1,7 @@
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { Namespace } from 'socket.io';
-import { authMiddleware } from '../../middlewares/auth.middleware';
+import { auth } from '../../middlewares/auth.middleware';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -69,7 +69,7 @@ export function applyAuthMiddleware(
 
       // Verify token
       try {
-        const user = await authMiddleware(token);
+        const user = await auth(token);
         if (!user) {
           if (!requireAuth) {
             socket.data.user = null;

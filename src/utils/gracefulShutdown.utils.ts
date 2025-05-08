@@ -1,5 +1,5 @@
 import http from 'http';
-import { cleanupFieldAvailabilityUpdates } from '../controllers/all/availability.controller';
+import { cleanupFieldAvailabilityUpdates } from '../controllers/availability.controller';
 import { stopBookingCleanupJob } from './booking/bookingCleanup.utils';
 import redisClient from '../config/services/redis';
 import prisma from '../config/services/database';

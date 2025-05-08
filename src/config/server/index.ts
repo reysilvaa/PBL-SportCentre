@@ -13,7 +13,7 @@ import { initializeAllSocketHandlers } from '../../socket-handlers';
 import { 
   startFieldAvailabilityUpdates, 
   setupFieldAvailabilityProcessor 
-} from '../../controllers/all/availability.controller';
+} from '../../controllers/availability.controller';
 import { logServerStartup, setupPeriodicHealthCheck } from './monitoring';
 import { setupSwagger } from '../swagger/swagger.config';
 import { 

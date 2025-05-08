@@ -4,9 +4,8 @@ import {
   createPromotion,
   updatePromotion,
   deletePromotion,
-} from '../../controllers/all/promotion.controller';
-import { authMiddleware } from '../../middlewares/auth.middleware';
-import { roleBasedController } from '../../middlewares/role.middleware';
+} from '../../controllers/promotion.controller';
+import { auth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
@@ -15,29 +14,26 @@ router.get('/', cacheMiddleware('promotions', 300), getPromotions);
 
 router.post(
   '/',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: createPromotion,
-    branchAdmin: createPromotion,
-  })
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang'],
+  }),
+  createPromotion
 );
 
 router.put(
   '/:id',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: updatePromotion,
-    branchAdmin: updatePromotion,
-  })
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang'],
+  }),
+  updatePromotion
 );
 
 router.delete(
   '/:id',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: deletePromotion,
-    branchAdmin: deletePromotion,
-  })
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang'],
+  }),
+  deletePromotion
 );
 
 export default router;

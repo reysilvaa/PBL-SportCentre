@@ -4,10 +4,9 @@ import {
   createFieldReview,
   updateFieldReview,
   deleteFieldReview,
-} from '../../controllers/user/fieldReview.controller';
+} from '../../controllers/fieldReview.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
-import { authMiddleware } from '../../middlewares/auth.middleware';
-import { roleBasedController } from '../../middlewares/role.middleware';
+import { auth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
@@ -16,27 +15,31 @@ router.get('/', cacheMiddleware('field_reviews', 300), getFieldReviews);
 
 router.post(
   '/',
-  authMiddleware(['user']),
+  auth({
+    allowedRoles: ['user']
+  }),
   parseIds,
-  roleBasedController({
-    user: createFieldReview,
-  })
+  createFieldReview
 );
 
 router.put(
   '/:id',
-  authMiddleware(['user']),
-  roleBasedController({
-    user: updateFieldReview,
-  })
+  auth({
+    allowedRoles: ['user'],
+    ownerOnly: true,
+    resourceName: 'fieldReview'
+  }),
+  updateFieldReview
 );
 
 router.delete(
   '/:id',
-  authMiddleware(['user']),
-  roleBasedController({
-    user: deleteFieldReview,
-  })
+  auth({
+    allowedRoles: ['user'],
+    ownerOnly: true,
+    resourceName: 'fieldReview'
+  }),
+  deleteFieldReview
 );
 
 export default router;

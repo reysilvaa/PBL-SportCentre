@@ -1,57 +1,53 @@
 // src/routes/route-lists/user.routes.ts
 import express from 'express';
-import * as userController from '../../controllers/admin/super_admin/user.controller';
-import {
-  superAdminAuth,
-  branchAdminAuth,
-  ownerAuth,
-  authMiddleware,
-} from '../../middlewares/auth.middleware';
-import { roleBasedController } from '../../middlewares/role.middleware';
+import * as userController from '../../controllers/user.controller';
+import { auth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
 
-// Pendekatan minimalis untuk mendapatkan pengguna dengan satu endpoint
+// Mendapatkan daftar pengguna (super admin dan admin cabang)
 router.get(
   '/',
-  authMiddleware(['super_admin', 'admin_cabang', 'owner_cabang']),
+  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
   cacheMiddleware('users_unified', 300),
-  roleBasedController({
-    superAdmin: userController.getUsers,
-    branchAdmin: userController.getUsers,
-    owner: userController.getUsers,
-  })
+  userController.getUsers
 );
 
-// Pendekatan minimalis untuk membuat pengguna
+// Mendapatkan profil pengguna (semua role, tapi hanya milik sendiri kecuali super admin)
+router.get(
+  '/profile/:id?',
+  auth(),
+  cacheMiddleware('user_profile', 300),
+  userController.getUserProfile
+);
+
+// Update profil pengguna sendiri
+router.put(
+  '/profile/:id?',
+  auth(),
+  userController.updateUserProfile
+);
+
+// Membuat pengguna (super admin dan admin cabang)
 router.post(
   '/',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: userController.createUser,
-    branchAdmin: userController.createUser,
-  })
+  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  userController.createUser
 );
 
-// Pendekatan minimalis untuk mengupdate pengguna
+// Mengupdate pengguna (super admin dan admin cabang)
 router.put(
   '/:id',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: userController.updateUser,
-    branchAdmin: userController.updateUser,
-  })
+  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  userController.updateUser
 );
 
-// Pendekatan minimalis untuk menghapus pengguna
+// Menghapus pengguna (super admin dan admin cabang)
 router.delete(
   '/:id',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: userController.deleteUser,
-    branchAdmin: userController.deleteUser,
-  })
+  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  userController.deleteUser
 );
 
 // Mempertahankan backward compatibility untuk pendekatan lama
