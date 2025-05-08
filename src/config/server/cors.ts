@@ -10,8 +10,13 @@ export const corsConfig = (): CorsOptions => {
   const allowedOrigins = [
     config.urls.frontend,
     'http://localhost:3000',
-    'http://localhost:3001'
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
   ];
+
+  // Log allowed origins for debugging
+  console.log('CORS Allowed Origins:', allowedOrigins);
 
   // Menghapus wildcard (*) untuk keamanan
   // Gunakan array domain yang spesifik
@@ -20,16 +25,18 @@ export const corsConfig = (): CorsOptions => {
     origin: (origin, callback) => {
       // Izinkan request tanpa origin (seperti aplikasi mobile atau Postman)
       if (!origin) {
+        console.log('CORS: Request without origin allowed');
         return callback(null, true);
       }
 
       // Cek apakah origin ada di daftar yang diizinkan
       if (allowedOrigins.indexOf(origin) !== -1) {
+        console.log(`CORS: Origin ${origin} allowed`);
         callback(null, true);
       } else {
         // Log origins yang ditolak untuk debugging
         console.warn(`CORS ditolak untuk origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'), false);
+        callback(new Error(`Not allowed by CORS: ${origin}`), false);
       }
     },
     credentials: true, // Izinkan pengiriman cookies
