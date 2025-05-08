@@ -1,12 +1,12 @@
 import { Response } from 'express';
 import prisma from '../../config/services/database';
-import { getIO } from '../../config/server/socket';
 import { PaymentStatus, PaymentMethod } from '@prisma/client';
 import { isFieldAvailable } from './checkAvailability.utils';
 import { startBookingCleanupJob } from './bookingCleanup.utils';
 import { formatDateToWIB } from '../variables/timezone.utils';
-import { broadcastActivityLogUpdates } from '../../socket-handlers/activityLog.socket';
 import midtrans from '../../config/services/midtrans';
+// Import emitBookingEvents dari socket handler yang baru dibuat
+import { emitBookingEvents } from '../../socket-handlers/booking.socket';
 
 // Initialize booking cleanup job when server starts
 startBookingCleanupJob();
@@ -182,139 +182,8 @@ export const processMidtransPayment = async (
   return { transaction, expiryDate };
 };
 
-// Emit booking-related socket events
-export const emitBookingEvents = (eventType: string, data: any) => {
-  try {
-    const io = getIO();
-
-    switch (eventType) {
-      case 'new-booking':
-        // Emit to branch channel
-        if (data.branchId) {
-          io.to(`branch-${data.branchId}`).emit(
-            'booking:created',
-            data.booking
-          );
-        }
-
-        // Emit to user's personal channel
-        if (data.userId) {
-          io.to(`user-${data.userId}`).emit('booking:created', {
-            booking: data.booking,
-            message: 'A new booking has been created for you',
-          });
-
-          // Log activity
-          prisma.activityLog
-            .create({
-              data: {
-                userId: data.userId,
-                action: 'CREATE_BOOKING',
-                details: JSON.stringify({
-                  bookingId: data.booking.id,
-                  fieldId: data.fieldId,
-                  date: formatDateToWIB(data.bookingDate),
-                }),
-              },
-            })
-            .then(() => {
-              // Broadcast activity log updates
-              broadcastActivityLogUpdates(data.userId);
-            });
-        }
-
-        // Emit to field availability channel
-        if (data.fieldId) {
-          io.to(`field-${data.fieldId}`).emit('field:availability-changed', {
-            fieldId: data.fieldId,
-            date: data.bookingDate,
-            startTime: formatDateToWIB(data.startTime),
-            endTime: formatDateToWIB(data.endTime),
-            available: false,
-          });
-        }
-        break;
-
-      case 'update-payment':
-        // Emit to branch channel
-        if (data.branchId) {
-          io.to(`branch-${data.branchId}`).emit(
-            'booking:updated',
-            data.booking
-          );
-        }
-
-        // Emit to user's personal channel
-        if (data.userId) {
-          io.to(`user-${data.userId}`).emit('booking:updated', {
-            bookingId: data.booking?.id,
-            paymentStatus: data.paymentStatus,
-            message: `Your booking payment status has been updated to: ${data.paymentStatus}`,
-          });
-
-          // Log activity
-          prisma.activityLog
-            .create({
-              data: {
-                userId: data.userId,
-                action: 'UPDATE_PAYMENT',
-                details: JSON.stringify({
-                  bookingId: data.booking?.id,
-                  paymentStatus: data.paymentStatus,
-                }),
-              },
-            })
-            .then(() => {
-              // Broadcast activity log updates
-              broadcastActivityLogUpdates(data.userId);
-            });
-        }
-        break;
-
-      case 'cancel-booking':
-        // Emit to admin channel
-        io.of('/admin/bookings').emit('booking-canceled', {
-          bookingId: data.bookingId,
-          fieldId: data.fieldId,
-          userId: data.userId,
-        });
-
-        // Update field availability
-        io.of('/fields').emit('availability-update', {
-          fieldId: data.fieldId,
-          date: data.bookingDate,
-          timeSlot: {
-            start: formatDateToWIB(data.startTime),
-            end: formatDateToWIB(data.endTime),
-          },
-          available: true,
-        });
-
-        // Log activity if userId is provided
-        if (data.userId) {
-          prisma.activityLog
-            .create({
-              data: {
-                userId: data.userId,
-                action: 'CANCEL_BOOKING',
-                details: JSON.stringify({
-                  bookingId: data.bookingId,
-                  fieldId: data.fieldId,
-                }),
-              },
-            })
-            .then(() => {
-              // Broadcast activity log updates
-              broadcastActivityLogUpdates(data.userId);
-            });
-        }
-        break;
-    }
-  } catch (error) {
-    console.error('❌ Failed to emit Socket.IO events:', error);
-    // Continue even if socket emission fails
-  }
-};
+// Export emitBookingEvents dari socket handler
+export { emitBookingEvents };
 
 // Get complete booking with relations
 export const getCompleteBooking = async (bookingId: number) => {

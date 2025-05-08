@@ -4,7 +4,7 @@ import { Router } from 'express';
 import {
   getNotifications,
   readNotification,
-} from '../../controllers/webhook-handlers/notification.controller';
+} from '../../controllers/webhook/notification.controller';
 import { auth } from '../../middlewares/auth.middleware';
 
 const router = Router();
