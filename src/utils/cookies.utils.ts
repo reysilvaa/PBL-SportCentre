@@ -20,6 +20,7 @@ export const setCookie = (
     sameSite?: boolean | 'none' | 'lax' | 'strict';
     domain?: string;
     path?: string;
+    expires?: Date;
   }
 ) => {
   // Gabungkan dengan konfigurasi default
@@ -61,11 +62,17 @@ export const clearCookie = (
   options?: {
     path?: string;
     domain?: string;
+    secure?: boolean;
+    sameSite?: boolean | 'none' | 'lax' | 'strict';
   }
 ) => {
   const cookieOptions = {
     path: '/',
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite,
     ...options,
+    // Set expiry ke masa lalu untuk memastikan cookie dihapus
+    expires: new Date(0)
   };
 
   res.clearCookie(name, cookieOptions);
@@ -81,6 +88,9 @@ export const setAuthCookie = (res: Response, token: string) => {
     httpOnly: true, // Untuk keamanan, tidak dapat diakses oleh JavaScript
     signed: true, // Ditandatangani untuk verifikasi
     maxAge: config.cookies.maxAge,
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite, // Gunakan lax di dev, none di prod dengan secure:true
+    path: '/', // Tersedia di semua path aplikasi
   });
 };
 
@@ -97,7 +107,10 @@ export const getAuthToken = (req: Request): string | undefined => {
  * @param res Express response object
  */
 export const clearAuthCookie = (res: Response) => {
-  clearCookie(res, 'auth_token');
+  clearCookie(res, 'auth_token', {
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite
+  });
 };
 
 /**
@@ -110,6 +123,9 @@ export const setRefreshTokenCookie = (res: Response, token: string) => {
     httpOnly: true,
     signed: true,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite,
+    path: '/',
   });
 };
 
@@ -126,7 +142,10 @@ export const getRefreshToken = (req: Request): string | undefined => {
  * @param res Express response object
  */
 export const clearRefreshTokenCookie = (res: Response) => {
-  clearCookie(res, 'refresh_token');
+  clearCookie(res, 'refresh_token', {
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite
+  });
 };
 
 /**
@@ -142,6 +161,8 @@ export const setUserPreferencesCookie = (
     httpOnly: false, // Dapat diakses oleh JavaScript client-side
     signed: false,
     maxAge: 365 * 24 * 60 * 60 * 1000, // 1 tahun
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite
   });
 };
 

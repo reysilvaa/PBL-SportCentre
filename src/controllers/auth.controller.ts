@@ -9,6 +9,7 @@ import {
   clearAuthCookie,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
+  getAuthToken,
 } from '../utils/cookies.utils';
 import { hashPassword, verifyPassword } from '../utils/password.utils';
 
@@ -225,6 +226,55 @@ export const refreshToken = async (
     }
   } catch (error) {
     console.error('Refresh Token Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Endpoint untuk memeriksa status autentikasi
+export const getAuthStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Ambil token dari cookie atau header
+    const headerToken = req.header('Authorization')?.split(' ')[1];
+    const cookieToken = getAuthToken(req);
+    const token = cookieToken || headerToken;
+
+    if (!token) {
+      res.status(401).json({ error: 'Tidak terautentikasi' });
+      return;
+    }
+
+    try {
+      // Verifikasi token
+      const decoded = jwt.verify(token, config.jwtSecret) as {
+        id: number;
+        email: string;
+        role: string;
+      };
+
+      // Ambil data user
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+      });
+
+      if (!user) {
+        res.status(401).json({ error: 'User tidak ditemukan' });
+        return;
+      }
+
+      const { password: _, ...userWithoutPassword } = user;
+
+      res.json({
+        user: userWithoutPassword,
+        token // Mengembalikan token untuk kompatibilitas dengan client lama
+      });
+    } catch (error) {
+      // Token tidak valid
+      clearAuthCookie(res);
+      clearRefreshTokenCookie(res);
+      res.status(401).json({ error: 'Token tidak valid atau sudah expired' });
+    }
+  } catch (error) {
+    console.error('Auth Status Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
