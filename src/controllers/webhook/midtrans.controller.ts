@@ -3,8 +3,6 @@ import prisma from '../../config/services/database';
 import { PaymentStatus } from '@prisma/client';
 import { emitBookingEvents } from '../../utils/booking/booking.utils';
 import { getIO } from '../../config/server/socket';
-import { sendPaymentNotification } from '../../socket-handlers/payment.socket';
-import { ActivityLogService } from '../../utils/activityLog/activityLog.utils';
 import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 import { createHmac } from 'crypto';
 import { config } from '../../config/app/env';
@@ -20,7 +18,7 @@ class BadRequestError extends Error {
 
 // Import the global type definition
 declare global {
-  // eslint-disable-next-line no-var
+   
   var activeLocks: Record<string, boolean>;
 }
 
@@ -31,12 +29,12 @@ const createPaymentNotification = async (
   userId: number,
   bookingId: number,
   fieldName: string,
-  status: PaymentStatus
+  status: PaymentStatus,
 ) => {
   try {
     let title = '';
     let message = '';
-    let type = 'payment';
+    const type = 'payment';
 
     switch (status) {
       case 'paid':
@@ -152,13 +150,13 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     }
 
     console.log(
-      `[WEBHOOK] Booking #${payment.bookingId} - User: ${payment.booking.user.name} (${payment.booking.user.id}) - Field: ${payment.booking.field.name}`
+      `[WEBHOOK] Booking #${payment.bookingId} - User: ${payment.booking.user.name} (${payment.booking.user.id}) - Field: ${payment.booking.field.name}`,
     );
 
     // Map Midtrans transaction status to our payment status
     let paymentStatus: PaymentStatus;
-    let transactionId = notification.transaction_id || null;
-    let paymentUrl = notification.redirect_url || null;
+    const transactionId = notification.transaction_id || null;
+    const paymentUrl = notification.redirect_url || null;
 
     switch (notification.transaction_status) {
       case 'capture':
@@ -199,7 +197,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       payment.bookingId,
       payment.booking.fieldId,
       payment.booking.field.branchId,
-      payment.booking.userId
+      payment.booking.userId,
     );
 
     if (!cacheInvalidated) {
@@ -222,7 +220,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       payment.booking.userId,
       payment.bookingId,
       payment.booking.field.name,
-      paymentStatus
+      paymentStatus,
     );
 
     // For paid status, add success activity log

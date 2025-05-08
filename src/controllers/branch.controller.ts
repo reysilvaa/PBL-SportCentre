@@ -5,7 +5,6 @@ import { invalidateBranchCache } from '../utils/cache/cacheInvalidation.utils';
 import { MulterRequest } from '../middlewares/multer.middleware';
 import { cleanupUploadedFile } from '../utils/cloudinary.utils';
 import { User } from '../middlewares/auth.middleware';
-import { deleteCachedDataByPattern } from '../utils/cache.utils';
 
 /**
  * Unified Branch Controller

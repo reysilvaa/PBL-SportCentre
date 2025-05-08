@@ -41,7 +41,7 @@ router.get('/cache-stats', auth({ allowedRoles: ['super_admin'] }), async (req, 
     const stats = await getCacheStats();
     const pattern = req.query.pattern as string;
 
-    let keys: string[] = [];
+    const keys: string[] = [];
     if (pattern) {
       // Cari keys dengan pattern
       let cursor = 0;

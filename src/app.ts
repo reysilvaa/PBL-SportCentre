@@ -29,5 +29,3 @@ setupGracefulShutdown(server);
 
 // Mulai server
 startServer(server);
-
-export default app;

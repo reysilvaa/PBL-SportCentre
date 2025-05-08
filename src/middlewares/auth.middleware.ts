@@ -2,7 +2,6 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/services/database';
-import { config } from '../config/app/env';
 import { getAuthToken } from '../utils/auth.utils';
 import { isTokenBlacklisted } from '../utils/auth.utils';
 import { verifyToken } from '../utils/jwt.utils';
@@ -245,16 +244,20 @@ export const auth = (options: AuthOptions = {}) => {
 // Fungsi helper untuk pemeriksaan kepemilikan resource
 // Implementasi spesifik untuk tiap jenis resource
 async function checkResourceOwnership(resourceType: string, resourceId: number, userId: number): Promise<boolean> {
+  // Pra-deklarasi variabel yang digunakan dalam case blocks
+  let booking, field, branch, isAdmin, branchAdmin;
+  
   switch (resourceType.toLowerCase()) {
-    case 'booking':
-      const booking = await prisma.booking.findUnique({
+    case 'booking': {
+      booking = await prisma.booking.findUnique({
         where: { id: resourceId },
       });
       return booking?.userId === userId;
+    }
 
-    case 'field':
+    case 'field': {
       // Untuk field, cek apakah user adalah admin/owner dari branch yang memiliki field
-      const field = await prisma.field.findUnique({
+      field = await prisma.field.findUnique({
         where: { id: resourceId },
         include: { branch: true },
       });
@@ -265,7 +268,7 @@ async function checkResourceOwnership(resourceType: string, resourceId: number, 
       if (field.branch.ownerId === userId) return true;
 
       // Cek admin
-      const isAdmin = await prisma.branchAdmin.findFirst({
+      isAdmin = await prisma.branchAdmin.findFirst({
         where: {
           branchId: field.branchId,
           userId: userId,
@@ -273,9 +276,10 @@ async function checkResourceOwnership(resourceType: string, resourceId: number, 
       });
 
       return !!isAdmin;
+    }
 
-    case 'branch':
-      const branch = await prisma.branch.findUnique({
+    case 'branch': {
+      branch = await prisma.branch.findUnique({
         where: { id: resourceId },
       });
 
@@ -283,7 +287,7 @@ async function checkResourceOwnership(resourceType: string, resourceId: number, 
       if (branch?.ownerId === userId) return true;
 
       // Cek admin
-      const branchAdmin = await prisma.branchAdmin.findFirst({
+      branchAdmin = await prisma.branchAdmin.findFirst({
         where: {
           branchId: resourceId,
           userId: userId,
@@ -291,12 +295,14 @@ async function checkResourceOwnership(resourceType: string, resourceId: number, 
       });
 
       return !!branchAdmin;
+    }
 
     // Tambahkan kasus lain sesuai kebutuhan
 
-    default:
+    default: {
       // Default untuk resource yang tidak dikenal
       return false;
+    }
   }
 }
 

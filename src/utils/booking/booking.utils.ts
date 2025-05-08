@@ -14,7 +14,7 @@ export const sendErrorResponse = (
   res: Response,
   status: number,
   message: any,
-  details?: any
+  details?: any,
 ): void => {
   res.status(status).json({ error: message, ...(details && { details }) });
 };
@@ -40,7 +40,7 @@ export const validateBookingTime = async (
   fieldId: number,
   bookingDate: Date,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
 ) => {
   // Validate start and end times
   if (startTime >= endTime) {
@@ -84,7 +84,7 @@ export const createBookingWithPayment = async (
   endTime: Date,
   paymentStatus: PaymentStatus = 'pending',
   paymentMethod: PaymentMethod = 'cash',
-  amount?: any
+  amount?: any,
 ) => {
   // Create booking record
   const booking = await prisma.booking.create({
@@ -130,7 +130,7 @@ export const processMidtransPayment = async (
   payment: any,
   field: any,
   user: any,
-  totalPrice: number
+  totalPrice: number,
 ) => {
   // Define the expiry time in Midtrans (5 minutes)
   const expiryMinutes = 5;
@@ -226,7 +226,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       });
 
       console.log(
-        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`
+        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`,
       );
 
       // Emit event for booking cancellation to update field availability
@@ -253,7 +253,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         });
 
         console.log(
-          `🔔 Notified system about canceled booking #${booking.id} due to payment expiry`
+          `🔔 Notified system about canceled booking #${booking.id} due to payment expiry`,
         );
       }
     }
@@ -291,7 +291,7 @@ export const startBookingCleanupJob = (): void => {
     {
       jobId: 'cleanup-recurring',
       repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
-    }
+    },
   );
 
   console.log('🚀 Expired booking cleanup Bull Queue job started');

@@ -7,7 +7,6 @@ import {
   createBookingWithPayment,
   processMidtransPayment,
   emitBookingEvents,
-  getCompleteBooking,
 } from '../../utils/booking/booking.utils';
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { parseISO } from 'date-fns';
@@ -81,7 +80,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       startDateTime,
       endDateTime,
       Number(field.priceDay),
-      Number(field.priceNight)
+      Number(field.priceNight),
     );
 
     if (totalPrice <= 0) {
@@ -99,7 +98,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       endDateTime,
       'pending',
       'midtrans',
-      totalPrice
+      totalPrice,
     );
 
     console.log('✅ Booking created:', booking.id);

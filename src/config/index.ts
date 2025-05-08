@@ -23,8 +23,3 @@ export * from './swagger/swagger.config';
 // Export dari konfigurasi services
 export * from './services/cloudinary';
 
-// Nama dan versi aplikasi
-export const APP_INFO = {
-  name: 'Sport Center API',
-  version: '1.0.0',
-};

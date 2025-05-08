@@ -24,7 +24,7 @@ export const calculateTotalPrice = (
   startTime: Date,
   endTime: Date,
   dayPrice: number,
-  nightPrice: number
+  nightPrice: number,
 ): number => {
   // Daytime is considered from 06:00 to 18:00 WIB
   const bookingDate = startTime;

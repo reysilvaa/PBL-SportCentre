@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { getIO, applyAuthMiddleware, setupNamespaceEvents } from '../config/server/socket';
+import { getIO } from '../config/server/socket';
 import prisma from '../config/services/database';
 
 /**
@@ -87,7 +87,7 @@ export const setupActivityLogSocketHandlers = (): void => {
 
     // Set up listener for when client wants to subscribe to activity logs
     socket.on('subscribe_activity_logs', (options: { userId?: string }) =>
-      handleSubscribeActivityLogs(socket, options)
+      handleSubscribeActivityLogs(socket, options),
     );
 
     // Handle disconnection

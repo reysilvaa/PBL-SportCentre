@@ -181,7 +181,7 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       startDateTime,
       endDateTime,
       Number(field.priceDay),
-      Number(field.priceNight)
+      Number(field.priceNight),
     );
 
     // Create booking and payment records
@@ -193,7 +193,7 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       endDateTime,
       paymentStatus || 'paid',
       'cash',
-      totalPrice
+      totalPrice,
     );
 
     // Emit real-time events

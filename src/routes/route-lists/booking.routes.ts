@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as bookingController from '../../controllers/booking.controller';
-import { auth, userAuth, branchAdminAuth, superAdminAuth, ownerAuth } from '../../middlewares/auth.middleware';
+import { userAuth, branchAdminAuth, superAdminAuth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { bookingRateLimiter } from '../../middlewares/security.middleware';
 
@@ -17,7 +17,7 @@ router.get(
     resourceName: 'user',
   }),
   cacheMiddleware('user_bookings', 120),
-  bookingController.getUserBookings
+  bookingController.getUserBookings,
 );
 
 // Detail booking berdasarkan ID
@@ -28,7 +28,7 @@ router.get(
     resourceName: 'booking',
   }),
   cacheMiddleware('booking_detail', 120),
-  bookingController.getBookingById
+  bookingController.getBookingById,
 );
 
 // Pembatalan booking
@@ -38,7 +38,7 @@ router.delete(
     ownerOnly: true,
     resourceName: 'booking',
   }),
-  bookingController.cancelBooking
+  bookingController.cancelBooking,
 );
 
 // Daftar booking di cabang
@@ -46,7 +46,7 @@ router.get(
   '/branches/:branchId/bookings',
   branchAdminAuth(),
   cacheMiddleware('branch_bookings', 60),
-  bookingController.getBranchBookings
+  bookingController.getBranchBookings,
 );
 
 // Detail booking di cabang
@@ -54,7 +54,7 @@ router.get(
   '/branches/:branchId/bookings/:id',
   branchAdminAuth(),
   cacheMiddleware('branch_booking_detail', 60),
-  bookingController.getBranchBookingById
+  bookingController.getBranchBookingById,
 );
 
 // Update status booking
@@ -68,7 +68,7 @@ router.get(
   '/admin/bookings',
   superAdminAuth(),
   cacheMiddleware('admin_all_bookings', 120),
-  bookingController.getAllBookings
+  bookingController.getAllBookings,
 );
 
 // Detail booking admin
@@ -76,7 +76,7 @@ router.get(
   '/admin/bookings/:id',
   superAdminAuth(),
   cacheMiddleware('admin_booking_detail', 60),
-  bookingController.getBookingById
+  bookingController.getBookingById,
 );
 
 // Update pembayaran booking
@@ -90,7 +90,7 @@ router.get(
   '/admin/bookings/stats',
   superAdminAuth(),
   cacheMiddleware('admin_booking_stats', 300),
-  bookingController.getBookingStats
+  bookingController.getBookingStats,
 );
 
 // Laporan pendapatan untuk owner

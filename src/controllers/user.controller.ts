@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import prisma from '../config/services/database';
 import { hashPassword } from '../utils/password.utils';
 import { invalidateUserCache } from '../utils/cache/cacheInvalidation.utils';
@@ -214,7 +214,7 @@ export const getUsers = async (req: User, res: Response): Promise<void> => {
 
     // Ambil user unik dari bookings
     const uniqueUsers = Array.from(
-      new Map(bookings.map((booking: { userId: number; user: any }) => [booking.userId, booking.user])).values()
+      new Map(bookings.map((booking: { userId: number; user: any }) => [booking.userId, booking.user])).values(),
     );
 
     res.status(200).json({

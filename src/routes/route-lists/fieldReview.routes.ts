@@ -19,7 +19,7 @@ router.post(
     allowedRoles: ['user'],
   }),
   parseIds,
-  createFieldReview
+  createFieldReview,
 );
 
 router.put(
@@ -29,7 +29,7 @@ router.put(
     ownerOnly: true,
     resourceName: 'fieldReview',
   }),
-  updateFieldReview
+  updateFieldReview,
 );
 
 router.delete(
@@ -39,7 +39,7 @@ router.delete(
     ownerOnly: true,
     resourceName: 'fieldReview',
   }),
-  deleteFieldReview
+  deleteFieldReview,
 );
 
 export default router;

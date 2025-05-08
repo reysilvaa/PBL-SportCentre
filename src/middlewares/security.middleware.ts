@@ -33,21 +33,21 @@ const createRateLimiter = (windowMs: number, max: number, message: string) => {
 export const loginRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
   30,
-  'Terlalu banyak percobaan login, coba lagi nanti'
+  'Terlalu banyak percobaan login, coba lagi nanti',
 );
 
 // Rate limiter untuk endpoint register
 export const registerRateLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 jam
   15,
-  'Terlalu banyak percobaan register, coba lagi nanti'
+  'Terlalu banyak percobaan register, coba lagi nanti',
 );
 
 // Rate limiter untuk endpoint booking
 export const bookingRateLimiter = createRateLimiter(
   10 * 60 * 1000, // 10 menit
   30,
-  'Terlalu banyak percobaan booking, coba lagi nanti'
+  'Terlalu banyak percobaan booking, coba lagi nanti',
 );
 
 /**
@@ -212,7 +212,7 @@ export const resetFailedBookingCounter = async (userId: number) => {
 export const apiRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
   1000, // Ditingkatkan dari 500 ke 1000 permintaan per IP
-  'Terlalu banyak permintaan, coba lagi nanti'
+  'Terlalu banyak permintaan, coba lagi nanti',
 );
 
 /**
@@ -221,7 +221,7 @@ export const apiRateLimiter = createRateLimiter(
 export const globalRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
   2000, // Ditingkatkan dari 1000 ke 2000 permintaan per IP
-  'Terlalu banyak permintaan, coba lagi nanti'
+  'Terlalu banyak permintaan, coba lagi nanti',
 );
 
 /**

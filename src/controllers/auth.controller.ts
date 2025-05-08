@@ -12,7 +12,7 @@ import {
   getAuthToken,
 } from '../utils/auth.utils';
 import { hashPassword, verifyPassword } from '../utils/password.utils';
-import { generateToken, verifyToken } from '../utils/jwt.utils';
+import { verifyToken } from '../utils/jwt.utils';
 
 // Fungsi untuk generate token
 const generateTokens = (user: { id: number; email: string; role: string }) => {
@@ -24,7 +24,7 @@ const generateTokens = (user: { id: number; email: string; role: string }) => {
       role: user.role,
     },
     config.jwtSecret,
-    { expiresIn: '1h' }
+    { expiresIn: '1h' },
   );
 
   // Refresh token (masa aktif panjang)

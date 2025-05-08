@@ -12,7 +12,7 @@ export const createBookingSchema = z.object({
     ],
     {
       message: 'ID pengguna harus berupa angka',
-    }
+    },
   ),
   fieldId: z.union(
     [
@@ -24,7 +24,7 @@ export const createBookingSchema = z.object({
     ],
     {
       message: 'ID lapangan harus berupa angka',
-    }
+    },
   ),
   bookingDate: z
     .string({

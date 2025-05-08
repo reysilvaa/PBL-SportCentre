@@ -12,7 +12,7 @@ export const SOCKET_CONFIG = {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
+   
   var io: SocketServer | any;
 }
 
@@ -107,7 +107,7 @@ export function setupNamespaceEvents(namespace: Namespace): void {
 
     socket.on('disconnect', (reason) => {
       console.log(
-        `Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`
+        `Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`,
       );
     });
 

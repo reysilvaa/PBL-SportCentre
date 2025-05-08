@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import { Application } from 'express';
 import compression from 'compression';
 import cluster from 'cluster';
 import { Server as SocketServer } from 'socket.io';

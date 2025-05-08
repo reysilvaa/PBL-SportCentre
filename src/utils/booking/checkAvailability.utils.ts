@@ -1,5 +1,4 @@
 import prisma from '../../config/services/database';
-import { addHours } from 'date-fns';
 
 // Types
 type TimeSlot = { start: Date; end: Date };
@@ -10,6 +9,7 @@ type FieldAvailability = {
   isAvailable: boolean;
   availableTimeSlots?: TimeSlot[];
   currentDate?: Date;
+
 };
 
 /**
@@ -39,7 +39,7 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
     'Searching for bookings between:',
     startOfDay.toISOString(),
     'and',
-    endOfDay.toISOString()
+    endOfDay.toISOString(),
   );
 
   const whereClause: any = {
@@ -84,7 +84,7 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
         date: b.bookingDate,
         start: b.startTime,
         end: b.endTime,
-      }))
+      })),
     );
 
     // Debug - Payment status
@@ -96,7 +96,7 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
               status: booking.payment.status,
               expires: booking.payment.expiresDate,
             }
-          : 'No payment record'
+          : 'No payment record',
       );
     });
 
@@ -157,7 +157,7 @@ const generateHourlyTimeSlots = (date: Date): TimeSlot[] => {
 export const calculateAvailableTimeSlots = (
   openingTime: Date,
   closingTime: Date,
-  bookedSlots: TimeSlot[]
+  bookedSlots: TimeSlot[],
 ): TimeSlot[] => {
   if (bookedSlots.length === 0) {
     return [{ start: openingTime, end: closingTime }];
@@ -195,7 +195,7 @@ export const isFieldAvailable = async (
   fieldId: number,
   bookingDate: Date,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
 ): Promise<boolean> => {
   console.log('🔍 Checking availability for Field ID:', fieldId);
   console.log('📆 Booking Date:', bookingDate);
@@ -211,7 +211,7 @@ export const isFieldAvailable = async (
     console.log('⚠️ Detail booking yang overlapping:');
     overlappingBookings.forEach((booking) => {
       console.log(
-        `  - Booking #${booking.id}, status: ${booking.payment?.status}, expires: ${booking.payment?.expiresDate ? booking.payment.expiresDate : 'No expiry'}`
+        `  - Booking #${booking.id}, status: ${booking.payment?.status}, expires: ${booking.payment?.expiresDate ? booking.payment.expiresDate : 'No expiry'}`,
       );
       console.log(`    Time: ${booking.startTime} - ${booking.endTime}`);
     });
@@ -260,7 +260,7 @@ export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> =
         end: b.endTime,
         paymentStatus: b.payment?.status,
         expires: b.payment?.expiresDate,
-      }))
+      })),
     );
 
     // Periksa setiap slot per jam
@@ -288,7 +288,7 @@ export const getAvailableTimeSlots = async (fieldId: number, date: Date): Promis
   targetDate.setHours(0, 0, 0, 0);
 
   console.log(
-    `🔍 Mencari slot tersedia untuk lapangan #${fieldId} pada tanggal: ${targetDate.toISOString().split('T')[0]}`
+    `🔍 Mencari slot tersedia untuk lapangan #${fieldId} pada tanggal: ${targetDate.toISOString().split('T')[0]}`,
   );
 
   // Dapatkan semua booking valid untuk field ini pada tanggal tersebut
@@ -309,7 +309,7 @@ export const getAvailableTimeSlots = async (fieldId: number, date: Date): Promis
     const bookingEnd = new Date(booking.endTime);
 
     console.log(
-      `  - Booking: ${bookingStart.toLocaleTimeString()} - ${bookingEnd.toLocaleTimeString()}`
+      `  - Booking: ${bookingStart.toLocaleTimeString()} - ${bookingEnd.toLocaleTimeString()}`,
     );
 
     return {
@@ -323,7 +323,7 @@ export const getAvailableTimeSlots = async (fieldId: number, date: Date): Promis
   console.log(`✅ Tersedia ${availableSlots.length} slot waktu:`);
   availableSlots.forEach((slot, index) => {
     console.log(
-      `  ${index + 1}. ${slot.start.toLocaleTimeString()} - ${slot.end.toLocaleTimeString()}`
+      `  ${index + 1}. ${slot.start.toLocaleTimeString()} - ${slot.end.toLocaleTimeString()}`,
     );
   });
 

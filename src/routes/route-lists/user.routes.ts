@@ -11,7 +11,7 @@ router.get(
   '/',
   auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
   cacheMiddleware('users_unified', 300),
-  userController.getUsers
+  userController.getUsers,
 );
 
 // Mendapatkan profil pengguna (semua role, tapi hanya milik sendiri kecuali super admin)
@@ -30,7 +30,7 @@ router.put('/:id', auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_c
 router.delete(
   '/:id',
   auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
-  userController.deleteUser
+  userController.deleteUser,
 );
 
 // Mempertahankan backward compatibility untuk pendekatan lama

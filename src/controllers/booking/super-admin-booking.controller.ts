@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/services/database';
 import { updateBookingPaymentSchema } from '../../zod-schemas/bookingPayment.schema';
-import { emitBookingEvents, sendErrorResponse } from '../../utils/booking/booking.utils';
+import { emitBookingEvents } from '../../utils/booking/booking.utils';
 import { invalidateBookingCache, invalidatePaymentCache } from '../../utils/cache/cacheInvalidation.utils';
 
 /**
@@ -124,7 +124,7 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
       bookingId,
       booking.field.id,
       booking.field.branchId,
-      booking.userId
+      booking.userId,
     );
 
     res.status(200).json({
@@ -276,7 +276,7 @@ export const getBookingStats = async (req: Request, res: Response): Promise<void
           }
           return acc;
         },
-        {} as Record<number, { id: number; name: string; total: number }>
+        {} as Record<number, { id: number; name: string; total: number }>,
       );
 
       return {

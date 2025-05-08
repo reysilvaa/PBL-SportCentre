@@ -111,7 +111,7 @@ export const deleteCachedData = async (key: string): Promise<number> => {
  */
 export const deleteCachedDataByPattern = async (
   pattern: string,
-  verbose: boolean = false
+  verbose: boolean = false,
 ): Promise<number> => {
   try {
     // Periksa koneksi Redis sebelum akses
@@ -147,7 +147,7 @@ export const deleteCachedDataByPattern = async (
       deletedCount = await redisClient.del(uniqueKeys);
       if (verbose) {
         console.log(`[CACHE] Delete by pattern: ${pattern} - Deleted ${deletedCount} keys`);
-        console.log(`[CACHE] Deleted keys:`, uniqueKeys);
+        console.log('[CACHE] Deleted keys:', uniqueKeys);
       } else {
         console.log(`[CACHE] Delete by pattern: ${pattern} - Deleted ${deletedCount} keys`);
       }
@@ -174,7 +174,7 @@ export const clearCache = async (): Promise<void> => {
     }
 
     await redisClient.flushAll();
-    console.log(`[CACHE] Clear all cache`);
+    console.log('[CACHE] Clear all cache');
   } catch (error) {
     console.error('[CACHE ERROR] Error clearing Redis cache:', error);
   }

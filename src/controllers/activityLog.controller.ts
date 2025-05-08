@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { createActivityLogSchema } from '../zod-schemas/activityLog.schema';
 import { ActivityLogService } from '../utils/activityLog/activityLog.utils';
 import { invalidateActivityLogCache } from '../utils/cache/cacheInvalidation.utils';
@@ -74,7 +74,7 @@ export const createActivityLog = async (req: User, res: Response): Promise<void>
       action,
       details,
       relatedId === null ? undefined : relatedId,
-      ipAddress
+      ipAddress,
     );
 
     // Hapus cache activity logs
@@ -122,7 +122,7 @@ export const deleteActivityLog = async (req: User, res: Response): Promise<void>
       'DELETE_ACTIVITY_LOG',
       `Menghapus log aktivitas dengan ID ${logId}`,
       logId,
-      ipAddress
+      ipAddress,
     );
 
     res.status(200).json({

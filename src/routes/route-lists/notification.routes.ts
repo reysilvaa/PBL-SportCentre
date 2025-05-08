@@ -11,7 +11,7 @@ router.get(
   auth({
     allowedRoles: ['user', 'admin_cabang', 'owner_cabang', 'super_admin'],
   }),
-  getNotifications
+  getNotifications,
 );
 
 router.patch(
@@ -19,7 +19,7 @@ router.patch(
   auth({
     allowedRoles: ['user', 'admin_cabang', 'owner_cabang', 'super_admin'],
   }),
-  readNotification
+  readNotification,
 );
 
 export default router;

@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import { getIO } from '../config/server/socket';
 import {
-  isFieldAvailable,
   getAllFieldsAvailability,
-  getAvailableTimeSlots,
 } from '../utils/booking/checkAvailability.utils';
 import { fieldAvailabilityQueue } from '../config/services/queue';
 
@@ -59,7 +57,7 @@ export const startFieldAvailabilityUpdates = (): void => {
     {
       jobId: 'availability-recurring',
       repeat: { cron: '*/1 * * * *' },
-    }
+    },
   );
 
   console.log('🚀 Field availability Bull Queue job started');

@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { DateUtils } from '../../utils/variables/date.utils';
 
 /**
  * Validates that the provided start and end dates are valid and that start date is before end date
@@ -65,7 +64,7 @@ export const validateDateRange = (startDate: string, endDate: string, res: Respo
 export const validateId = (
   id: string | undefined,
   res: Response,
-  paramName: string = 'ID'
+  paramName: string = 'ID',
 ): boolean => {
   if (!id) {
     return true; // ID is optional
@@ -91,7 +90,7 @@ export const validateId = (
 export const validatePagination = (
   page: string | undefined,
   limit: string | undefined,
-  res: Response
+  res: Response,
 ): boolean => {
   if (!page && !limit) {
     return true; // Pagination is optional
@@ -123,7 +122,7 @@ export const validatePagination = (
 export const validateRequiredString = (
   value: string | undefined,
   res: Response,
-  paramName: string
+  paramName: string,
 ): boolean => {
   if (!value || value.trim() === '') {
     res.status(400).json({ error: `${paramName} is required` });
