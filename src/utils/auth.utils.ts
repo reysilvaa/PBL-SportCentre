@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import { config } from '../config/app/env';
+import redisClient from '../config/services/redis';
+
+// ==================== COOKIE MANAGEMENT ====================
 
 /**
  * Mengatur cookie pada response
@@ -78,6 +81,8 @@ export const clearCookie = (
   res.clearCookie(name, cookieOptions);
 };
 
+// ==================== TOKEN MANAGEMENT ====================
+
 /**
  * Set cookie untuk autentikasi (token)
  * @param res Express response object
@@ -89,8 +94,8 @@ export const setAuthCookie = (res: Response, token: string) => {
     signed: true, // Ditandatangani untuk verifikasi
     maxAge: config.cookies.maxAge,
     secure: config.cookies.secure,
-    sameSite: config.cookies.sameSite, // Gunakan lax di dev, none di prod dengan secure:true
-    path: '/', // Tersedia di semua path aplikasi
+    sameSite: config.cookies.sameSite,
+    path: '/',
   });
 };
 
@@ -149,49 +154,83 @@ export const clearRefreshTokenCookie = (res: Response) => {
 };
 
 /**
- * Set cookie untuk preferensi user
- * @param res Express response object
- * @param preferences Object preferensi user
+ * Memeriksa apakah cookie dengan nama tertentu ada
+ * @param name Nama cookie yang dicari
+ * @returns boolean true jika cookie ada, false jika tidak
  */
-export const setUserPreferencesCookie = (
-  res: Response,
-  preferences: object
-) => {
-  setCookie(res, 'user_preferences', JSON.stringify(preferences), {
-    httpOnly: false, // Dapat diakses oleh JavaScript client-side
-    signed: false,
-    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 tahun
-    secure: config.cookies.secure,
-    sameSite: config.cookies.sameSite
-  });
+export const hasCookie = (name: string): boolean => {
+  if (typeof document === 'undefined') {
+    return false; // Jika berjalan di server, tidak ada cookie
+  }
+  
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i].trim();
+    if (cookie.startsWith(name + '=')) {
+      return true;
+    }
+  }
+  return false;
 };
 
 /**
- * Mendapatkan preferensi user dari cookies
- * @param req Express request object
+ * Cek apakah user memiliki cookie autentikasi
+ * @returns boolean true jika ada cookie auth, false jika tidak
  */
-export const getUserPreferences = (req: Request) => {
-  const prefCookie = getCookie(req, 'user_preferences');
-  if (!prefCookie) return {};
+export const hasAuthCookie = (): boolean => {
+  return hasCookie('auth_token') || hasCookie('refresh_token');
+};
 
+// ==================== TOKEN BLACKLIST ====================
+
+// Prefix untuk kunci blacklist token di Redis
+const BLACKLIST_PREFIX = 'token_blacklist:';
+const DEFAULT_TTL = 24 * 60 * 60; // Default TTL: 24 jam
+
+/**
+ * Menambahkan token ke blacklist
+ * @param token Token yang akan di-blacklist
+ * @param expiryInSeconds Waktu dalam detik token tetap di blacklist (opsional)
+ */
+export const blacklistToken = async (
+  token: string,
+  expiryInSeconds?: number
+): Promise<void> => {
+  // Gunakan default TTL jika expiryInSeconds tidak diberikan
+  const ttl = expiryInSeconds || DEFAULT_TTL;
   try {
-    return JSON.parse(prefCookie);
+    await redisClient.setEx(`${BLACKLIST_PREFIX}${token}`, ttl, '1');
   } catch (error) {
-    console.error('Error parsing user preferences cookie:', error);
-    return {};
+    console.error('Error blacklisting token:', error);
   }
 };
 
-export default {
-  setCookie,
-  getCookie,
-  clearCookie,
-  setAuthCookie,
-  getAuthToken,
-  clearAuthCookie,
-  setRefreshTokenCookie,
-  getRefreshToken,
-  clearRefreshTokenCookie,
-  setUserPreferencesCookie,
-  getUserPreferences,
+/**
+ * Memeriksa apakah token ada dalam blacklist
+ * @param token Token yang akan diperiksa
+ * @returns Boolean
+ */
+export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
+  try {
+    const exists = await redisClient.exists(`${BLACKLIST_PREFIX}${token}`);
+    return exists === 1;
+  } catch (error) {
+    console.error('Error checking blacklisted token:', error);
+    return false;
+  }
 };
+
+/**
+ * Menghapus token dari blacklist
+ * @param token Token yang akan dihapus dari blacklist
+ * @returns Boolean
+ */
+export const removeFromBlacklist = async (token: string): Promise<boolean> => {
+  try {
+    const result = await redisClient.del(`${BLACKLIST_PREFIX}${token}`);
+    return result > 0;
+  } catch (error) {
+    console.error('Error removing token from blacklist:', error);
+    return false;
+  }
+}; 

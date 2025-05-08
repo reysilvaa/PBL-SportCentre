@@ -19,7 +19,7 @@ import { setupSwagger } from '../swagger/swagger.config';
 import { 
   startBookingCleanupJob, 
   setupBookingCleanupProcessor 
-} from '../../utils/booking/bookingCleanup.utils';
+} from '../../utils/booking/booking.utils';
 import { initializeCloudinary } from '../services/cloudinary';
 
 /**

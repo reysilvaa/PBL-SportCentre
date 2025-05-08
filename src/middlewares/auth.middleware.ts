@@ -3,8 +3,9 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/services/database';
 import { config } from '../config/app/env';
-import { getAuthToken } from '../utils/cookies.utils';
-import { isTokenBlacklisted } from '../utils/token-blacklist.utils';
+import { getAuthToken } from '../utils/auth.utils';
+import { isTokenBlacklisted } from '../utils/auth.utils';
+import { verifyToken } from '../utils/jwt.utils';
 
 /**
  * Middleware Autentikasi & Otorisasi Terpadu
@@ -91,11 +92,20 @@ export const auth = (options: AuthOptions = {}) => {
 
       // Verifikasi token
       try {
-        const decoded = jwt.verify(token, config.jwtSecret) as {
+        const decodedToken = verifyToken(token);
+        
+        if (!decodedToken) {
+          res.status(401).json({
+            status: false,
+            message: 'Unauthorized: Token tidak valid',
+          });
+          return;
+        }
+        
+        req.user = decodedToken as {
           id: number;
           role: string;
         };
-        req.user = decoded;
       } catch (error) {
         // Jika token tidak valid karena expired, tambahkan pesan khusus
         if (error instanceof jwt.TokenExpiredError) {

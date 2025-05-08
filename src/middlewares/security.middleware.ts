@@ -10,9 +10,9 @@ const BLOCKED_USER_PREFIX = 'blocked_user:';
 const BLOCKED_IP_PREFIX = 'blocked_ip:';
 
 // Konfigurasi untuk jumlah maksimum percobaan
-const MAX_FAILED_BOOKINGS = 5; // Maksimum booking gagal/pending dalam periode
-const BLOCK_USER_TIME = 30 * 60; // Block user selama 30 menit (dalam detik)
-const BLOCK_IP_TIME = 15 * 60; // Block IP selama 15 menit (dalam detik)
+const MAX_FAILED_BOOKINGS = 10; // Ditingkatkan dari 5 ke 10 booking gagal/pending dalam periode
+const BLOCK_USER_TIME = 15 * 60; // Dikurangi dari 30 ke 15 menit (dalam detik)
+const BLOCK_IP_TIME = 10 * 60; // Dikurangi dari 15 ke 10 menit (dalam detik)
 
 /**
  * Fungsi helper untuk membuat rate limiter dengan konfigurasi yang umum
@@ -32,21 +32,21 @@ const createRateLimiter = (windowMs: number, max: number, message: string) => {
 // Rate limiter untuk endpoint login
 export const loginRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
-  10, // 10 permintaan per IP
+  30, 
   'Terlalu banyak percobaan login, coba lagi nanti'
 );
 
 // Rate limiter untuk endpoint register
 export const registerRateLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 jam
-  5, // 5 permintaan per IP
+  15,
   'Terlalu banyak percobaan register, coba lagi nanti'
 );
 
 // Rate limiter untuk endpoint booking
 export const bookingRateLimiter = createRateLimiter(
   10 * 60 * 1000, // 10 menit
-  10, // 10 permintaan per IP
+  30,
   'Terlalu banyak percobaan booking, coba lagi nanti'
 );
 
@@ -219,7 +219,7 @@ export const resetFailedBookingCounter = async (userId: number) => {
 // Rate limiter untuk API
 export const apiRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
-  100, // 100 permintaan per IP
+  1000, // Ditingkatkan dari 500 ke 1000 permintaan per IP
   'Terlalu banyak permintaan, coba lagi nanti'
 );
 
@@ -228,7 +228,7 @@ export const apiRateLimiter = createRateLimiter(
  */
 export const globalRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
-  500, // 500 permintaan per IP
+  2000, // Ditingkatkan dari 1000 ke 2000 permintaan per IP
   'Terlalu banyak permintaan, coba lagi nanti'
 );
 
@@ -292,14 +292,6 @@ export const addSecurityHeaders = (
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // Tambahkan Cache-Control untuk konten statis
-  if (req.method === 'GET') {
-    res.setHeader(
-      'Cache-Control',
-      'no-store, no-cache, must-revalidate, proxy-revalidate'
-    );
-  }
-
   next();
 };
 
@@ -328,18 +320,3 @@ export const preventParamPollution = (
  */
 import helmet from 'helmet';
 export const helmetMiddleware = helmet();
-
-export default {
-  loginRateLimiter,
-  registerRateLimiter,
-  bookingRateLimiter,
-  checkBlockedUser,
-  trackFailedBooking,
-  resetFailedBookingCounter,
-  apiRateLimiter,
-  globalRateLimiter,
-  sanitizeData,
-  addSecurityHeaders,
-  preventParamPollution,
-  helmetMiddleware,
-};

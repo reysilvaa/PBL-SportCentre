@@ -6,6 +6,13 @@ import { logger } from '../app/logger';
 import { setCacheControlHeaders } from '../../utils/cache.utils';
 import { corsConfig } from './cors';
 
+/**
+ * Setup middleware dasar untuk aplikasi
+ * 
+ * Catatan:
+ * - Middleware cache di sini menangani pengaturan Cache-Control untuk semua respons
+ * - Security headers diatur di setupSecurityMiddlewares terpisah
+ */
 export const setupMiddlewares = (app: Application): void => {
   // Middleware dasar
   app.use(cors(corsConfig()));

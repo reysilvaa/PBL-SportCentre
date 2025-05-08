@@ -1,17 +1,18 @@
 import { Request, Response } from 'express';
-import prisma from '../config/services/database';
 import jwt from 'jsonwebtoken';
+import prisma from '../config/services/database';
 import { config } from '../config/app/env';
-import { registerSchema, loginSchema } from '../zod-schemas/auth.schema';
-import { blacklistToken } from '../utils/token-blacklist.utils';
+import { loginSchema, registerSchema } from '../zod-schemas/auth.schema';
 import {
+  blacklistToken,
   setAuthCookie,
-  clearAuthCookie,
   setRefreshTokenCookie,
+  clearAuthCookie,
   clearRefreshTokenCookie,
   getAuthToken,
-} from '../utils/cookies.utils';
+} from '../utils/auth.utils';
 import { hashPassword, verifyPassword } from '../utils/password.utils';
+import { generateToken, verifyToken } from '../utils/jwt.utils';
 
 // Fungsi untuk generate token
 const generateTokens = (user: { id: number; email: string; role: string }) => {
@@ -144,17 +145,19 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     if (token) {
       try {
         // Decode token untuk mendapatkan waktu expired
-        const decoded = jwt.verify(token, config.jwtSecret) as { exp: number };
+        const decoded = verifyToken(token) as { exp: number };
 
-        // Hitung sisa waktu token (dalam detik)
-        const now = Math.floor(Date.now() / 1000);
-        const expiryInSeconds = decoded.exp - now;
+        if (decoded) {
+          // Hitung sisa waktu token (dalam detik)
+          const now = Math.floor(Date.now() / 1000);
+          const expiryInSeconds = decoded.exp - now;
 
-        // Tambahkan token ke blacklist dengan waktu expired yang sama
-        await blacklistToken(
-          token,
-          expiryInSeconds > 0 ? expiryInSeconds : undefined
-        );
+          // Tambahkan token ke blacklist dengan waktu expired yang sama
+          await blacklistToken(
+            token,
+            expiryInSeconds > 0 ? expiryInSeconds : undefined
+          );
+        }
       } catch (error) {
         console.error('Error adding token to blacklist:', error);
         // Lanjutkan meskipun ada error dalam menambahkan token ke blacklist
@@ -188,9 +191,16 @@ export const refreshToken = async (
 
     // Verifikasi refresh token
     try {
-      const decoded = jwt.verify(refreshToken, config.jwtSecret) as {
+      const decoded = verifyToken(refreshToken) as {
         id: number;
       };
+
+      if (!decoded) {
+        clearAuthCookie(res);
+        clearRefreshTokenCookie(res);
+        res.status(401).json({ error: 'Refresh token tidak valid' });
+        return;
+      }
 
       // Cari user berdasarkan id dari token
       const user = await prisma.user.findUnique({
@@ -239,17 +249,28 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
     const token = cookieToken || headerToken;
 
     if (!token) {
-      res.status(401).json({ error: 'Tidak terautentikasi' });
+      res.status(401).json({ 
+        status: false,
+        message: 'Tidak terautentikasi',
+        authenticated: false
+      });
       return;
     }
 
     try {
       // Verifikasi token
-      const decoded = jwt.verify(token, config.jwtSecret) as {
+      const decoded = verifyToken(token) as {
         id: number;
         email: string;
         role: string;
       };
+
+      if (!decoded) {
+        clearAuthCookie(res);
+        clearRefreshTokenCookie(res);
+        res.status(401).json({ error: 'Token tidak valid' });
+        return;
+      }
 
       // Ambil data user
       const user = await prisma.user.findUnique({

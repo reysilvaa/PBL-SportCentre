@@ -1,6 +1,6 @@
 import http from 'http';
 import { cleanupFieldAvailabilityUpdates } from '../controllers/availability.controller';
-import { stopBookingCleanupJob } from './booking/bookingCleanup.utils';
+import { stopBookingCleanupJob } from './booking/booking.utils';
 import redisClient from '../config/services/redis';
 import prisma from '../config/services/database';
 

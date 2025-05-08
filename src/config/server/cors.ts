@@ -18,9 +18,6 @@ export const corsConfig = (): CorsOptions => {
   // Log allowed origins for debugging
   console.log('CORS Allowed Origins:', allowedOrigins);
 
-  // Menghapus wildcard (*) untuk keamanan
-  // Gunakan array domain yang spesifik
-
   return {
     origin: (origin, callback) => {
       // Izinkan request tanpa origin (seperti aplikasi mobile atau Postman)
@@ -47,4 +44,18 @@ export const corsConfig = (): CorsOptions => {
     preflightContinue: false,
     optionsSuccessStatus: 204
   };
-}; 
+};
+
+/**
+ * Mendapatkan CORS options sederhana untuk keamanan yang dapat digunakan secara langsung
+ * Ini hanya digunakan untuk fallback
+ */
+export const getSimpleCorsOptions = (): CorsOptions => {
+  return {
+    origin: config.urls.frontend,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400,
+  };
+};

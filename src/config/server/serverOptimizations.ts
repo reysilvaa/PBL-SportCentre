@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import compression from 'compression';
 import cluster from 'cluster';
 import { Server as SocketServer } from 'socket.io';
+import { SOCKET_CONFIG } from './socket';
 
 /**
  * Konfigurasi pengoptimalan memori
@@ -32,17 +33,17 @@ export const setupPerformanceOptimizations = (app: Application): void => {
  * Setup optimasi socket
  */
 export const setupSocketOptimizations = (io: SocketServer): void => {
-  // Optimasi Socket.IO
-  (io as any).engine.maxPayload = 50000; // Turunkan batas payload
-  (io as any).engine.pingTimeout = 20000; // Turunkan timeout
-  (io as any).engine.pingInterval = 25000; // Tingkatkan interval
+  // Optimasi Socket.IO menggunakan konfigurasi standar
+  (io as any).engine.maxPayload = SOCKET_CONFIG.maxPayload;
+  (io as any).engine.pingTimeout = SOCKET_CONFIG.pingTimeout;
+  (io as any).engine.pingInterval = SOCKET_CONFIG.pingInterval;
 };
 
 /**
  * Setup cluster untuk multi-core processing di PM2
  */
 export const setupCluster = (): void => {
-  if (cluster.isMaster) {
+  if (cluster.isPrimary) {
     const numCPUs = require('os').cpus().length;
     for (let i = 0; i < Math.min(numCPUs, 2); i++) {
       cluster.fork();

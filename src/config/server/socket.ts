@@ -4,6 +4,13 @@ import { Namespace } from 'socket.io';
 import { auth } from '../../middlewares/auth.middleware';
 import { corsConfig } from './cors';
 
+// Definisikan konfigurasi Socket yang standar
+export const SOCKET_CONFIG = {
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  maxPayload: 50000
+};
+
 declare global {
   // eslint-disable-next-line no-var
   var io: SocketServer | any;
@@ -18,9 +25,9 @@ export function initializeSocketIO(server: HttpServer): SocketServer {
   if (!global.io) {
     global.io = new SocketServer(server, {
       cors: corsConfig(),
-      // Increase ping timeout and interval for better connection stability
-      pingTimeout: 60000,
-      pingInterval: 25000,
+      // Gunakan konfigurasi standar
+      pingTimeout: SOCKET_CONFIG.pingTimeout,
+      pingInterval: SOCKET_CONFIG.pingInterval,
     });
 
     console.log('Socket.IO server initialized');
