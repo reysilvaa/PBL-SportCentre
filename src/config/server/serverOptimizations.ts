@@ -1,7 +1,5 @@
 import express, { Application } from 'express';
 import compression from 'compression';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import cluster from 'cluster';
 import { Server as SocketServer } from 'socket.io';
 
@@ -23,26 +21,11 @@ export const setupMemoryOptimization = (): void => {
 };
 
 /**
- * Rate limiting untuk aplikasi
- */
-export const createRateLimiter = () => {
-  return rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 menit
-    max: 100, // limit setiap IP ke 100 request per windowMs
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    message: 'Terlalu banyak permintaan dari IP ini, coba lagi nanti',
-  });
-};
-
-/**
  * Setup optimasi performa untuk aplikasi
  */
 export const setupPerformanceOptimizations = (app: Application): void => {
   // Middleware optimasi performa
   app.use(compression()); // Kompresi respons HTTP
-  app.use(helmet()); // Keamanan header
-  app.use(createRateLimiter()); // Rate limiting
 };
 
 /**
@@ -65,21 +48,6 @@ export const setupCluster = (): void => {
       cluster.fork();
     }
   }
-};
-
-/**
- * Setup HTTP caching untuk API routes (browser caching)
- */
-export const setupHttpCaching = () => {
-  return (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    // Cache selama 5 menit
-    res.set('Cache-Control', 'public, max-age=300');
-    next();
-  };
 };
 
 /**

@@ -1,15 +1,14 @@
 import express, { Application } from 'express';
 import {
   config,
-  setupHttpCaching,
   initializeApplication,
   startServer,
+  setupCacheControl
 } from './config';
 import router from './routes/index.routes';
 import errorMiddleware from './middlewares/error.middleware';
 import { setupSwagger } from './config/swagger/swagger.config';
 import { setupGracefulShutdown } from './utils/gracefulShutdown.utils';
-
 
 // Inisialisasi aplikasi Express
 const app: Application = express();
@@ -25,7 +24,7 @@ const server = initializeApplication(app);
 setupSwagger(app);
 
 // Routes dengan HTTP browser caching (header Cache-Control)
-app.use('/api', setupHttpCaching(), router);
+app.use('/api', setupCacheControl(), router);
 
 // Error handling middleware
 app.use(errorMiddleware as express.ErrorRequestHandler);

@@ -2,6 +2,7 @@ import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { Namespace } from 'socket.io';
 import { auth } from '../../middlewares/auth.middleware';
+import { corsConfig } from './cors';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -16,12 +17,7 @@ declare global {
 export function initializeSocketIO(server: HttpServer): SocketServer {
   if (!global.io) {
     global.io = new SocketServer(server, {
-      cors: {
-        origin: '*',
-        // || process.env.FRONTEND_URL || 'http://localhost:3000'
-        methods: ['GET', 'POST'],
-        credentials: true,
-      },
+      cors: corsConfig(),
       // Increase ping timeout and interval for better connection stability
       pingTimeout: 60000,
       pingInterval: 25000,

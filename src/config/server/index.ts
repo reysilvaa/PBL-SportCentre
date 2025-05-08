@@ -26,25 +26,23 @@ import { initializeCloudinary } from '../services/cloudinary';
  * Inisialisasi semua komponen sebelum server dimulai
  */
 export const initializeApplication = (app: Application): http.Server => {
-  // Inisialisasi optimasi memori
-
-  //inisialisasi cloudinary
+  // Inisialisasi cloudinary
   initializeCloudinary();
 
-  //inisialisasi optimasi memori
+  // Inisialisasi optimasi memori
   setupMemoryOptimization();
 
   // Buat HTTP server
   const server = http.createServer(app);
-
-  // Setup optimasi performa
-  setupPerformanceOptimizations(app);
 
   // Setup security middlewares
   setupSecurityMiddlewares(app);
 
   // Setup basic middlewares
   setupMiddlewares(app);
+
+  // Setup optimasi performa
+  setupPerformanceOptimizations(app);
 
   setupSwagger(app);
 
