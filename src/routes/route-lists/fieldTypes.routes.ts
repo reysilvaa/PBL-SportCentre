@@ -18,7 +18,7 @@ router.get('/', cacheMiddleware('field_types', 600), getFieldTypes);
 router.post(
   '/',
   auth({
-    allowedRoles: ['super_admin']
+    allowedRoles: ['super_admin'],
   }),
   parseIds,
   createFieldType
@@ -27,7 +27,7 @@ router.post(
 router.put(
   '/:id',
   auth({
-    allowedRoles: ['super_admin']
+    allowedRoles: ['super_admin'],
   }),
   updateFieldType
 );
@@ -35,7 +35,7 @@ router.put(
 router.delete(
   '/:id',
   auth({
-    allowedRoles: ['super_admin']
+    allowedRoles: ['super_admin'],
   }),
   deleteFieldType
 );

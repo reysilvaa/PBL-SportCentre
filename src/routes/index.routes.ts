@@ -48,9 +48,9 @@ router.get('/cache-stats', auth({ allowedRoles: ['super_admin'] }), async (req, 
       do {
         const result = await redisClient.scan(cursor, {
           MATCH: `*${pattern}*`,
-          COUNT: 100
+          COUNT: 100,
         });
-        
+
         cursor = result.cursor;
         if (result.keys.length > 0) {
           keys.push(...result.keys);

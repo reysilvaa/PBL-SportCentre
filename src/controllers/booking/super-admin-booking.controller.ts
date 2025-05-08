@@ -1,24 +1,15 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/services/database';
 import { updateBookingPaymentSchema } from '../../zod-schemas/bookingPayment.schema';
-import { 
-  emitBookingEvents,
-  sendErrorResponse 
-} from '../../utils/booking/booking.utils';
-import { 
-  invalidateBookingCache, 
-  invalidatePaymentCache 
-} from '../../utils/cache/cacheInvalidation.utils';
+import { emitBookingEvents, sendErrorResponse } from '../../utils/booking/booking.utils';
+import { invalidateBookingCache, invalidatePaymentCache } from '../../utils/cache/cacheInvalidation.utils';
 
 /**
  * Super Admin Booking Controller
  * Berisi semua operasi booking yang hanya dapat dilakukan oleh super admin
  */
 
-export const getAllBookings = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getAllBookings = async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, branchId, status } = req.query;
 
@@ -61,17 +52,14 @@ export const getAllBookings = async (
     });
   } catch (error) {
     console.error('Error in getAllBookings:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
 
-export const updateBookingPayment = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateBookingPayment = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const bookingId = parseInt(id);
@@ -90,24 +78,24 @@ export const updateBookingPayment = async (
 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { 
+      include: {
         payment: true,
-        field: { select: { id: true, branchId: true } }
+        field: { select: { id: true, branchId: true } },
       },
     });
 
     if (!booking) {
-      res.status(404).json({ 
+      res.status(404).json({
         status: false,
-        message: 'Booking tidak ditemukan' 
+        message: 'Booking tidak ditemukan',
       });
       return;
     }
 
     if (!booking.payment) {
-      res.status(404).json({ 
+      res.status(404).json({
         status: false,
-        message: 'Pembayaran tidak ditemukan' 
+        message: 'Pembayaran tidak ditemukan',
       });
       return;
     }
@@ -117,12 +105,8 @@ export const updateBookingPayment = async (
       where: { id: booking.payment.id },
       data: {
         status: result.data.paymentStatus || booking.payment.status,
-        paymentMethod:
-          result.data.paymentMethod || booking.payment.paymentMethod,
-        amount:
-          result.data.amount !== undefined
-            ? result.data.amount
-            : booking.payment.amount,
+        paymentMethod: result.data.paymentMethod || booking.payment.paymentMethod,
+        amount: result.data.amount !== undefined ? result.data.amount : booking.payment.amount,
       },
     });
 
@@ -149,21 +133,18 @@ export const updateBookingPayment = async (
       data: {
         booking,
         payment: updatedPayment,
-      }
+      },
     });
   } catch (error) {
     console.error('Error in updateBookingPayment:', error);
-    res.status(400).json({ 
+    res.status(400).json({
       status: false,
-      message: 'Gagal memperbarui pembayaran booking' 
+      message: 'Gagal memperbarui pembayaran booking',
     });
   }
 };
 
-export const deleteBooking = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const deleteBooking = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const bookingId = parseInt(id);
@@ -171,16 +152,16 @@ export const deleteBooking = async (
     // First check if booking exists and has a payment
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { 
+      include: {
         payment: true,
-        field: { select: { id: true, branchId: true } }
+        field: { select: { id: true, branchId: true } },
       },
     });
 
     if (!booking) {
-      res.status(404).json({ 
+      res.status(404).json({
         status: false,
-        message: 'Booking tidak ditemukan' 
+        message: 'Booking tidak ditemukan',
       });
       return;
     }
@@ -218,17 +199,14 @@ export const deleteBooking = async (
     });
   } catch (error) {
     console.error('Error in deleteBooking:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Gagal menghapus booking' 
+      message: 'Gagal menghapus booking',
     });
   }
 };
 
-export const getBookingStats = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getBookingStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const stats = await prisma.$transaction(async (prisma) => {
       // Total bookings
@@ -285,18 +263,21 @@ export const getBookingStats = async (
         },
       });
 
-      const branchRevenue = revenueByBranch.reduce((acc, payment) => {
-        const branchId = payment.booking?.field?.branch?.id;
-        const branchName = payment.booking?.field?.branch?.name;
-        
-        if (branchId && branchName) {
-          if (!acc[branchId]) {
-            acc[branchId] = { id: branchId, name: branchName, total: 0 };
+      const branchRevenue = revenueByBranch.reduce(
+        (acc, payment) => {
+          const branchId = payment.booking?.field?.branch?.id;
+          const branchName = payment.booking?.field?.branch?.name;
+
+          if (branchId && branchName) {
+            if (!acc[branchId]) {
+              acc[branchId] = { id: branchId, name: branchName, total: 0 };
+            }
+            acc[branchId].total += Number(payment.amount);
           }
-          acc[branchId].total += Number(payment.amount);
-        }
-        return acc;
-      }, {} as Record<number, { id: number; name: string; total: number }>);
+          return acc;
+        },
+        {} as Record<number, { id: number; name: string; total: number }>
+      );
 
       return {
         totalBookings,
@@ -315,13 +296,13 @@ export const getBookingStats = async (
     res.status(200).json({
       status: true,
       message: 'Berhasil mendapatkan statistik booking',
-      data: stats
+      data: stats,
     });
   } catch (error) {
     console.error('Error in getBookingStats:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Gagal mendapatkan statistik booking' 
+      message: 'Gagal mendapatkan statistik booking',
     });
   }
-}; 
+};

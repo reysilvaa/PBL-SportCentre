@@ -47,13 +47,7 @@ export interface AuthOptions {
 }
 
 // Handler tipe untuk controller yang diautentikasi
-export type AuthenticatedRequestHandler = RequestHandler<
-  any,
-  any,
-  any,
-  any,
-  { user?: { id: number; role: string } }
->;
+export type AuthenticatedRequestHandler = RequestHandler<any, any, any, any, { user?: { id: number; role: string } }>;
 
 /**
  * Middleware utama untuk otentikasi dan otorisasi
@@ -93,7 +87,7 @@ export const auth = (options: AuthOptions = {}) => {
       // Verifikasi token
       try {
         const decodedToken = verifyToken(token);
-        
+
         if (!decodedToken) {
           res.status(401).json({
             status: false,
@@ -101,7 +95,7 @@ export const auth = (options: AuthOptions = {}) => {
           });
           return;
         }
-        
+
         req.user = decodedToken as {
           id: number;
           role: string;
@@ -126,7 +120,7 @@ export const auth = (options: AuthOptions = {}) => {
 
       // BAGIAN 2: PEMERIKSAAN ROLE - Dari role.middleware.ts dan auth.middleware.ts
       const { allowedRoles = [] } = options;
-      
+
       if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role)) {
         res.status(403).json({
           status: false,
@@ -147,7 +141,7 @@ export const auth = (options: AuthOptions = {}) => {
           status: 'active',
           createdAt: new Date(),
         };
-        
+
         // Jika super admin, skip pemeriksaan cabang dan lanjut
         if (!options.ownerOnly && !options.customCheck) {
           next();
@@ -200,16 +194,16 @@ export const auth = (options: AuthOptions = {}) => {
       if (options.ownerOnly) {
         const { id } = req.params;
         const resourceType = options.resourceName || 'resource';
-        
+
         if (id && req.user.role !== 'super_admin') {
           // Di sini perlu implementasi spesifik untuk masing-masing model/resource
           // Namun ini adalah pola umum yang bisa digunakan
           try {
             const resourceId = parseInt(id);
-            
+
             // Contoh implementasi untuk booking - perlu disesuaikan per resource
             const isOwner = await checkResourceOwnership(resourceType, resourceId, req.user.id);
-            
+
             if (!isOwner) {
               res.status(403).json({
                 status: false,
@@ -250,30 +244,26 @@ export const auth = (options: AuthOptions = {}) => {
 
 // Fungsi helper untuk pemeriksaan kepemilikan resource
 // Implementasi spesifik untuk tiap jenis resource
-async function checkResourceOwnership(
-  resourceType: string,
-  resourceId: number,
-  userId: number
-): Promise<boolean> {
+async function checkResourceOwnership(resourceType: string, resourceId: number, userId: number): Promise<boolean> {
   switch (resourceType.toLowerCase()) {
     case 'booking':
       const booking = await prisma.booking.findUnique({
         where: { id: resourceId },
       });
       return booking?.userId === userId;
-    
+
     case 'field':
       // Untuk field, cek apakah user adalah admin/owner dari branch yang memiliki field
       const field = await prisma.field.findUnique({
         where: { id: resourceId },
         include: { branch: true },
       });
-      
+
       if (!field) return false;
-      
+
       // Cek owner
       if (field.branch.ownerId === userId) return true;
-      
+
       // Cek admin
       const isAdmin = await prisma.branchAdmin.findFirst({
         where: {
@@ -281,17 +271,17 @@ async function checkResourceOwnership(
           userId: userId,
         },
       });
-      
+
       return !!isAdmin;
-    
+
     case 'branch':
       const branch = await prisma.branch.findUnique({
         where: { id: resourceId },
       });
-      
+
       // Cek owner
       if (branch?.ownerId === userId) return true;
-      
+
       // Cek admin
       const branchAdmin = await prisma.branchAdmin.findFirst({
         where: {
@@ -299,11 +289,11 @@ async function checkResourceOwnership(
           userId: userId,
         },
       });
-      
+
       return !!branchAdmin;
-    
+
     // Tambahkan kasus lain sesuai kebutuhan
-    
+
     default:
       // Default untuk resource yang tidak dikenal
       return false;

@@ -5,8 +5,14 @@ const DEFAULT_TTL = Number(process.env.CACHE_TTL || 30); // 30 detik (lebih resp
 
 // Daftar endpoint yang memerlukan data terbaru
 const DYNAMIC_ENDPOINTS = [
-  'branch', 'field', 'booking', 'payment', 
-  'notification', 'dashboard', 'stats', 'reports'
+  'branch',
+  'field',
+  'booking',
+  'payment',
+  'notification',
+  'dashboard',
+  'stats',
+  'reports',
 ];
 
 /**
@@ -16,15 +22,15 @@ const DYNAMIC_ENDPOINTS = [
  */
 export const setCacheControlHeaders = (req: any, res: any): void => {
   const url = req.originalUrl?.toLowerCase() || '';
-  
+
   // Untuk endpoint dinamis, cache hanya 2 detik
-  if (DYNAMIC_ENDPOINTS.some(endpoint => url.includes(endpoint))) {
+  if (DYNAMIC_ENDPOINTS.some((endpoint) => url.includes(endpoint))) {
     res.setHeader('Cache-Control', 'public, max-age=2');
   } else {
     // Untuk endpoint statis yang jarang berubah, izinkan cache lebih lama
     res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1800');
   }
-  
+
   // Tambahkan Vary header untuk mencegah berbagi cache antar pengguna berbeda
   res.setHeader('Vary', 'Accept, Authorization');
 };
@@ -40,10 +46,10 @@ export const getCachedData = async <T>(key: string): Promise<T | undefined> => {
       console.warn('[CACHE] Redis connection not open, skipping cache get');
       return undefined;
     }
-    
+
     const data = await redisClient.get(key);
     console.log(`[CACHE] Get: ${key} - ${data ? 'HIT' : 'MISS'}`);
-    return data ? JSON.parse(data) as T : undefined;
+    return data ? (JSON.parse(data) as T) : undefined;
   } catch (error) {
     console.error('[CACHE ERROR] Error getting data from Redis cache:', error);
     return undefined;
@@ -56,21 +62,17 @@ export const getCachedData = async <T>(key: string): Promise<T | undefined> => {
  * @param data Data to be stored
  * @param ttl Time-to-live in seconds, defaults to configuration TTL
  */
-export const setCachedData = async <T>(
-  key: string,
-  data: T,
-  ttl?: number
-): Promise<boolean> => {
+export const setCachedData = async <T>(key: string, data: T, ttl?: number): Promise<boolean> => {
   try {
     // Periksa koneksi Redis sebelum akses
     if (!redisClient.isOpen) {
       console.warn('[CACHE] Redis connection not open, skipping cache set');
       return false;
     }
-    
+
     const serializedData = JSON.stringify(data);
     const expiryTime = ttl || DEFAULT_TTL;
-    
+
     // Set dengan expiry
     await redisClient.setEx(key, expiryTime, serializedData);
     console.log(`[CACHE] Set: ${key} - TTL: ${expiryTime}s`);
@@ -92,7 +94,7 @@ export const deleteCachedData = async (key: string): Promise<number> => {
       console.warn('[CACHE] Redis connection not open, skipping cache delete');
       return 0;
     }
-    
+
     const result = await redisClient.del(key);
     console.log(`[CACHE] Delete: ${key} - Result: ${result}`);
     return result;
@@ -107,37 +109,40 @@ export const deleteCachedData = async (key: string): Promise<number> => {
  * @param pattern Pattern of keys to delete
  * @param verbose Whether to log detailed information
  */
-export const deleteCachedDataByPattern = async (pattern: string, verbose: boolean = false): Promise<number> => {
+export const deleteCachedDataByPattern = async (
+  pattern: string,
+  verbose: boolean = false
+): Promise<number> => {
   try {
     // Periksa koneksi Redis sebelum akses
     if (!redisClient.isOpen) {
       console.warn('[CACHE] Redis connection not open, skipping cache delete by pattern');
       return 0;
     }
-    
+
     // Jika tidak ada pattern, gunakan wildcard untuk mencocokkan semua key
     const actualPattern = pattern === '' ? '*' : `*${pattern}*`;
-    
+
     let cursor = 0;
     const keysToDelete: string[] = [];
-    
+
     // Scan dengan satu pattern saja untuk mengurangi operasi
     do {
       const result = await redisClient.scan(cursor, {
         MATCH: actualPattern,
-        COUNT: 100
+        COUNT: 100,
       });
-      
+
       cursor = result.cursor;
       if (result.keys.length > 0) {
         keysToDelete.push(...result.keys);
       }
     } while (cursor !== 0);
-    
+
     // Hapus keys yang ditemukan (tanpa duplikat)
     const uniqueKeys = [...new Set(keysToDelete)];
     let deletedCount = 0;
-    
+
     if (uniqueKeys.length > 0) {
       deletedCount = await redisClient.del(uniqueKeys);
       if (verbose) {
@@ -149,7 +154,7 @@ export const deleteCachedDataByPattern = async (pattern: string, verbose: boolea
     } else if (verbose) {
       console.log(`[CACHE] No keys found for pattern: ${pattern}`);
     }
-    
+
     return deletedCount;
   } catch (error) {
     console.error('[CACHE ERROR] Error deleting data by pattern from Redis cache:', error);
@@ -167,7 +172,7 @@ export const clearCache = async (): Promise<void> => {
       console.warn('[CACHE] Redis connection not open, skipping clear cache');
       return;
     }
-    
+
     await redisClient.flushAll();
     console.log(`[CACHE] Clear all cache`);
   } catch (error) {
@@ -183,24 +188,24 @@ export const clearCache = async (): Promise<void> => {
 export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
   // Gunakan TTL yang lebih rendah untuk semua endpoint
   const cacheTTL = ttl || DEFAULT_TTL; // Default 30 detik jika tidak diatur
-  
+
   return async (req: any, res: any, next: any) => {
     try {
       // Atur header cache control sesuai jenis endpoint
       setCacheControlHeaders(req, res);
-      
+
       // Skip cache completely if DISABLE_CACHE query param exists
       if (req.query.noCache === 'true' || req.query.refresh === 'true') {
         console.log(`[CACHE] Cache disabled via query param for: ${req.originalUrl}`);
         return next();
       }
-      
+
       // Skip cache untuk metode mutasi (POST, PUT, DELETE, PATCH)
       if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
         console.log(`[CACHE] Skipping cache for mutating method: ${req.method}`);
         return next();
       }
-      
+
       // Tambahkan timestamp ke key cache untuk mendukung versioning
       const timestamp = Math.floor(Date.now() / (cacheTTL * 1000)); // Versi cache berdasarkan TTL
       const key = `${keyPrefix}:${req.method}:${req.originalUrl}:v${timestamp}`;
@@ -219,7 +224,7 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
         const crypto = require('crypto');
         const etag = `W/"${crypto.createHash('md5').update(JSON.stringify(cachedData)).digest('hex')}"`;
         res.setHeader('ETag', etag);
-        
+
         // Periksa If-None-Match untuk validasi cache
         const clientEtag = req.headers['if-none-match'];
         if (clientEtag === etag) {
@@ -227,15 +232,15 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
           console.log(`[CACHE] ETag match, sending 304 Not Modified: ${key}`);
           return res.status(304).end();
         }
-        
+
         // Log hit ratio untuk monitoring
         console.log(`[CACHE] Serving from cache: ${key}`);
-        
+
         // Add cache header for transparency
         res.set('X-Cache', 'HIT');
         return res.send(cachedData);
       }
-      
+
       // Add cache header for transparency
       res.set('X-Cache', 'MISS');
 
@@ -248,14 +253,14 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
           const crypto = require('crypto');
           const etag = `W/"${crypto.createHash('md5').update(JSON.stringify(data)).digest('hex')}"`;
           this.setHeader('ETag', etag);
-          
+
           // Only cache successful responses
           if (res.statusCode >= 200 && res.statusCode < 300) {
             // Store data in cache
             await setCachedData(key, data, cacheTTL);
             console.log(`[CACHE] Storing in cache: ${key}`);
           }
-          
+
           // Return original function
           return originalJson.call(this, data);
         }
@@ -286,10 +291,10 @@ export const getCacheStats = async () => {
         misses: 0,
         memory: '0B',
         clients: 0,
-        connected: false
+        connected: false,
       };
     }
-    
+
     const info = await redisClient.info();
     const infoParsed = info.split('\r\n').reduce((acc: any, line) => {
       const parts = line.split(':');
@@ -298,14 +303,14 @@ export const getCacheStats = async () => {
       }
       return acc;
     }, {});
-    
+
     return {
       keys: await redisClient.dbSize(),
       hits: parseInt(infoParsed.keyspace_hits || '0'),
       misses: parseInt(infoParsed.keyspace_misses || '0'),
       memory: infoParsed.used_memory_human,
       clients: infoParsed.connected_clients,
-      connected: true
+      connected: true,
     };
   } catch (error) {
     console.error('[CACHE ERROR] Error getting Redis stats:', error);
@@ -315,7 +320,7 @@ export const getCacheStats = async () => {
       misses: 0,
       memory: '0B',
       clients: 0,
-      connected: false
+      connected: false,
     };
   }
 };

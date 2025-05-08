@@ -1,15 +1,7 @@
 import express from 'express';
-import {
-  getBranches,
-  createBranch,
-  updateBranch,
-  deleteBranch,
-} from '../../controllers/branch.controller';
+import { getBranches, createBranch, updateBranch, deleteBranch } from '../../controllers/branch.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
-import {
-  auth,
-  superAdminAuth,
-} from '../../middlewares/auth.middleware';
+import { auth, superAdminAuth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { branchUpload } from '../../middlewares/multer.middleware';
 
@@ -23,19 +15,13 @@ router.get(
   '/:id',
   cacheMiddleware('branch_detail', 10),
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user']
+    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
   }),
   getBranches
 );
 
 // Pendekatan minimalis untuk operasi cabang
-router.post(
-  '/',
-  superAdminAuth(),
-  branchUpload.single('imageUrl'),
-  parseIds,
-  createBranch
-);
+router.post('/', superAdminAuth(), branchUpload.single('imageUrl'), parseIds, createBranch);
 
 // Update cabang dengan pendekatan minimalis
 router.put(
@@ -43,17 +29,13 @@ router.put(
   auth({
     allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'],
     ownerOnly: true,
-    resourceName: 'branch'
+    resourceName: 'branch',
   }),
   branchUpload.single('imageUrl'),
   updateBranch
 );
 
 // Hapus cabang (hanya super admin)
-router.delete(
-  '/:id',
-  superAdminAuth(),
-  deleteBranch
-);
+router.delete('/:id', superAdminAuth(), deleteBranch);
 
 export default router;

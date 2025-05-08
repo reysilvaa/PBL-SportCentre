@@ -5,10 +5,7 @@ import { emitBookingEvents } from '../../utils/booking/booking.utils';
 import { getIO } from '../../config/server/socket';
 import { sendPaymentNotification } from '../../socket-handlers/payment.socket';
 import { ActivityLogService } from '../../utils/activityLog/activityLog.utils';
-import {
-  trackFailedBooking,
-  resetFailedBookingCounter,
-} from '../../middlewares/security.middleware';
+import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 import { createHmac } from 'crypto';
 import { config } from '../../config/app/env';
 import { invalidatePaymentCache } from '../../utils/cache/cacheInvalidation.utils';
@@ -40,7 +37,7 @@ const createPaymentNotification = async (
     let title = '';
     let message = '';
     let type = 'payment';
-    
+
     switch (status) {
       case 'paid':
         title = 'Pembayaran Berhasil';
@@ -58,7 +55,7 @@ const createPaymentNotification = async (
         title = 'Update Status Pembayaran';
         message = `Status pembayaran untuk booking #${bookingId} lapangan ${fieldName} telah diperbarui menjadi ${status}.`;
     }
-    
+
     // Buat notifikasi di database
     const notification = await prisma.notification.create({
       data: {
@@ -67,10 +64,10 @@ const createPaymentNotification = async (
         message,
         type,
         linkId: bookingId.toString(),
-        isRead: false
-      }
+        isRead: false,
+      },
     });
-    
+
     // Kirim notifikasi lewat socket
     const io = getIO();
     if (io) {
@@ -80,12 +77,12 @@ const createPaymentNotification = async (
         message,
         type,
         linkId: bookingId.toString(),
-        createdAt: notification.createdAt
+        createdAt: notification.createdAt,
       });
-      
+
       console.log(`[NOTIFICATION] Notifikasi pembayaran terkirim ke user #${userId}`);
     }
-    
+
     return notification;
   } catch (error) {
     console.error('[NOTIFICATION ERROR] Gagal membuat notifikasi pembayaran:', error);
@@ -93,12 +90,9 @@ const createPaymentNotification = async (
   }
 };
 
-export const handleMidtransNotification = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
   console.log('[WEBHOOK] Mulai memproses notifikasi Midtrans', new Date().toISOString());
-  
+
   try {
     const notification = req.body;
     console.log('[WEBHOOK] Received Midtrans notification:', JSON.stringify(notification));
@@ -137,15 +131,15 @@ export const handleMidtransNotification = async (
         booking: {
           include: {
             user: { select: { id: true, email: true, name: true } },
-            field: { 
-              select: { 
-                id: true, 
-                name: true, 
+            field: {
+              select: {
+                id: true,
+                name: true,
                 branchId: true,
                 branch: {
-                  select: { id: true, name: true }
-                }
-              } 
+                  select: { id: true, name: true },
+                },
+              },
             },
           },
         },
@@ -157,7 +151,9 @@ export const handleMidtransNotification = async (
       throw new BadRequestError(`Payment with ID ${paymentId} not found`);
     }
 
-    console.log(`[WEBHOOK] Booking #${payment.bookingId} - User: ${payment.booking.user.name} (${payment.booking.user.id}) - Field: ${payment.booking.field.name}`);
+    console.log(
+      `[WEBHOOK] Booking #${payment.bookingId} - User: ${payment.booking.user.name} (${payment.booking.user.id}) - Field: ${payment.booking.field.name}`
+    );
 
     // Map Midtrans transaction status to our payment status
     let paymentStatus: PaymentStatus;
@@ -191,7 +187,7 @@ export const handleMidtransNotification = async (
       data: {
         status: paymentStatus,
         transactionId,
-        paymentUrl
+        paymentUrl,
       },
     });
 
@@ -200,12 +196,12 @@ export const handleMidtransNotification = async (
     // Invalidate related caches to ensure fresh data
     const cacheInvalidated = await invalidatePaymentCache(
       paymentId,
-      payment.bookingId, 
-      payment.booking.fieldId, 
+      payment.bookingId,
+      payment.booking.fieldId,
       payment.booking.field.branchId,
       payment.booking.userId
     );
-    
+
     if (!cacheInvalidated) {
       console.warn(`[WEBHOOK] Cache invalidation problems detected for payment #${paymentId}`);
     }
@@ -218,9 +214,9 @@ export const handleMidtransNotification = async (
       branchId: payment.booking.field.branchId,
       paymentId: payment.id,
       status: paymentStatus,
-      updateTime: new Date().toISOString()
+      updateTime: new Date().toISOString(),
     });
-    
+
     // Buat notifikasi untuk user
     await createPaymentNotification(
       payment.booking.userId,
@@ -239,13 +235,13 @@ export const handleMidtransNotification = async (
           ipAddress: req.ip || undefined,
         },
       });
-      
+
       // Reset failed booking counter for this user
       resetFailedBookingCounter(payment.booking.userId);
     } else if (paymentStatus === 'failed') {
       // Track failed payment untuk keamanan
       trackFailedBooking(payment.booking.userId, payment.bookingId, req.ip || '0.0.0.0');
-      
+
       // Log kegagalan pembayaran
       await prisma.activityLog.create({
         data: {
@@ -258,21 +254,21 @@ export const handleMidtransNotification = async (
     }
 
     console.log(`[WEBHOOK] Midtrans notification processing completed for payment #${paymentId}`);
-    
+
     res.status(200).json({
       status: 'success',
       message: 'Notification processed',
-      data: { 
-        orderId: notification.order_id, 
+      data: {
+        orderId: notification.order_id,
         status: paymentStatus,
         transactionId,
-        bookingId: payment.bookingId
+        bookingId: payment.bookingId,
       },
     });
   } catch (error) {
     console.error('[WEBHOOK ERROR] Error handling Midtrans notification:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     res.status(error instanceof BadRequestError ? 400 : 500).json({
       status: 'error',
       message: errorMessage,

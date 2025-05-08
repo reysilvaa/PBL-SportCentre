@@ -1,11 +1,4 @@
-import {
-  format,
-  setHours,
-  setMinutes,
-  setSeconds,
-  setMilliseconds,
-  parseISO,
-} from 'date-fns';
+import { format, setHours, setMinutes, setSeconds, setMilliseconds, parseISO } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 // Tetapkan timezone WIB
@@ -28,10 +21,7 @@ export const formatDateToWIB = (date: Date): string => {
 export const getStartOfDayWIB = (date: Date): Date => {
   const zonedDate = toZonedTime(date, TIMEZONE);
   // Set jam, menit, detik, milidetik ke 0
-  const startOfDay = setMilliseconds(
-    setSeconds(setMinutes(setHours(zonedDate, 0), 0), 0),
-    0
-  );
+  const startOfDay = setMilliseconds(setSeconds(setMinutes(setHours(zonedDate, 0), 0), 0), 0);
   // Tidak perlu konversi balik ke UTC karena Date selalu disimpan sebagai UTC
   return startOfDay;
 };
@@ -45,10 +35,7 @@ export const getStartOfDayWIB = (date: Date): Date => {
 export const createDateWithHourWIB = (baseDate: Date, hour: number): Date => {
   const zonedDate = toZonedTime(baseDate, TIMEZONE);
   // Set jam spesifik dan reset menit, detik, milidetik
-  const dateWithHour = setMilliseconds(
-    setSeconds(setMinutes(setHours(zonedDate, hour), 0), 0),
-    0
-  );
+  const dateWithHour = setMilliseconds(setSeconds(setMinutes(setHours(zonedDate, hour), 0), 0), 0);
   // Tidak perlu konversi balik ke UTC karena Date selalu disimpan sebagai UTC
   return dateWithHour;
 };
@@ -59,14 +46,8 @@ export const createDateWithHourWIB = (baseDate: Date, hour: number): Date => {
  * @param timeString Time string in format "HH:mm"
  * @returns Date object with combined date and time in WIB
  */
-export const combineDateWithTimeWIB = (
-  date: Date,
-  timeString: string
-): Date => {
+export const combineDateWithTimeWIB = (date: Date, timeString: string): Date => {
   const [hours, minutes] = timeString.split(':').map(Number);
   const zonedDate = toZonedTime(date, TIMEZONE);
-  return setMilliseconds(
-    setSeconds(setMinutes(setHours(zonedDate, hours), minutes), 0),
-    0
-  );
+  return setMilliseconds(setSeconds(setMinutes(setHours(zonedDate, hours), minutes), 0), 0);
 };

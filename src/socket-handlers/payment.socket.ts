@@ -1,9 +1,5 @@
 import { Socket } from 'socket.io';
-import {
-  getIO,
-  applyAuthMiddleware,
-  setupNamespaceEvents,
-} from '../config/server/socket';
+import { getIO, applyAuthMiddleware, setupNamespaceEvents } from '../config/server/socket';
 
 /**
  * Handle payment status update
@@ -50,9 +46,7 @@ export const sendPaymentNotification = (data: {
     const io = getIO();
 
     if (!io) {
-      console.warn(
-        '⚠️ Socket.IO not initialized, skipping real-time notification'
-      );
+      console.warn('⚠️ Socket.IO not initialized, skipping real-time notification');
       return;
     }
 
@@ -74,9 +68,7 @@ export const sendPaymentNotification = (data: {
       userId,
     });
 
-    console.log(
-      `📢 Sent real-time payment updates to ${userRoomId} and /payments namespace`
-    );
+    console.log(`📢 Sent real-time payment updates to ${userRoomId} and /payments namespace`);
   } catch (error) {
     console.error('❌ Socket.IO Error:', error);
     // Continue processing even if socket notification fails
@@ -100,9 +92,7 @@ export const setupPaymentSocketHandlers = (): void => {
     console.log(`💳 Payment client connected: ${socket.id}`);
 
     // Handle payment status update
-    socket.on('status_change', (data) =>
-      handlePaymentStatusUpdate(socket, data)
-    );
+    socket.on('status_change', (data) => handlePaymentStatusUpdate(socket, data));
 
     // Handle client leaving
     socket.on('disconnect', () => {

@@ -8,7 +8,7 @@ import { corsConfig } from './cors';
 export const SOCKET_CONFIG = {
   pingTimeout: 60000,
   pingInterval: 25000,
-  maxPayload: 50000
+  maxPayload: 50000,
 };
 
 declare global {
@@ -53,10 +53,7 @@ export function getIO(): SocketServer {
  * @param namespace Socket.IO namespace
  * @param requireAuth Whether authentication is required (default: true)
  */
-export function applyAuthMiddleware(
-  namespace: Namespace,
-  requireAuth: boolean = true
-): void {
+export function applyAuthMiddleware(namespace: Namespace, requireAuth: boolean = true): void {
   namespace.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
@@ -106,9 +103,7 @@ export function applyAuthMiddleware(
  */
 export function setupNamespaceEvents(namespace: Namespace): void {
   namespace.on('connection', (socket) => {
-    console.log(
-      `Client connected to ${namespace.name || '/'} - ID: ${socket.id}`
-    );
+    console.log(`Client connected to ${namespace.name || '/'} - ID: ${socket.id}`);
 
     socket.on('disconnect', (reason) => {
       console.log(

@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/services/database';
-import {
-  branchSchema,
-  updateBranchSchema,
-} from '../zod-schemas/branch.schema';
+import { branchSchema, updateBranchSchema } from '../zod-schemas/branch.schema';
 import { invalidateBranchCache } from '../utils/cache/cacheInvalidation.utils';
 import { MulterRequest } from '../middlewares/multer.middleware';
 import { cleanupUploadedFile } from '../utils/cloudinary.utils';
@@ -19,10 +16,7 @@ import { deleteCachedDataByPattern } from '../utils/cache.utils';
 // Constants for folder paths
 const BRANCH_FOLDER = 'PBL/branch-images';
 
-export const getBranches = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getBranches = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { q, page = '1', limit = '10' } = req.query;
@@ -43,9 +37,9 @@ export const getBranches = async (
       });
 
       if (!branch) {
-        res.status(404).json({ 
+        res.status(404).json({
           status: false,
-          message: 'Cabang tidak ditemukan' 
+          message: 'Cabang tidak ditemukan',
         });
         return;
       }
@@ -53,7 +47,7 @@ export const getBranches = async (
       res.status(200).json({
         status: true,
         message: 'Berhasil mendapatkan data cabang',
-        data: branch
+        data: branch,
       });
       return;
     }
@@ -67,10 +61,7 @@ export const getBranches = async (
     let whereCondition = {};
     if (q) {
       whereCondition = {
-        OR: [
-          { name: { contains: q as string } },
-          { location: { contains: q as string } },
-        ],
+        OR: [{ name: { contains: q as string } }, { location: { contains: q as string } }],
       };
     }
 
@@ -112,17 +103,14 @@ export const getBranches = async (
     });
   } catch (error) {
     console.error('Error in getBranches:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
 
-export const createBranch = async (
-  req: MulterRequest & User,
-  res: Response
-): Promise<void> => {
+export const createBranch = async (req: MulterRequest & User, res: Response): Promise<void> => {
   try {
     // Validasi data dengan Zod (tanpa imageUrl dulu)
     const result = branchSchema.safeParse({
@@ -151,7 +139,7 @@ export const createBranch = async (
       ...result.data,
       imageUrl: req.file?.path || null,
     };
-    
+
     const newBranch = await prisma.branch.create({
       data: branchData,
     });
@@ -172,7 +160,7 @@ export const createBranch = async (
     res.status(201).json({
       status: true,
       message: 'Berhasil membuat cabang baru',
-      data: newBranch
+      data: newBranch,
     });
   } catch (error) {
     console.error('Error in createBranch:', error);
@@ -181,17 +169,14 @@ export const createBranch = async (
       await cleanupUploadedFile(req.file.path);
     }
 
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
 
-export const updateBranch = async (
-  req: MulterRequest & User,
-  res: Response
-): Promise<void> => {
+export const updateBranch = async (req: MulterRequest & User, res: Response): Promise<void> => {
   if (res.headersSent) return;
 
   try {
@@ -268,7 +253,7 @@ export const updateBranch = async (
           id: branchId,
           OR: [
             { ownerId: req.user!.id }, // User is owner
-            { 
+            {
               admins: {
                 some: {
                   userId: req.user!.id,
@@ -309,7 +294,7 @@ export const updateBranch = async (
 
     // Prepare update data
     const updateData = { ...result.data };
-    
+
     // Tambahkan ownerId jika ada dan izinkan (untuk superadmin)
     if (ownerId && req.user?.role === 'super_admin') {
       (updateData as any).ownerId = ownerId;
@@ -318,7 +303,7 @@ export const updateBranch = async (
     // Handle image update
     if (req.file?.path) {
       updateData.imageUrl = req.file.path;
-      
+
       // Clean up old image if exists
       if (existingBranch.imageUrl) {
         await cleanupUploadedFile(existingBranch.imageUrl);
@@ -350,12 +335,12 @@ export const updateBranch = async (
     });
   } catch (error) {
     console.error('Error updating branch:', error);
-    
+
     // Clean up uploaded file if exists
     if (req.file?.path) {
       await cleanupUploadedFile(req.file.path);
     }
-    
+
     res.status(500).json({
       status: false,
       message: 'Internal Server Error',
@@ -363,10 +348,7 @@ export const updateBranch = async (
   }
 };
 
-export const deleteBranch = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const deleteBranch = async (req: User, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const branchId = parseInt(id);
@@ -447,9 +429,9 @@ export const deleteBranch = async (
     });
   } catch (error) {
     console.error('Error deleting branch:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
-}; 
+};

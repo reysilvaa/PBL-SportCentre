@@ -5,11 +5,7 @@ import { config } from '../config/app/env';
  * Middleware untuk memastikan penggunaan HTTPS di production
  * Redirect HTTP ke HTTPS jika dipanggil melalui HTTP di production
  */
-export const httpsMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const httpsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Skip jika:
   // 1. Bukan production
   // 2. Sudah HTTPS

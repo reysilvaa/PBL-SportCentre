@@ -16,7 +16,7 @@ router.get('/', cacheMiddleware('field_reviews', 300), getFieldReviews);
 router.post(
   '/',
   auth({
-    allowedRoles: ['user']
+    allowedRoles: ['user'],
   }),
   parseIds,
   createFieldReview
@@ -27,7 +27,7 @@ router.put(
   auth({
     allowedRoles: ['user'],
     ownerOnly: true,
-    resourceName: 'fieldReview'
+    resourceName: 'fieldReview',
   }),
   updateFieldReview
 );
@@ -37,7 +37,7 @@ router.delete(
   auth({
     allowedRoles: ['user'],
     ownerOnly: true,
-    resourceName: 'fieldReview'
+    resourceName: 'fieldReview',
   }),
   deleteFieldReview
 );

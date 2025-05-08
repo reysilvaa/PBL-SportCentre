@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/services/database';
-import {
-  createFieldReviewSchema,
-  updateFieldReviewSchema,
-} from '../zod-schemas/fieldReview.schema';
+import { createFieldReviewSchema, updateFieldReviewSchema } from '../zod-schemas/fieldReview.schema';
 import { invalidateFieldReviewCache } from '../utils/cache/cacheInvalidation.utils';
 import { User } from '../middlewares/auth.middleware';
 
@@ -15,14 +12,14 @@ import { User } from '../middlewares/auth.middleware';
 export const getFieldReviews = async (req: Request, res: Response) => {
   try {
     const { fieldId, userId } = req.query;
-    
+
     // Filtering berdasarkan query params
     const whereCondition: any = {};
-    
+
     if (fieldId) {
       whereCondition.fieldId = parseInt(fieldId as string);
     }
-    
+
     if (userId) {
       whereCondition.userId = parseInt(userId as string);
     }
@@ -53,25 +50,22 @@ export const getFieldReviews = async (req: Request, res: Response) => {
         createdAt: 'desc',
       },
     });
-    
+
     res.status(200).json({
       status: true,
       message: 'Berhasil mendapatkan data ulasan lapangan',
-      data: reviews
+      data: reviews,
     });
   } catch (error) {
     console.error('Error fetching field reviews:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
 
-export const createFieldReview = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const createFieldReview = async (req: User, res: Response): Promise<void> => {
   try {
     // Validasi data dengan Zod dan pastikan userId adalah pengguna saat ini
     const result = createFieldReviewSchema.safeParse({
@@ -110,8 +104,8 @@ export const createFieldReview = async (
         userId,
         fieldId,
         payment: {
-          status: 'paid'
-        }
+          status: 'paid',
+        },
       },
     });
 
@@ -177,13 +171,13 @@ export const createFieldReview = async (
     res.status(201).json({
       status: true,
       message: 'Berhasil membuat ulasan lapangan',
-      data: newReview
+      data: newReview,
     });
   } catch (error) {
     console.error('Error creating field review:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
@@ -192,7 +186,7 @@ export const updateFieldReview = async (req: User, res: Response) => {
   try {
     const { id } = req.params;
     const reviewId = parseInt(id);
-    
+
     if (isNaN(reviewId)) {
       res.status(400).json({
         status: false,
@@ -281,13 +275,13 @@ export const updateFieldReview = async (req: User, res: Response) => {
     res.status(200).json({
       status: true,
       message: 'Berhasil memperbarui ulasan lapangan',
-      data: updatedReview
+      data: updatedReview,
     });
   } catch (error) {
     console.error('Error updating field review:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
@@ -296,7 +290,7 @@ export const deleteFieldReview = async (req: User, res: Response) => {
   try {
     const { id } = req.params;
     const reviewId = parseInt(id);
-    
+
     if (isNaN(reviewId)) {
       res.status(400).json({
         status: false,
@@ -357,9 +351,9 @@ export const deleteFieldReview = async (req: User, res: Response) => {
     });
   } catch (error) {
     console.error('Error deleting field review:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
-}; 
+};

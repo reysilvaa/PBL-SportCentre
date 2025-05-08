@@ -111,7 +111,7 @@ export const updateUserProfile = async (req: User, res: Response): Promise<void>
 
     if (name) updateData.name = name;
     if (phone) updateData.phone = phone;
-    
+
     if (email && email !== existingUser.email) {
       // Cek apakah email baru sudah digunakan oleh user lain
       const emailExists = await prisma.user.findFirst({
@@ -128,7 +128,7 @@ export const updateUserProfile = async (req: User, res: Response): Promise<void>
         });
         return;
       }
-      
+
       updateData.email = email;
     }
 
@@ -190,7 +190,7 @@ export const getUsers = async (req: User, res: Response): Promise<void> => {
 
     // Jika user adalah admin cabang, tampilkan user yang terkait dengan cabang
     const branchId = req.userBranch?.id;
-    
+
     if (!branchId) {
       res.status(403).json({
         status: false,
@@ -214,12 +214,7 @@ export const getUsers = async (req: User, res: Response): Promise<void> => {
 
     // Ambil user unik dari bookings
     const uniqueUsers = Array.from(
-      new Map(
-        bookings.map((booking: { userId: number; user: any }) => [
-          booking.userId,
-          booking.user,
-        ])
-      ).values()
+      new Map(bookings.map((booking: { userId: number; user: any }) => [booking.userId, booking.user])).values()
     );
 
     res.status(200).json({
@@ -274,7 +269,7 @@ export const createUser = async (req: User, res: Response): Promise<void> => {
 
     // Validasi peran berdasarkan role pengguna yang membuat
     let allowedRoles = ['user'];
-    
+
     if (req.user?.role === 'super_admin') {
       allowedRoles = ['user', 'admin_cabang', 'owner_cabang', 'super_admin'];
     } else if (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') {
@@ -305,8 +300,8 @@ export const createUser = async (req: User, res: Response): Promise<void> => {
 
     // Jika admin cabang membuat user dan role adalah admin_cabang, buat relasi dengan cabang
     if (
-      (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') && 
-      role === 'admin_cabang' && 
+      (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') &&
+      role === 'admin_cabang' &&
       req.userBranch?.id
     ) {
       await prisma.branchAdmin.create({
@@ -380,7 +375,7 @@ export const updateUser = async (req: User, res: Response): Promise<void> => {
     // Validasi peran berdasarkan role pengguna yang mengupdate
     if (role && req.user?.role !== 'super_admin') {
       let allowedRoles = ['user'];
-      
+
       if (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') {
         allowedRoles = ['user', 'admin_cabang'];
       }
@@ -399,7 +394,7 @@ export const updateUser = async (req: User, res: Response): Promise<void> => {
 
     if (name) updateData.name = name;
     if (phone) updateData.phone = phone;
-    
+
     if (email && email !== existingUser.email) {
       // Cek apakah email baru sudah digunakan oleh user lain
       const emailExists = await prisma.user.findFirst({
@@ -416,7 +411,7 @@ export const updateUser = async (req: User, res: Response): Promise<void> => {
         });
         return;
       }
-      
+
       updateData.email = email;
     }
 
@@ -505,7 +500,7 @@ export const deleteUser = async (req: User, res: Response): Promise<void> => {
 
       // Admin cabang hanya dapat menghapus user yang terkait dengan cabangnya
       const branchId = req.userBranch?.id;
-      
+
       if (!branchId) {
         res.status(403).json({
           status: false,
@@ -589,4 +584,4 @@ export const deleteUser = async (req: User, res: Response): Promise<void> => {
       message: 'Terjadi kesalahan server internal',
     });
   }
-}; 
+};

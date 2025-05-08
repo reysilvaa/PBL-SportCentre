@@ -45,11 +45,7 @@ export const setCookie = (
  * @param name Nama cookie
  * @param signed Apakah cookie ditandatangani (signed)
  */
-export const getCookie = (
-  req: Request,
-  name: string,
-  signed = false
-): string | undefined => {
+export const getCookie = (req: Request, name: string, signed = false): string | undefined => {
   return signed ? req.signedCookies[name] : req.cookies[name];
 };
 
@@ -75,7 +71,7 @@ export const clearCookie = (
     sameSite: config.cookies.sameSite,
     ...options,
     // Set expiry ke masa lalu untuk memastikan cookie dihapus
-    expires: new Date(0)
+    expires: new Date(0),
   };
 
   res.clearCookie(name, cookieOptions);
@@ -114,7 +110,7 @@ export const getAuthToken = (req: Request): string | undefined => {
 export const clearAuthCookie = (res: Response) => {
   clearCookie(res, 'auth_token', {
     secure: config.cookies.secure,
-    sameSite: config.cookies.sameSite
+    sameSite: config.cookies.sameSite,
   });
 };
 
@@ -149,7 +145,7 @@ export const getRefreshToken = (req: Request): string | undefined => {
 export const clearRefreshTokenCookie = (res: Response) => {
   clearCookie(res, 'refresh_token', {
     secure: config.cookies.secure,
-    sameSite: config.cookies.sameSite
+    sameSite: config.cookies.sameSite,
   });
 };
 
@@ -162,7 +158,7 @@ export const hasCookie = (name: string): boolean => {
   if (typeof document === 'undefined') {
     return false; // Jika berjalan di server, tidak ada cookie
   }
-  
+
   const cookies = document.cookie.split(';');
   for (let i = 0; i < cookies.length; i++) {
     const cookie = cookies[i].trim();
@@ -192,10 +188,7 @@ const DEFAULT_TTL = 24 * 60 * 60; // Default TTL: 24 jam
  * @param token Token yang akan di-blacklist
  * @param expiryInSeconds Waktu dalam detik token tetap di blacklist (opsional)
  */
-export const blacklistToken = async (
-  token: string,
-  expiryInSeconds?: number
-): Promise<void> => {
+export const blacklistToken = async (token: string, expiryInSeconds?: number): Promise<void> => {
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || DEFAULT_TTL;
   try {
@@ -233,4 +226,4 @@ export const removeFromBlacklist = async (token: string): Promise<boolean> => {
     console.error('Error removing token from blacklist:', error);
     return false;
   }
-}; 
+};

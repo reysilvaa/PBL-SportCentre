@@ -94,12 +94,18 @@ export class ActivityLogService {
     ipAddress?: string
   ) {
     const action = `Payment ${status} for booking ${bookingId}`;
-    return this.createLog(userId, action, {
-      paymentId,
-      bookingId,
-      status,
-      ...details,
-    }, undefined, ipAddress);
+    return this.createLog(
+      userId,
+      action,
+      {
+        paymentId,
+        bookingId,
+        status,
+        ...details,
+      },
+      undefined,
+      ipAddress
+    );
   }
 
   /**

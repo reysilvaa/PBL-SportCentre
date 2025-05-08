@@ -1,18 +1,11 @@
 import { Socket } from 'socket.io';
-import {
-  getIO,
-  applyAuthMiddleware,
-  setupNamespaceEvents,
-} from '../config/server/socket';
+import { getIO, applyAuthMiddleware, setupNamespaceEvents } from '../config/server/socket';
 import prisma from '../config/services/database';
 
 /**
  * Handle activity logs subscription
  */
-export const handleSubscribeActivityLogs = async (
-  socket: Socket,
-  options: { userId?: string }
-) => {
+export const handleSubscribeActivityLogs = async (socket: Socket, options: { userId?: string }) => {
   try {
     // If the client specifies a userId, join that specific room
     if (options.userId) {
@@ -54,10 +47,7 @@ export const broadcastActivityLogUpdates = async (userId?: number) => {
         orderBy: { createdAt: 'desc' },
       });
 
-      io.to(`activity_logs_user_${userId}`).emit(
-        'activity_logs_updated',
-        userLogs
-      );
+      io.to(`activity_logs_user_${userId}`).emit('activity_logs_updated', userLogs);
       io.to(`user_${userId}`).emit('activity_logs_updated', userLogs);
       console.log(`Broadcast activity logs to user ${userId}`);
     }

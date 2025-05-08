@@ -52,9 +52,8 @@ export const getBranchFields = async (req: User, res: Response): Promise<void> =
     }
 
     // Super admin bisa mengakses lapangan dari cabang tertentu
-    const whereCondition = branchId === 0 && req.query.branchId 
-      ? { branchId: parseInt(req.query.branchId as string) } 
-      : { branchId };
+    const whereCondition =
+      branchId === 0 && req.query.branchId ? { branchId: parseInt(req.query.branchId as string) } : { branchId };
 
     const fields = await prisma.field.findMany({
       where: whereCondition,
@@ -86,10 +85,7 @@ export const getBranchFields = async (req: User, res: Response): Promise<void> =
 };
 
 // Create field with image upload
-export const createField = async (
-  req: MulterRequest & User,
-  res: Response
-): Promise<void> => {
+export const createField = async (req: MulterRequest & User, res: Response): Promise<void> => {
   if (res.headersSent) return;
 
   try {
@@ -99,18 +95,18 @@ export const createField = async (
     // Super admin dapat menentukan branchId dari body request
     if (req.user?.role === 'super_admin' && req.body.branchId) {
       branchId = parseInt(req.body.branchId);
-      
+
       // Verifikasi branch dengan ID tersebut ada
       const branchExists = await prisma.branch.findUnique({
         where: { id: branchId },
       });
-      
+
       if (!branchExists) {
         // Clean up uploaded file if exists
         if (req.file?.path) {
           await cleanupUploadedFile(req.file.path);
         }
-        
+
         res.status(400).json({
           status: false,
           message: 'Branch dengan ID tersebut tidak ditemukan',
@@ -206,10 +202,7 @@ export const createField = async (
 };
 
 // Update field with image upload
-export const updateField = async (
-  req: MulterRequest & User,
-  res: Response
-): Promise<void> => {
+export const updateField = async (req: MulterRequest & User, res: Response): Promise<void> => {
   if (res.headersSent) return;
 
   try {
@@ -246,9 +239,7 @@ export const updateField = async (
     }
 
     // Super admin bisa mengakses dan mengubah lapangan manapun
-    const whereCondition = req.user?.role === 'super_admin'
-      ? { id: fieldId }
-      : { id: fieldId, branchId };
+    const whereCondition = req.user?.role === 'super_admin' ? { id: fieldId } : { id: fieldId, branchId };
 
     // Check if field exists and belongs to the user's branch
     const existingField = await prisma.field.findFirst({
@@ -299,7 +290,7 @@ export const updateField = async (
         });
         return;
       }
-      
+
       // Force branchId to be user's branch from middleware
       updateData.branchId = branchId;
     }
@@ -397,9 +388,7 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     }
 
     // Super admin bisa menghapus lapangan manapun
-    const whereCondition = req.user?.role === 'super_admin'
-      ? { id: fieldId }
-      : { id: fieldId, branchId };
+    const whereCondition = req.user?.role === 'super_admin' ? { id: fieldId } : { id: fieldId, branchId };
 
     // Check if field exists and belongs to the user's branch
     const existingField = await prisma.field.findFirst({
@@ -521,4 +510,4 @@ export const getFieldById = async (req: Request, res: Response): Promise<void> =
       message: 'Internal Server Error',
     });
   }
-}; 
+};

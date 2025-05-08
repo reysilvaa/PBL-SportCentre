@@ -32,7 +32,7 @@ const createRateLimiter = (windowMs: number, max: number, message: string) => {
 // Rate limiter untuk endpoint login
 export const loginRateLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 menit
-  30, 
+  30,
   'Terlalu banyak percobaan login, coba lagi nanti'
 );
 
@@ -100,22 +100,14 @@ const _checkBlockedUser = async (req: User, res: Response, next: NextFunction) =
  * Middleware untuk memeriksa apakah pengguna diblokir
  * Fungsi publik untuk digunakan di Express router
  */
-export const checkBlockedUser = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const checkBlockedUser = (req: Request, res: Response, next: NextFunction) => {
   return _checkBlockedUser(req as User, res, next);
 };
 
 /**
  * Melacak booking failed/pending dan memblokir pengguna jika melewati batas
  */
-export const trackFailedBooking = async (
-  userId: number,
-  bookingId: number,
-  clientIP: string
-) => {
+export const trackFailedBooking = async (userId: number, bookingId: number, clientIP: string) => {
   const userKey = `${FAILED_BOOKING_PREFIX}user_${userId}`;
   const ipKey = `${FAILED_BOOKING_PREFIX}ip_${clientIP}`;
 
@@ -235,11 +227,7 @@ export const globalRateLimiter = createRateLimiter(
 /**
  * Middleware untuk sanitasi data
  */
-export const sanitizeData = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const sanitizeData = (req: Request, res: Response, next: NextFunction) => {
   if (req.body) {
     // Fungsi rekursif untuk sanitasi objek
     const sanitizeObject = (obj: any): any => {
@@ -278,11 +266,7 @@ export const sanitizeData = (
 /**
  * Middleware untuk menambahkan security headers
  */
-export const addSecurityHeaders = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const addSecurityHeaders = (req: Request, res: Response, next: NextFunction) => {
   // Hapus header yang berpotensi membocorkan informasi
   res.removeHeader('X-Powered-By');
 
@@ -298,11 +282,7 @@ export const addSecurityHeaders = (
 /**
  * Middleware untuk mencegah parameter pollution
  */
-export const preventParamPollution = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const preventParamPollution = (req: Request, res: Response, next: NextFunction) => {
   if (req.query) {
     for (const [key, value] of Object.entries(req.query)) {
       // Jika parameter query adalah array, ambil nilai terakhir saja

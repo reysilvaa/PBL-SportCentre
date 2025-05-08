@@ -153,10 +153,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
           const expiryInSeconds = decoded.exp - now;
 
           // Tambahkan token ke blacklist dengan waktu expired yang sama
-          await blacklistToken(
-            token,
-            expiryInSeconds > 0 ? expiryInSeconds : undefined
-          );
+          await blacklistToken(token, expiryInSeconds > 0 ? expiryInSeconds : undefined);
         }
       } catch (error) {
         console.error('Error adding token to blacklist:', error);
@@ -176,10 +173,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 };
 
 // Endpoint untuk refresh token
-export const refreshToken = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
     // Ambil refresh token dari cookies yang signed (ditandatangani)
     const refreshToken = req.signedCookies['refresh_token'];
@@ -213,8 +207,7 @@ export const refreshToken = async (
       }
 
       // Generate token baru
-      const { accessToken, refreshToken: newRefreshToken } =
-        generateTokens(user);
+      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
 
       // Set cookies baru
       setAuthCookie(res, accessToken);
@@ -230,9 +223,7 @@ export const refreshToken = async (
       // Token tidak valid atau expired
       clearAuthCookie(res);
       clearRefreshTokenCookie(res);
-      res
-        .status(401)
-        .json({ error: 'Refresh token tidak valid atau sudah expired' });
+      res.status(401).json({ error: 'Refresh token tidak valid atau sudah expired' });
     }
   } catch (error) {
     console.error('Refresh Token Error:', error);
@@ -249,10 +240,10 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
     const token = cookieToken || headerToken;
 
     if (!token) {
-      res.status(401).json({ 
+      res.status(401).json({
         status: false,
         message: 'Tidak terautentikasi',
-        authenticated: false
+        authenticated: false,
       });
       return;
     }
@@ -286,7 +277,7 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
 
       res.json({
         user: userWithoutPassword,
-        token // Mengembalikan token untuk kompatibilitas dengan client lama
+        token, // Mengembalikan token untuk kompatibilitas dengan client lama
       });
     } catch (error) {
       // Token tidak valid

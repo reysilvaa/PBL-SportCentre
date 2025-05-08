@@ -10,18 +10,18 @@ import { User } from '../middlewares/auth.middleware';
 export const getPromotionUsages = async (req: User, res: Response) => {
   try {
     const { userId, promoId, bookingId } = req.query;
-    
+
     // Filtering berdasarkan query params
     const whereCondition: any = {};
-    
+
     if (userId) {
       whereCondition.userId = parseInt(userId as string);
     }
-    
+
     if (promoId) {
       whereCondition.promoId = parseInt(promoId as string);
     }
-    
+
     if (bookingId) {
       whereCondition.bookingId = parseInt(bookingId as string);
     }
@@ -62,25 +62,22 @@ export const getPromotionUsages = async (req: User, res: Response) => {
         promo: true,
       },
     });
-    
+
     res.status(200).json({
       status: true,
       message: 'Berhasil mendapatkan data penggunaan promo',
-      data: usages
+      data: usages,
     });
   } catch (error) {
     console.error('Error fetching promotion usages:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
 
-export const createPromotionUsage = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const createPromotionUsage = async (req: User, res: Response): Promise<void> => {
   try {
     const { bookingId, promoId } = req.body;
     const userId = req.user?.id;
@@ -96,9 +93,9 @@ export const createPromotionUsage = async (
 
     // Periksa apakah booking ada dan milik user yang sama
     const booking = await prisma.booking.findFirst({
-      where: { 
+      where: {
         id: bookingId,
-        userId
+        userId,
       },
     });
 
@@ -118,7 +115,7 @@ export const createPromotionUsage = async (
     if (!promotion || promotion.status !== 'active') {
       res.status(400).json({
         status: false,
-        message: 'Promo tidak valid atau tidak aktif'
+        message: 'Promo tidak valid atau tidak aktif',
       });
       return;
     }
@@ -167,13 +164,13 @@ export const createPromotionUsage = async (
     res.status(201).json({
       status: true,
       message: 'Berhasil menggunakan promo',
-      data: newPromotionUsage
+      data: newPromotionUsage,
     });
   } catch (error) {
     console.error('Error creating promotion usage:', error);
-    res.status(400).json({ 
+    res.status(400).json({
       status: false,
-      message: 'Gagal menggunakan promo'
+      message: 'Gagal menggunakan promo',
     });
   }
 };
@@ -182,7 +179,7 @@ export const deletePromotionUsage = async (req: User, res: Response) => {
   try {
     const { id } = req.params;
     const usageId = parseInt(id);
-    
+
     if (isNaN(usageId)) {
       res.status(400).json({
         status: false,
@@ -237,9 +234,9 @@ export const deletePromotionUsage = async (req: User, res: Response) => {
     });
   } catch (error) {
     console.error('Error deleting promotion usage:', error);
-    res.status(400).json({ 
+    res.status(400).json({
       status: false,
-      message: 'Gagal menghapus penggunaan promo'
+      message: 'Gagal menghapus penggunaan promo',
     });
   }
-}; 
+};

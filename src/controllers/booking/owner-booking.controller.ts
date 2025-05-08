@@ -33,7 +33,7 @@
 //       type as string,
 //       targetBranchId !== 0 ? targetBranchId : undefined
 //     );
-    
+
 //     res.status(200).json({
 //       status: true,
 //       message: 'Berhasil mendapatkan laporan pendapatan',
@@ -41,9 +41,9 @@
 //     });
 //   } catch (error) {
 //     console.error('Error getting revenue reports:', error);
-//     res.status(500).json({ 
+//     res.status(500).json({
 //       status: false,
-//       message: 'Internal Server Error' 
+//       message: 'Internal Server Error'
 //     });
 //   }
 // };
@@ -60,7 +60,7 @@
 
 //     const start = new Date(startDate as string);
 //     const end = new Date(endDate as string);
-    
+
 //     // Owner hanya bisa melihat data cabang mereka sendiri
 //     // Super admin bisa melihat data semua cabang atau pilih specific branch
 //     const targetBranchId = req.user?.role === 'super_admin' && req.query.branchId
@@ -72,7 +72,7 @@
 //       end,
 //       targetBranchId !== 0 ? targetBranchId : undefined
 //     );
-    
+
 //     res.status(200).json({
 //       status: true,
 //       message: 'Berhasil mendapatkan laporan okupansi',
@@ -80,9 +80,9 @@
 //     });
 //   } catch (error) {
 //     console.error('Error getting occupancy reports:', error);
-//     res.status(500).json({ 
+//     res.status(500).json({
 //       status: false,
-//       message: 'Internal Server Error' 
+//       message: 'Internal Server Error'
 //     });
 //   }
 // };
@@ -98,7 +98,7 @@
 //     const result = await RevenueService.generateBusinessPerformanceReport(
 //       branchId !== 0 ? branchId : undefined
 //     );
-    
+
 //     res.status(200).json({
 //       status: true,
 //       message: 'Berhasil mendapatkan laporan performa bisnis',
@@ -106,9 +106,9 @@
 //     });
 //   } catch (error) {
 //     console.error('Error getting business performance:', error);
-//     res.status(500).json({ 
+//     res.status(500).json({
 //       status: false,
-//       message: 'Internal Server Error' 
+//       message: 'Internal Server Error'
 //     });
 //   }
 // };
@@ -124,7 +124,7 @@
 //     const result = await RevenueService.generateBookingForecast(
 //       branchId !== 0 ? branchId : undefined
 //     );
-    
+
 //     res.status(200).json({
 //       status: true,
 //       message: 'Berhasil mendapatkan prediksi booking',
@@ -132,9 +132,9 @@
 //     });
 //   } catch (error) {
 //     console.error('Error getting booking forecast:', error);
-//     res.status(500).json({ 
+//     res.status(500).json({
 //       status: false,
-//       message: 'Internal Server Error' 
+//       message: 'Internal Server Error'
 //     });
 //   }
-// }; 
+// };

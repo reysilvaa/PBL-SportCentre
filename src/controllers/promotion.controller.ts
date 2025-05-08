@@ -28,28 +28,20 @@ export const getPromotions = async (req: Request, res: Response) => {
     res.status(200).json({
       status: true,
       message: 'Berhasil mendapatkan daftar promo',
-      data: promotions
+      data: promotions,
     });
   } catch (error) {
     console.error('Error fetching promotions:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
 
 export const createPromotion = async (req: User, res: Response) => {
   try {
-    const {
-      code,
-      description,
-      discountPercent,
-      maxDiscount,
-      validFrom,
-      validUntil,
-      status,
-    } = req.body;
+    const { code, description, discountPercent, maxDiscount, validFrom, validUntil, status } = req.body;
 
     // Validasi data dasar
     if (!code || !description || !discountPercent) {
@@ -101,13 +93,13 @@ export const createPromotion = async (req: User, res: Response) => {
     res.status(201).json({
       status: true,
       message: 'Berhasil membuat promo baru',
-      data: newPromotion
+      data: newPromotion,
     });
   } catch (error) {
     console.error('Error creating promotion:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
@@ -116,7 +108,7 @@ export const updatePromotion = async (req: User, res: Response) => {
   try {
     const { id } = req.params;
     const promoId = parseInt(id);
-    
+
     if (isNaN(promoId)) {
       res.status(400).json({
         status: false,
@@ -125,15 +117,7 @@ export const updatePromotion = async (req: User, res: Response) => {
       return;
     }
 
-    const {
-      code,
-      description,
-      discountPercent,
-      maxDiscount,
-      validFrom,
-      validUntil,
-      status,
-    } = req.body;
+    const { code, description, discountPercent, maxDiscount, validFrom, validUntil, status } = req.body;
 
     // Cek apakah promo ada
     const existingPromo = await prisma.promotion.findUnique({
@@ -151,9 +135,9 @@ export const updatePromotion = async (req: User, res: Response) => {
     // Validasi kode promo jika diubah
     if (code && code !== existingPromo.code) {
       const codeExists = await prisma.promotion.findFirst({
-        where: { 
+        where: {
           code,
-          id: { not: promoId }
+          id: { not: promoId },
         },
       });
 
@@ -195,13 +179,13 @@ export const updatePromotion = async (req: User, res: Response) => {
     res.status(200).json({
       status: true,
       message: 'Berhasil memperbarui promo',
-      data: updatedPromotion
+      data: updatedPromotion,
     });
   } catch (error) {
     console.error('Error updating promotion:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
@@ -210,7 +194,7 @@ export const deletePromotion = async (req: User, res: Response) => {
   try {
     const { id } = req.params;
     const promoId = parseInt(id);
-    
+
     if (isNaN(promoId)) {
       res.status(400).json({
         status: false,
@@ -264,13 +248,13 @@ export const deletePromotion = async (req: User, res: Response) => {
 
     res.status(200).json({
       status: true,
-      message: 'Berhasil menghapus promo'
+      message: 'Berhasil menghapus promo',
     });
   } catch (error) {
     console.error('Error deleting promotion:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
-}; 
+};

@@ -1,9 +1,6 @@
 import { isWithinInterval } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import {
-  combineDateWithTimeWIB,
-  TIMEZONE,
-} from '../../utils/variables/timezone.utils';
+import { combineDateWithTimeWIB, TIMEZONE } from '../../utils/variables/timezone.utils';
 
 /**
  * Combines a date with time string
@@ -72,20 +69,16 @@ export const calculateTotalPrice = (
     } else {
       // Continues into night again
       dayHours = (nightStart.getTime() - dayStart.getTime()) / (1000 * 60 * 60);
-      nightHours +=
-        (endTime.getTime() - nightStart.getTime()) / (1000 * 60 * 60);
+      nightHours += (endTime.getTime() - nightStart.getTime()) / (1000 * 60 * 60);
     }
   } else if (startTime >= dayStart && startTime < nightStart) {
     // Starts during day, calculate until nightStart
     dayHours +=
-      (Math.min(endTime.getTime(), nightStart.getTime()) -
-        startTime.getTime()) /
-      (1000 * 60 * 60);
+      (Math.min(endTime.getTime(), nightStart.getTime()) - startTime.getTime()) / (1000 * 60 * 60);
 
     // If booking extends to nighttime
     if (endTime > nightStart) {
-      nightHours =
-        (endTime.getTime() - nightStart.getTime()) / (1000 * 60 * 60);
+      nightHours = (endTime.getTime() - nightStart.getTime()) / (1000 * 60 * 60);
     }
   } else {
     // Starts during night

@@ -1,10 +1,5 @@
 import express, { Application } from 'express';
-import {
-  config,
-  initializeApplication,
-  startServer,
-  setupCacheControl
-} from './config';
+import { config, initializeApplication, startServer, setupCacheControl } from './config';
 import router from './routes/index.routes';
 import errorMiddleware from './middlewares/error.middleware';
 import { setupSwagger } from './config/swagger/swagger.config';

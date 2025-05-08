@@ -8,11 +8,7 @@ import { DateUtils } from '../../utils/variables/date.utils';
  * @param res - Express Response object to send error if validation fails
  * @returns boolean indicating if validation passed
  */
-export const validateDateRange = (
-  startDate: string,
-  endDate: string,
-  res: Response
-): boolean => {
+export const validateDateRange = (startDate: string, endDate: string, res: Response): boolean => {
   // Check if dates are provided
   if (!startDate || !endDate) {
     res.status(400).json({ error: 'Start date and end date are required' });
@@ -48,9 +44,7 @@ export const validateDateRange = (
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays > maxRangeDays) {
-      res
-        .status(400)
-        .json({ error: `Date range cannot exceed ${maxRangeDays} days` });
+      res.status(400).json({ error: `Date range cannot exceed ${maxRangeDays} days` });
       return false;
     }
 
@@ -112,9 +106,7 @@ export const validatePagination = (
   }
 
   if (isNaN(limitNum) || limitNum <= 0 || limitNum > 100) {
-    res
-      .status(400)
-      .json({ error: 'Limit must be a positive integer between 1 and 100' });
+    res.status(400).json({ error: 'Limit must be a positive integer between 1 and 100' });
     return false;
   }
 

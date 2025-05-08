@@ -36,4 +36,4 @@ redisClient.on('ready', () => {
 });
 
 // Export the Redis client
-export default redisClient; 
+export default redisClient;

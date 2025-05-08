@@ -5,7 +5,7 @@ import { broadcastActivityLogUpdates } from './activityLog.socket';
 
 /**
  * Emit booking-related socket events
- * 
+ *
  * @param eventType Tipe event ('new-booking', 'update-payment', 'cancel-booking', dll)
  * @param data Data yang terkait dengan event
  */
@@ -26,7 +26,7 @@ export const emitBookingEvents = (eventType: string, data: any) => {
       case 'booking:deleted':
         handleBookingCanceledEvent(io, data);
         break;
-        
+
       default:
         console.log(`Unhandled booking event type: ${eventType}`);
         // Broadcast event with raw data for custom handling
@@ -44,10 +44,7 @@ export const emitBookingEvents = (eventType: string, data: any) => {
 const handleBookingCreatedEvent = (io: any, data: any) => {
   // Emit to branch channel if booking includes field with branch
   if (data.booking?.field?.branchId) {
-    io.to(`branch-${data.booking.field.branchId}`).emit(
-      'booking:created',
-      data.booking
-    );
+    io.to(`branch-${data.booking.field.branchId}`).emit('booking:created', data.booking);
   }
 
   // Emit to user's personal channel
@@ -58,15 +55,11 @@ const handleBookingCreatedEvent = (io: any, data: any) => {
     });
 
     // Log activity
-    logBookingActivity(
-      data.booking.userId,
-      'CREATE_BOOKING',
-      {
-        bookingId: data.booking.id,
-        fieldId: data.booking.fieldId,
-        date: formatDateToWIB(data.booking.bookingDate),
-      }
-    );
+    logBookingActivity(data.booking.userId, 'CREATE_BOOKING', {
+      bookingId: data.booking.id,
+      fieldId: data.booking.fieldId,
+      date: formatDateToWIB(data.booking.bookingDate),
+    });
   }
 
   // Emit to field availability channel
@@ -87,10 +80,7 @@ const handleBookingCreatedEvent = (io: any, data: any) => {
 const handlePaymentUpdateEvent = (io: any, data: any) => {
   // Emit to branch channel
   if (data.branchId) {
-    io.to(`branch-${data.branchId}`).emit(
-      'booking:updated',
-      data.booking
-    );
+    io.to(`branch-${data.branchId}`).emit('booking:updated', data.booking);
   }
 
   // Emit to user's personal channel
@@ -102,14 +92,10 @@ const handlePaymentUpdateEvent = (io: any, data: any) => {
     });
 
     // Log activity
-    logBookingActivity(
-      data.userId,
-      'UPDATE_PAYMENT',
-      {
-        bookingId: data.booking?.id,
-        paymentStatus: data.paymentStatus,
-      }
-    );
+    logBookingActivity(data.userId, 'UPDATE_PAYMENT', {
+      bookingId: data.booking?.id,
+      paymentStatus: data.paymentStatus,
+    });
   }
 };
 
@@ -139,14 +125,10 @@ const handleBookingCanceledEvent = (io: any, data: any) => {
 
   // Log activity if userId is provided
   if (data.userId) {
-    logBookingActivity(
-      data.userId,
-      'CANCEL_BOOKING',
-      {
-        bookingId: data.bookingId,
-        fieldId: data.fieldId,
-      }
-    );
+    logBookingActivity(data.userId, 'CANCEL_BOOKING', {
+      bookingId: data.bookingId,
+      fieldId: data.fieldId,
+    });
   }
 };
 
@@ -162,10 +144,10 @@ const logBookingActivity = async (userId: number, action: string, details: any) 
         details: JSON.stringify(details),
       },
     });
-    
+
     // Broadcast activity log updates
     broadcastActivityLogUpdates(userId);
   } catch (error) {
     console.error(`Failed to log booking activity: ${action}`, error);
   }
-}; 
+};

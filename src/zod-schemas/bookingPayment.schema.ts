@@ -4,8 +4,7 @@ import { z } from 'zod';
 export const updateBookingPaymentSchema = z.object({
   paymentStatus: z
     .enum(['pending', 'paid', 'dp_paid', 'failed', 'refunded'], {
-      message:
-        'Status pembayaran harus salah satu dari: pending, paid, dp_paid, failed, refunded',
+      message: 'Status pembayaran harus salah satu dari: pending, paid, dp_paid, failed, refunded',
     })
     .optional(),
 

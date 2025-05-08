@@ -14,7 +14,9 @@ import redisClient from '../../config/services/redis';
  * @param entityId ID entitas (opsional)
  */
 const logInvalidation = (entityName: string, entityId?: number): void => {
-  console.log(`[CACHE] Invalidating ${entityName} cache${entityId ? ` for ${entityName} #${entityId}` : ''}`);
+  console.log(
+    `[CACHE] Invalidating ${entityName} cache${entityId ? ` for ${entityName} #${entityId}` : ''}`
+  );
 };
 
 /**
@@ -49,30 +51,30 @@ export const invalidateBookingCache = async (
 ): Promise<boolean> => {
   try {
     logInvalidation('booking', bookingId);
-    
+
     // Hapus cache booking dan cachingnya
     await deleteCachedDataByPattern('booking');
-    
+
     // Hapus cache field terkait
     if (fieldId) {
       await deleteCachedDataByPattern(`field:${fieldId}`);
     }
     await deleteCachedDataByPattern('fields_availability');
-    
+
     // Hapus cache branch terkait
     if (branchId) {
       await deleteCachedDataByPattern(`branch:${branchId}:bookings`);
     }
-    
+
     // Hapus cache user terkait
     if (userId) {
       await deleteCachedDataByPattern(`user:${userId}:bookings`);
     }
-    
+
     // Hapus cache dashboard dan statistik
     await deleteCachedDataByPattern('dashboard');
     await deleteCachedDataByPattern('stats');
-    
+
     logSuccess('booking');
     return true;
   } catch (error) {
@@ -98,19 +100,19 @@ export const invalidatePaymentCache = async (
 ): Promise<boolean> => {
   try {
     logInvalidation('payment', paymentId);
-    
+
     // Hapus cache payment
     await deleteCachedDataByPattern('payment');
-    
+
     // Hapus cache booking terkait jika ada ID booking
     if (bookingId) {
       // Panggil dengan verbose=false untuk mengurangi log
       await invalidateBookingCache(bookingId, fieldId, branchId, userId);
     }
-    
+
     // Hapus cache revenue
     await deleteCachedDataByPattern('revenue');
-    
+
     logSuccess('payment');
     return true;
   } catch (error) {
@@ -130,16 +132,16 @@ export const invalidateFieldCache = async (
 ): Promise<boolean> => {
   try {
     logInvalidation('field', fieldId);
-    
+
     // Hapus cache field dan ketersediaan
     await deleteCachedDataByPattern('field');
     await deleteCachedDataByPattern('fields_availability');
-    
+
     // Hapus cache branch terkait
     if (branchId) {
       await deleteCachedDataByPattern(`branch:${branchId}:fields`);
     }
-    
+
     logSuccess('field');
     return true;
   } catch (error) {
@@ -152,26 +154,24 @@ export const invalidateFieldCache = async (
  * Menghapus cache terkait branch secara komprehensif
  * @param branchId - ID branch spesifik (opsional)
  */
-export const invalidateBranchCache = async (
-  branchId?: number
-): Promise<boolean> => {
+export const invalidateBranchCache = async (branchId?: number): Promise<boolean> => {
   try {
     logInvalidation('branch', branchId);
-    
+
     // Hapus cache branch
     await deleteCachedDataByPattern('branch');
-    
+
     // Hapus cache spesifik jika ID disediakan
     if (branchId) {
       await deleteCachedDataByPattern(`branch:${branchId}`);
     }
-    
+
     // Branch mempengaruhi fields dan ketersediaannya
     await invalidateFieldCache();
-    
+
     // Dan dashboard
     await deleteCachedDataByPattern('dashboard');
-    
+
     logSuccess('branch');
     return true;
   } catch (error) {
@@ -184,20 +184,18 @@ export const invalidateBranchCache = async (
  * Menghapus cache terkait user secara komprehensif
  * @param userId - ID user spesifik (opsional)
  */
-export const invalidateUserCache = async (
-  userId?: number
-): Promise<boolean> => {
+export const invalidateUserCache = async (userId?: number): Promise<boolean> => {
   try {
     logInvalidation('user', userId);
-    
+
     // Hapus cache user
     await deleteCachedDataByPattern('user');
-    
+
     // Hapus cache spesifik jika ID disediakan
     if (userId) {
       await deleteCachedDataByPattern(`user:${userId}`);
     }
-    
+
     logSuccess('user');
     return true;
   } catch (error) {
@@ -210,20 +208,18 @@ export const invalidateUserCache = async (
  * Menghapus cache terkait aktivitas log
  * @param userId - ID user terkait (opsional)
  */
-export const invalidateActivityLogCache = async (
-  userId?: number
-): Promise<boolean> => {
+export const invalidateActivityLogCache = async (userId?: number): Promise<boolean> => {
   try {
     logInvalidation('activity log');
-    
+
     // Hapus cache activity log
     await deleteCachedDataByPattern('activity_logs');
-    
+
     // Hapus cache user spesifik jika ID disediakan
     if (userId) {
       await deleteCachedDataByPattern(`user:${userId}:activities`);
     }
-    
+
     logSuccess('activity log');
     return true;
   } catch (error) {
@@ -236,20 +232,18 @@ export const invalidateActivityLogCache = async (
  * Menghapus cache terkait notifikasi
  * @param userId - ID user terkait (opsional)
  */
-export const invalidateNotificationCache = async (
-  userId?: number
-): Promise<boolean> => {
+export const invalidateNotificationCache = async (userId?: number): Promise<boolean> => {
   try {
     logInvalidation('notification');
-    
+
     // Hapus cache notifikasi
     await deleteCachedDataByPattern('notifications');
-    
+
     // Hapus cache spesifik jika ID disediakan
     if (userId) {
       await deleteCachedDataByPattern(`user:${userId}:notifications`);
     }
-    
+
     logSuccess('notification');
     return true;
   } catch (error) {
@@ -264,9 +258,9 @@ export const invalidateNotificationCache = async (
 export const invalidateFieldTypeCache = async (): Promise<boolean> => {
   try {
     logInvalidation('field type');
-    
+
     await deleteCachedDataByPattern('field_types');
-    
+
     logSuccess('field type');
     return true;
   } catch (error) {
@@ -281,9 +275,9 @@ export const invalidateFieldTypeCache = async (): Promise<boolean> => {
 export const invalidatePromotionCache = async (): Promise<boolean> => {
   try {
     logInvalidation('promotion');
-    
+
     await deleteCachedDataByPattern('promotions');
-    
+
     logSuccess('promotion');
     return true;
   } catch (error) {
@@ -298,9 +292,9 @@ export const invalidatePromotionCache = async (): Promise<boolean> => {
 export const invalidatePromotionUsageCache = async (): Promise<boolean> => {
   try {
     logInvalidation('promotion usage');
-    
+
     await deleteCachedDataByPattern('promotion_usage');
-    
+
     logSuccess('promotion usage');
     return true;
   } catch (error) {
@@ -315,9 +309,9 @@ export const invalidatePromotionUsageCache = async (): Promise<boolean> => {
 export const invalidateFieldReviewCache = async (): Promise<boolean> => {
   try {
     logInvalidation('field review');
-    
+
     await deleteCachedDataByPattern('field_reviews');
-    
+
     logSuccess('field review');
     return true;
   } catch (error) {
@@ -334,10 +328,10 @@ export const invalidateFieldReviewCache = async (): Promise<boolean> => {
 export const invalidateAllCache = async (): Promise<boolean> => {
   try {
     console.log('[CACHE] Invalidating all system cache');
-    
+
     // Lebih efisien menggunakan flushAll Redis daripada menghapus pattern
     await redisClient.flushAll();
-    
+
     console.log('[CACHE] Successfully invalidated all system cache');
     return true;
   } catch (error) {

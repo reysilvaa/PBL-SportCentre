@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/services/database';
-import {
-  createFieldTypeSchema,
-  updateFieldTypeSchema,
-} from '../zod-schemas/fieldType.schema';
+import { createFieldTypeSchema, updateFieldTypeSchema } from '../zod-schemas/fieldType.schema';
 import { invalidateFieldTypeCache } from '../utils/cache/cacheInvalidation.utils';
 import { User } from '../middlewares/auth.middleware';
 
@@ -35,10 +32,7 @@ export const getFieldTypes = async (req: Request, res: Response) => {
   }
 };
 
-export const createFieldType = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const createFieldType = async (req: User, res: Response): Promise<void> => {
   try {
     // Validasi data dengan Zod
     const result = createFieldTypeSchema.safeParse(req.body);
@@ -75,13 +69,13 @@ export const createFieldType = async (
     res.status(201).json({
       status: true,
       message: 'Berhasil membuat tipe lapangan baru',
-      data: newFieldType
+      data: newFieldType,
     });
   } catch (error) {
     console.error('Error creating field type:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
@@ -90,7 +84,7 @@ export const updateFieldType = async (req: User, res: Response) => {
   try {
     const { id } = req.params;
     const fieldTypeId = parseInt(id);
-    
+
     if (isNaN(fieldTypeId)) {
       res.status(400).json({
         status: false,
@@ -147,25 +141,22 @@ export const updateFieldType = async (req: User, res: Response) => {
     res.status(200).json({
       status: true,
       message: 'Berhasil memperbarui tipe lapangan',
-      data: updatedFieldType
+      data: updatedFieldType,
     });
   } catch (error) {
     console.error('Error updating field type:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
 };
 
-export const deleteFieldType = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const deleteFieldType = async (req: User, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const fieldTypeId = parseInt(id);
-    
+
     if (isNaN(fieldTypeId)) {
       res.status(400).json({
         status: false,
@@ -219,13 +210,13 @@ export const deleteFieldType = async (
 
     res.status(200).json({
       status: true,
-      message: 'Berhasil menghapus tipe lapangan'
+      message: 'Berhasil menghapus tipe lapangan',
     });
   } catch (error) {
     console.error('Error deleting field type:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Internal Server Error' 
+      message: 'Internal Server Error',
     });
   }
-}; 
+};

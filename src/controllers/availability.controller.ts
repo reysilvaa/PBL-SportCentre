@@ -12,10 +12,7 @@ import { fieldAvailabilityQueue } from '../config/services/queue';
  * Mengelola endpoint terkait ketersediaan lapangan
  */
 
-export const checkAllFieldsAvailability = async (
-  req: Request,
-  res: Response
-) => {
+export const checkAllFieldsAvailability = async (req: Request, res: Response) => {
   try {
     const results = await getAllFieldsAvailability();
     res.status(200).json({ success: true, data: results });
@@ -45,7 +42,7 @@ export const setupFieldAvailabilityProcessor = (): void => {
       throw error;
     }
   });
-  
+
   console.log('✅ Field availability processor didaftarkan');
 };
 
@@ -55,13 +52,16 @@ export const setupFieldAvailabilityProcessor = (): void => {
 export const startFieldAvailabilityUpdates = (): void => {
   // Jalankan pembaruan pertama segera
   fieldAvailabilityQueue.add({}, { jobId: 'initial-update' });
-  
+
   // Tambahkan recurring job (setiap 1 menit)
-  fieldAvailabilityQueue.add({}, {
-    jobId: 'availability-recurring',
-    repeat: { cron: '*/1 * * * *' }
-  });
-  
+  fieldAvailabilityQueue.add(
+    {},
+    {
+      jobId: 'availability-recurring',
+      repeat: { cron: '*/1 * * * *' },
+    }
+  );
+
   console.log('🚀 Field availability Bull Queue job started');
 };
 
@@ -71,4 +71,4 @@ export const startFieldAvailabilityUpdates = (): void => {
 export const cleanupFieldAvailabilityUpdates = async (): Promise<void> => {
   await fieldAvailabilityQueue.close();
   console.log('🛑 Field availability Bull Queue job stopped');
-}; 
+};

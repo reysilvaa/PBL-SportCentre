@@ -1,10 +1,7 @@
 // src/routes/notification.routes.ts
 
 import { Router } from 'express';
-import {
-  getNotifications,
-  readNotification,
-} from '../../controllers/webhook/notification.controller';
+import { getNotifications, readNotification } from '../../controllers/webhook/notification.controller';
 import { auth } from '../../middlewares/auth.middleware';
 
 const router = Router();

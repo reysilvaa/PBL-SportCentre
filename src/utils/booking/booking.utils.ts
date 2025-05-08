@@ -55,12 +55,7 @@ export const validateBookingTime = async (
   }
 
   // Check field availability
-  const isAvailable = await isFieldAvailable(
-    fieldId,
-    bookingDate,
-    startTime,
-    endTime
-  );
+  const isAvailable = await isFieldAvailable(fieldId, bookingDate, startTime, endTime);
 
   if (!isAvailable) {
     return {
@@ -178,10 +173,10 @@ export const processMidtransPayment = async (
   // Update the payment record with the expiry date, payment URL, and transaction ID
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { 
+    data: {
       expiresDate: expiryDate,
       paymentUrl: transaction.redirect_url,
-      transactionId: transaction.transaction_id
+      transactionId: transaction.transaction_id,
     },
   });
 
@@ -213,8 +208,8 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         booking: {
           include: {
             field: true,
-            user: true
-          }
+            user: true,
+          },
         },
       },
     });
@@ -237,7 +232,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       // Emit event for booking cancellation to update field availability
       if (payment.booking) {
         const booking = payment.booking;
-        
+
         // Emit event to notify system that booking is canceled
         emitBookingEvents('cancel-booking', {
           bookingId: booking.id,
@@ -248,7 +243,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
           startTime: booking.startTime,
           endTime: booking.endTime,
         });
-        
+
         // Emit notification to user
         emitBookingEvents('booking:updated', {
           booking: booking,
@@ -256,8 +251,10 @@ export const cleanupPendingBookings = async (): Promise<void> => {
           branchId: booking.field?.branchId,
           paymentStatus: 'failed',
         });
-        
-        console.log(`🔔 Notified system about canceled booking #${booking.id} due to payment expiry`);
+
+        console.log(
+          `🔔 Notified system about canceled booking #${booking.id} due to payment expiry`
+        );
       }
     }
 
@@ -277,7 +274,7 @@ export const setupBookingCleanupProcessor = (): void => {
     await cleanupPendingBookings();
     return { success: true, timestamp: new Date() };
   });
-  
+
   console.log('✅ Booking cleanup processor didaftarkan');
 };
 
@@ -287,13 +284,16 @@ export const setupBookingCleanupProcessor = (): void => {
 export const startBookingCleanupJob = (): void => {
   // Menjalankan proses cleanup segera
   bookingCleanupQueue.add({}, { jobId: 'initial-cleanup' });
-  
+
   // Tambahkan recurring job (setiap 1 menit)
-  bookingCleanupQueue.add({}, {
-    jobId: 'cleanup-recurring',
-    repeat: { cron: '*/1 * * * *' } // Sama dengan cron: setiap 1 menit
-  });
-  
+  bookingCleanupQueue.add(
+    {},
+    {
+      jobId: 'cleanup-recurring',
+      repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
+    }
+  );
+
   console.log('🚀 Expired booking cleanup Bull Queue job started');
 };
 

@@ -25,9 +25,7 @@ export class DateUtils {
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
     const week =
-      Math.floor(
-        (d.getTime() - new Date(d.getFullYear(), 0, 4).getTime()) / 86400000 / 7
-      ) + 1;
+      Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 4).getTime()) / 86400000 / 7) + 1;
     return `${d.getFullYear()}-${String(week).padStart(2, '0')}`;
   }
 
@@ -74,11 +72,7 @@ export class DateUtils {
   // Get months between two dates
   static getMonthsBetween(startDate: Date, endDate: Date): string[] {
     const months: string[] = [];
-    const currentDate = new Date(
-      startDate.getFullYear(),
-      startDate.getMonth(),
-      1
-    );
+    const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
     const lastDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
 
     while (currentDate <= lastDate) {

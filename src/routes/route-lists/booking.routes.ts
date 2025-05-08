@@ -7,19 +7,14 @@ import { bookingRateLimiter } from '../../middlewares/security.middleware';
 const router = Router();
 
 // Pembuatan booking
-router.post(
-  '/',
-  userAuth(),
-  bookingRateLimiter,
-  bookingController.createBooking
-);
+router.post('/', userAuth(), bookingRateLimiter, bookingController.createBooking);
 
 // Mendapatkan booking pengguna berdasarkan userId
 router.get(
   '/users/:userId/bookings',
   userAuth({
     ownerOnly: true,
-    resourceName: 'user'
+    resourceName: 'user',
   }),
   cacheMiddleware('user_bookings', 120),
   bookingController.getUserBookings
@@ -30,7 +25,7 @@ router.get(
   '/bookings/:id/user',
   userAuth({
     ownerOnly: true,
-    resourceName: 'booking'
+    resourceName: 'booking',
   }),
   cacheMiddleware('booking_detail', 120),
   bookingController.getBookingById
@@ -41,7 +36,7 @@ router.delete(
   '/bookings/:id',
   userAuth({
     ownerOnly: true,
-    resourceName: 'booking'
+    resourceName: 'booking',
   }),
   bookingController.cancelBooking
 );
@@ -63,18 +58,10 @@ router.get(
 );
 
 // Update status booking
-router.put(
-  '/branches/:branchId/bookings/:id/status',
-  branchAdminAuth(),
-  bookingController.updateBranchBookingStatus
-);
+router.put('/branches/:branchId/bookings/:id/status', branchAdminAuth(), bookingController.updateBranchBookingStatus);
 
 // Buat booking manual
-router.post(
-  '/branches/:branchId/bookings/manual',
-  branchAdminAuth(),
-  bookingController.createManualBooking
-);
+router.post('/branches/:branchId/bookings/manual', branchAdminAuth(), bookingController.createManualBooking);
 
 // Daftar semua booking (admin)
 router.get(
@@ -93,18 +80,10 @@ router.get(
 );
 
 // Update pembayaran booking
-router.put(
-  '/admin/bookings/:id/payment',
-  superAdminAuth(),
-  bookingController.updateBookingPayment
-);
+router.put('/admin/bookings/:id/payment', superAdminAuth(), bookingController.updateBookingPayment);
 
 // Hapus booking
-router.delete(
-  '/admin/bookings/:id',
-  superAdminAuth(),
-  bookingController.deleteBooking
-);
+router.delete('/admin/bookings/:id', superAdminAuth(), bookingController.deleteBooking);
 
 // Statistik booking
 router.get(

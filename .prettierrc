@@ -1,5 +1,5 @@
 {
-  "printWidth": 80,
+  "printWidth": 100,
   "tabWidth": 2,
   "useTabs": false,
   "semi": true,
@@ -8,7 +8,6 @@
   "bracketSpacing": true,
   "arrowParens": "always",
   "endOfLine": "lf",
-  "proseWrap": "preserve",
   "quoteProps": "as-needed",
   "jsxSingleQuote": false,
   "embeddedLanguageFormatting": "auto",
@@ -20,9 +19,9 @@
       }
     },
     {
-      "files": ["*.route.js", "*.routes.js", "*.route.ts", "*.routes.ts"],
+      "files": ["*.route.ts", "*.routes.ts", "*.controller.ts", "*.middleware.ts"],
       "options": {
-        "printWidth": 100
+        "printWidth": 120
       }
     },
     {

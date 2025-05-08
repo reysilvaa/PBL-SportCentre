@@ -9,21 +9,16 @@ import { User } from '../middlewares/auth.middleware';
  * Untuk pengelolaan log aktivitas aplikasi
  */
 
-export const getActivityLogs = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const getActivityLogs = async (req: User, res: Response): Promise<void> => {
   try {
     // Jika bukan super admin, batasi hanya untuk log sendiri
     let userId: number | undefined;
-    
+
     if (req.user?.role !== 'super_admin') {
       userId = req.user?.id;
     } else {
       // Super admin bisa melihat log berdasarkan userId dari query
-      userId = req.query.userId
-        ? parseInt(req.query.userId as string)
-        : undefined;
+      userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
     }
 
     const logs = await ActivityLogService.getLogs(userId);
@@ -36,21 +31,18 @@ export const getActivityLogs = async (
     res.status(200).json({
       status: true,
       message: 'Berhasil mendapatkan log aktivitas',
-      data: logs
+      data: logs,
     });
   } catch (error) {
     console.error('Error fetching activity logs:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Gagal mengambil log aktivitas' 
+      message: 'Gagal mengambil log aktivitas',
     });
   }
 };
 
-export const createActivityLog = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const createActivityLog = async (req: User, res: Response): Promise<void> => {
   try {
     // Validasi data dengan Zod
     const result = createActivityLogSchema.safeParse(req.body);
@@ -91,25 +83,22 @@ export const createActivityLog = async (
     res.status(201).json({
       status: true,
       message: 'Berhasil membuat log aktivitas',
-      data: newLog
+      data: newLog,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Gagal membuat log aktivitas' 
+      message: 'Gagal membuat log aktivitas',
     });
   }
 };
 
-export const deleteActivityLog = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const deleteActivityLog = async (req: User, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const logId = parseInt(id);
-    
+
     // Hanya super admin yang bisa menghapus log aktivitas
     if (req.user?.role !== 'super_admin') {
       res.status(403).json({
@@ -118,7 +107,7 @@ export const deleteActivityLog = async (
       });
       return;
     }
-    
+
     await ActivityLogService.deleteLog(logId);
 
     // Hapus cache activity logs (tanpa memberikan userId spesifik)
@@ -142,9 +131,9 @@ export const deleteActivityLog = async (
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: false,
-      message: 'Gagal menghapus log aktivitas' 
+      message: 'Gagal menghapus log aktivitas',
     });
   }
-}; 
+};

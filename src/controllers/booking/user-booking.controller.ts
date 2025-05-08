@@ -12,18 +12,9 @@ import {
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import {
-  TIMEZONE,
-  formatDateToWIB,
-  combineDateWithTimeWIB,
-} from '../../utils/variables/timezone.utils';
-import { 
-  invalidateBookingCache
-} from '../../utils/cache/cacheInvalidation.utils';
-import {
-  trackFailedBooking,
-  resetFailedBookingCounter,
-} from '../../middlewares/security.middleware';
+import { TIMEZONE, formatDateToWIB, combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
+import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
+import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 import { User } from '../../middlewares/auth.middleware';
 
 /**
@@ -31,10 +22,7 @@ import { User } from '../../middlewares/auth.middleware';
  * Berisi semua operasi booking untuk pengguna biasa
  */
 
-export const createBooking = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const createBooking = async (req: User, res: Response): Promise<void> => {
   try {
     console.log('📥 Request body:', req.body);
 
@@ -42,12 +30,7 @@ export const createBooking = async (
     const result = createBookingSchema.safeParse(req.body);
 
     if (!result.success) {
-      return sendErrorResponse(
-        res,
-        400,
-        'Validasi gagal',
-        result.error.format()
-      );
+      return sendErrorResponse(res, 400, 'Validasi gagal', result.error.format());
     }
 
     const { userId, fieldId, bookingDate, startTime, endTime } = result.data;
@@ -57,34 +40,18 @@ export const createBooking = async (
     console.log('📆 Booking Date (WIB):', formatDateToWIB(bookingDateTime));
 
     // Combine date with time in WIB timezone
-    const startDateTime = toZonedTime(
-      combineDateWithTimeWIB(bookingDateTime, startTime),
-      TIMEZONE
-    );
+    const startDateTime = toZonedTime(combineDateWithTimeWIB(bookingDateTime, startTime), TIMEZONE);
 
-    const endDateTime = toZonedTime(
-      combineDateWithTimeWIB(bookingDateTime, endTime),
-      TIMEZONE
-    );
+    const endDateTime = toZonedTime(combineDateWithTimeWIB(bookingDateTime, endTime), TIMEZONE);
 
     console.log('⏰ Start Time (WIB):', formatDateToWIB(startDateTime));
     console.log('⏰ End Time (WIB):', formatDateToWIB(endDateTime));
 
     // Validate booking time and availability
-    const timeValidation = await validateBookingTime(
-      fieldId,
-      bookingDateTime,
-      startDateTime,
-      endDateTime
-    );
+    const timeValidation = await validateBookingTime(fieldId, bookingDateTime, startDateTime, endDateTime);
 
     if (!timeValidation.valid) {
-      return sendErrorResponse(
-        res,
-        400,
-        timeValidation.message,
-        timeValidation.details
-      );
+      return sendErrorResponse(res, 400, timeValidation.message, timeValidation.details);
     }
 
     // Get field details for pricing
@@ -139,13 +106,7 @@ export const createBooking = async (
     console.log('💳 Payment created:', payment.id);
 
     // Process payment via Midtrans API
-    const paymentResult = await processMidtransPayment(
-      booking,
-      payment,
-      field,
-      user,
-      totalPrice
-    );
+    const paymentResult = await processMidtransPayment(booking, payment, field, user, totalPrice);
 
     if (!paymentResult) {
       // Jika gagal membuat pembayaran, lacak sebagai percobaan gagal
@@ -199,10 +160,7 @@ export const createBooking = async (
   }
 };
 
-export const getUserBookings = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const getUserBookings = async (req: User, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
     const parsedUserId = parseInt(userId);
@@ -234,10 +192,7 @@ export const getUserBookings = async (
   }
 };
 
-export const getBookingById = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const getBookingById = async (req: User, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const bookingId = parseInt(id);
@@ -273,10 +228,7 @@ export const getBookingById = async (
   }
 };
 
-export const cancelBooking = async (
-  req: User,
-  res: Response
-): Promise<void> => {
+export const cancelBooking = async (req: User, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const bookingId = parseInt(id);
@@ -300,11 +252,7 @@ export const cancelBooking = async (
 
     // Only allow cancellation of pending and unpaid bookings
     if (booking.payment?.status === 'paid') {
-      return sendErrorResponse(
-        res,
-        400,
-        'Cannot cancel a booking that has been paid. Please contact administrator.'
-      );
+      return sendErrorResponse(res, 400, 'Cannot cancel a booking that has been paid. Please contact administrator.');
     }
 
     // Delete payment first (foreign key constraint)
@@ -320,12 +268,7 @@ export const cancelBooking = async (
     });
 
     // Invalidate cache
-    await invalidateBookingCache(
-      bookingId,
-      booking.field.id,
-      booking.field.branchId,
-      booking.userId
-    );
+    await invalidateBookingCache(bookingId, booking.field.id, booking.field.branchId, booking.userId);
 
     // Emit booking cancelled event
     emitBookingEvents('booking:cancelled', { bookingId });
@@ -338,4 +281,4 @@ export const cancelBooking = async (
     console.error('Error cancelling booking:', error);
     sendErrorResponse(res, 500, 'Internal Server Error');
   }
-}; 
+};

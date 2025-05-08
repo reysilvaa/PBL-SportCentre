@@ -58,12 +58,7 @@ export const handleCheckFieldAvailability = async (
     const end = new Date(endTime);
     const date = new Date(bookingDate);
 
-    const isAvailable = await isFieldAvailable(
-      Number(fieldId),
-      date,
-      start,
-      end
-    );
+    const isAvailable = await isFieldAvailable(Number(fieldId), date, start, end);
 
     if (typeof callback === 'function') {
       callback({ success: true, data: { isAvailable } });
@@ -94,10 +89,7 @@ export const handleGetAvailableTimeSlots = async (
       return;
     }
 
-    const availableSlots = await getAvailableTimeSlots(
-      Number(fieldId),
-      new Date(date)
-    );
+    const availableSlots = await getAvailableTimeSlots(Number(fieldId), new Date(date));
 
     if (typeof callback === 'function') {
       callback({ success: true, data: { availableSlots } });

@@ -57,10 +57,7 @@ export const handleBookingSearch = async (socket: Socket, data: any) => {
 /**
  * Handle field availability check
  */
-export const handleFieldAvailabilityCheck = async (
-  socket: Socket,
-  data: any
-) => {
+export const handleFieldAvailabilityCheck = async (socket: Socket, data: any) => {
   try {
     const { fieldId, bookingDate, startTime, endTime } = data;
 
@@ -164,21 +161,10 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
       return;
     }
 
-    const {
-      fieldId,
-      userId,
-      bookingDate,
-      startTime,
-      endTime,
-      paymentStatus,
-      branchId,
-    } = data;
+    const { fieldId, userId, bookingDate, startTime, endTime, paymentStatus, branchId } = data;
 
     // Verify the field belongs to this branch
-    const field = await verifyFieldBranch(
-      parseInt(fieldId.toString()),
-      parseInt(branchId)
-    );
+    const field = await verifyFieldBranch(parseInt(fieldId.toString()), parseInt(branchId));
 
     if (!field) {
       socket.emit('booking:create-error', {
@@ -250,11 +236,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
 /**
  * Handle authentication
  */
-export const handleAuthentication = async (
-  socket: Socket,
-  data: any,
-  callback: Function
-) => {
+export const handleAuthentication = async (socket: Socket, data: any, callback: Function) => {
   try {
     const { token } = data;
     if (!token) {
@@ -332,9 +314,7 @@ export const setupBranchSocketHandlers = (): void => {
 
         const user = await authMiddleware(token);
         if (!user) {
-          console.log(
-            `Branch client connected with invalid token: ${socket.id}`
-          );
+          console.log(`Branch client connected with invalid token: ${socket.id}`);
           socket.data.user = null;
           socket.data.authenticated = false;
           return next();
@@ -380,17 +360,11 @@ export const setupBranchSocketHandlers = (): void => {
     }
 
     // Register event handlers
-    socket.on('auth:login', (data, callback) =>
-      handleAuthentication(socket, data, callback)
-    );
+    socket.on('auth:login', (data, callback) => handleAuthentication(socket, data, callback));
     socket.on('booking:search', (data) => handleBookingSearch(socket, data));
-    socket.on('field:check-availability', (data) =>
-      handleFieldAvailabilityCheck(socket, data)
-    );
+    socket.on('field:check-availability', (data) => handleFieldAvailabilityCheck(socket, data));
     socket.on('booking:stats', (data) => handleBookingStats(socket, data));
-    socket.on('booking:create-manual', (data) =>
-      handleCreateManualBooking(socket, data)
-    );
+    socket.on('booking:create-manual', (data) => handleCreateManualBooking(socket, data));
 
     // Handle admin leaving
     socket.on('disconnect', () => {

@@ -27,11 +27,7 @@ const isOverlapping = (slot1: TimeSlot, slot2: TimeSlot): boolean => {
 /**
  * Mencari booking yang valid berdasarkan status payment
  */
-const getValidBookings = async (
-  fieldId: number,
-  date: Date,
-  timeSlot?: TimeSlot
-) => {
+const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot) => {
   // Create date range for the entire day to avoid timezone issues
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
@@ -167,9 +163,7 @@ export const calculateAvailableTimeSlots = (
     return [{ start: openingTime, end: closingTime }];
   }
 
-  const sortedBookings = [...bookedSlots].sort(
-    (a, b) => a.start.getTime() - b.start.getTime()
-  );
+  const sortedBookings = [...bookedSlots].sort((a, b) => a.start.getTime() - b.start.getTime());
 
   const availableSlots: TimeSlot[] = [];
   let currentTime = openingTime;
@@ -209,11 +203,7 @@ export const isFieldAvailable = async (
   console.log('⏰ End Time:', endTime);
 
   const timeSlot = { start: startTime, end: endTime };
-  const overlappingBookings = await getValidBookings(
-    fieldId,
-    bookingDate,
-    timeSlot
-  );
+  const overlappingBookings = await getValidBookings(fieldId, bookingDate, timeSlot);
 
   console.log('📋 Overlapping bookings found:', overlappingBookings.length);
 
@@ -233,9 +223,7 @@ export const isFieldAvailable = async (
 /**
  * Mendapatkan ketersediaan semua lapangan untuk hari ini
  */
-export const getAllFieldsAvailability = async (): Promise<
-  FieldAvailability[]
-> => {
+export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> => {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Set ke awal hari
 
@@ -277,17 +265,14 @@ export const getAllFieldsAvailability = async (): Promise<
 
     // Periksa setiap slot per jam
     for (const slot of hourlyTimeSlots) {
-      const isOverlap = bookedSlots.some((bookedSlot) =>
-        isOverlapping(slot, bookedSlot)
-      );
+      const isOverlap = bookedSlots.some((bookedSlot) => isOverlapping(slot, bookedSlot));
 
       if (!isOverlap) {
         fieldAvailability.availableTimeSlots?.push(slot);
       }
     }
 
-    fieldAvailability.isAvailable =
-      (fieldAvailability.availableTimeSlots?.length || 0) > 0;
+    fieldAvailability.isAvailable = (fieldAvailability.availableTimeSlots?.length || 0) > 0;
     availabilityResults.push(fieldAvailability);
   }
 
@@ -297,10 +282,7 @@ export const getAllFieldsAvailability = async (): Promise<
 /**
  * Mendapatkan slot waktu yang tersedia untuk field tertentu pada tanggal tertentu
  */
-export const getAvailableTimeSlots = async (
-  fieldId: number,
-  date: Date
-): Promise<TimeSlot[]> => {
+export const getAvailableTimeSlots = async (fieldId: number, date: Date): Promise<TimeSlot[]> => {
   // Set tanggal ke awal hari
   const targetDate = new Date(date);
   targetDate.setHours(0, 0, 0, 0);
@@ -312,9 +294,7 @@ export const getAvailableTimeSlots = async (
   // Dapatkan semua booking valid untuk field ini pada tanggal tersebut
   const validBookings = await getValidBookings(Number(fieldId), targetDate);
 
-  console.log(
-    `📋 Ditemukan ${validBookings.length} booking valid pada tanggal tersebut`
-  );
+  console.log(`📋 Ditemukan ${validBookings.length} booking valid pada tanggal tersebut`);
 
   // Tetapkan jam buka dan tutup (24 jam)
   const openingTime = new Date(targetDate);
@@ -338,11 +318,7 @@ export const getAvailableTimeSlots = async (
     };
   });
 
-  const availableSlots = calculateAvailableTimeSlots(
-    openingTime,
-    closingTime,
-    bookedSlots
-  );
+  const availableSlots = calculateAvailableTimeSlots(openingTime, closingTime, bookedSlots);
 
   console.log(`✅ Tersedia ${availableSlots.length} slot waktu:`);
   availableSlots.forEach((slot, index) => {

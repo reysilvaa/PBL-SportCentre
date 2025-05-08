@@ -10,15 +10,15 @@ import { setupSecurityMiddlewares } from '../server/security';
 import { setupMiddlewares } from '../server/middleware';
 import { initializeSocketIO } from '../server/socket';
 import { initializeAllSocketHandlers } from '../../socket-handlers';
-import { 
-  startFieldAvailabilityUpdates, 
-  setupFieldAvailabilityProcessor 
+import {
+  startFieldAvailabilityUpdates,
+  setupFieldAvailabilityProcessor,
 } from '../../controllers/availability.controller';
 import { logServerStartup, setupPeriodicHealthCheck } from './monitoring';
 import { setupSwagger } from '../swagger/swagger.config';
-import { 
-  startBookingCleanupJob, 
-  setupBookingCleanupProcessor 
+import {
+  startBookingCleanupJob,
+  setupBookingCleanupProcessor,
 } from '../../utils/booking/booking.utils';
 import { initializeCloudinary } from '../services/cloudinary';
 
@@ -55,7 +55,7 @@ export const initializeApplication = (app: Application): http.Server => {
 
   // Setup Bull Queue processors
   setupQueueProcessors();
-  
+
   // Mulai Bull Queue jobs
   startBackgroundJobs();
 
@@ -68,10 +68,10 @@ export const initializeApplication = (app: Application): http.Server => {
 export const setupQueueProcessors = (): void => {
   // Setup processor untuk Field Availability queue
   setupFieldAvailabilityProcessor();
-  
+
   // Setup processor untuk Booking Cleanup queue
   setupBookingCleanupProcessor();
-  
+
   console.log('✅ Bull Queue processors telah didaftarkan');
 };
 
@@ -81,10 +81,10 @@ export const setupQueueProcessors = (): void => {
 export const startBackgroundJobs = (): void => {
   // Mulai job untuk memperbarui ketersediaan lapangan
   startFieldAvailabilityUpdates();
-  
+
   // Mulai job untuk membersihkan booking yang kedaluwarsa
   startBookingCleanupJob();
-  
+
   console.log('🚀 Background jobs dimulai dengan Bull Queue');
 };
 

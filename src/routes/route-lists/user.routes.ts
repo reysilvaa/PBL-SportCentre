@@ -15,33 +15,16 @@ router.get(
 );
 
 // Mendapatkan profil pengguna (semua role, tapi hanya milik sendiri kecuali super admin)
-router.get(
-  '/profile/:id?',
-  auth(),
-  cacheMiddleware('user_profile', 300),
-  userController.getUserProfile
-);
+router.get('/profile/:id?', auth(), cacheMiddleware('user_profile', 300), userController.getUserProfile);
 
 // Update profil pengguna sendiri
-router.put(
-  '/profile/:id?',
-  auth(),
-  userController.updateUserProfile
-);
+router.put('/profile/:id?', auth(), userController.updateUserProfile);
 
 // Membuat pengguna (super admin dan admin cabang)
-router.post(
-  '/',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
-  userController.createUser
-);
+router.post('/', auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }), userController.createUser);
 
 // Mengupdate pengguna (super admin dan admin cabang)
-router.put(
-  '/:id',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
-  userController.updateUser
-);
+router.put('/:id', auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }), userController.updateUser);
 
 // Menghapus pengguna (super admin dan admin cabang)
 router.delete(

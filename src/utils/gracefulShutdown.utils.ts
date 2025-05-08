@@ -29,10 +29,7 @@ const handleShutdown = async (server: http.Server, signal: string): Promise<void
 
     // Hentikan Bull Queue jobs
     console.log('🔄 Menutup Bull Queue jobs...');
-    await Promise.all([
-      stopBookingCleanupJob(),
-      cleanupFieldAvailabilityUpdates()
-    ]);
+    await Promise.all([stopBookingCleanupJob(), cleanupFieldAvailabilityUpdates()]);
     console.log('✅ Bull Queue jobs dihentikan');
 
     // Tutup koneksi Redis
@@ -51,4 +48,4 @@ const handleShutdown = async (server: http.Server, signal: string): Promise<void
     console.error('❌ Error selama graceful shutdown:', error);
     process.exit(1);
   }
-}; 
+};

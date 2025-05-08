@@ -12,7 +12,7 @@ export const corsConfig = (): CorsOptions => {
     'http://localhost:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
+    'http://127.0.0.1:3001',
   ];
 
   // Log allowed origins for debugging
@@ -38,11 +38,18 @@ export const corsConfig = (): CorsOptions => {
     },
     credentials: true, // Izinkan pengiriman cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'If-None-Match'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'If-None-Match',
+    ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'ETag', 'Cache-Control'],
     maxAge: 86400,
     preflightContinue: false,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 204,
   };
 };
 

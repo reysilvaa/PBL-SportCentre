@@ -21,12 +21,6 @@ export const initializeAllSocketHandlers = (): void => {
 };
 
 // Re-export socket handlers
-export { 
-  ActivityLogSocket,
-  BranchSocket, 
-  FieldSocket,
-  PaymentSocket,
-  BookingSocket
-};
+export { ActivityLogSocket, BranchSocket, FieldSocket, PaymentSocket, BookingSocket };
 
 export default initializeAllSocketHandlers;

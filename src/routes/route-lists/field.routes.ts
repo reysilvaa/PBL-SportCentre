@@ -3,13 +3,13 @@ import { parseIds } from '../../middlewares/parseId.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { fieldUpload } from '../../middlewares/multer.middleware';
 import { auth } from '../../middlewares/auth.middleware';
-import { 
-  getAllFields, 
+import {
+  getAllFields,
   getBranchFields,
   createField,
   updateField,
   deleteField,
-  getFieldById
+  getFieldById,
 } from '../../controllers/field.controller';
 import { checkAllFieldsAvailability } from '../../controllers/availability.controller';
 
@@ -25,7 +25,7 @@ router.get(
   '/admin',
   auth({
     allowedRoles: ['admin_cabang', 'owner_cabang', 'super_admin'],
-    attachBranch: true
+    attachBranch: true,
   }),
   cacheMiddleware('admin_fields', 300),
   getBranchFields
@@ -36,7 +36,7 @@ router.post(
   '/',
   auth({
     allowedRoles: ['super_admin', 'admin_cabang'],
-    attachBranch: true
+    attachBranch: true,
   }),
   fieldUpload.single('imageUrl'),
   parseIds,
@@ -50,7 +50,7 @@ router.put(
     allowedRoles: ['super_admin', 'admin_cabang'],
     attachBranch: true,
     ownerOnly: true,
-    resourceName: 'field'
+    resourceName: 'field',
   }),
   fieldUpload.single('imageUrl'),
   parseIds,
@@ -64,7 +64,7 @@ router.delete(
     allowedRoles: ['super_admin', 'admin_cabang'],
     attachBranch: true,
     ownerOnly: true,
-    resourceName: 'field'
+    resourceName: 'field',
   }),
   deleteField
 );

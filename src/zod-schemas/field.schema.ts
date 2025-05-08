@@ -56,13 +56,8 @@ export const createFieldSchema = z.object({
         message: 'Harga malam tidak boleh negatif',
       })
   ),
-  status: z
-    .enum(['available', 'maintenance', 'booked'])
-    .optional()
-    .default('available'),
+  status: z.enum(['available', 'maintenance', 'booked']).optional().default('available'),
 });
 
 // Skema untuk update lapangan (semua field opsional kecuali yang tidak boleh diubah)
-export const updateFieldSchema = createFieldSchema
-  .omit({ branchId: true })
-  .partial();
+export const updateFieldSchema = createFieldSchema.omit({ branchId: true }).partial();
