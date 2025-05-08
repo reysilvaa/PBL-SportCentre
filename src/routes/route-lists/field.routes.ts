@@ -41,6 +41,7 @@ router.post(
   authMiddleware(['super_admin', 'admin_cabang']),
   fieldUpload.single('imageUrl'),
   parseIds,
+  adminBranchMiddleware, /// sementara ... fixing nanti
   roleBasedController({
     superAdmin: createField,
     branchAdmin: createField,

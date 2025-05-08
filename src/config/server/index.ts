@@ -20,12 +20,18 @@ import {
   startBookingCleanupJob, 
   setupBookingCleanupProcessor 
 } from '../../utils/booking/bookingCleanup.utils';
+import { initializeCloudinary } from '../services/cloudinary';
 
 /**
  * Inisialisasi semua komponen sebelum server dimulai
  */
 export const initializeApplication = (app: Application): http.Server => {
   // Inisialisasi optimasi memori
+
+  //inisialisasi cloudinary
+  initializeCloudinary();
+
+  //inisialisasi optimasi memori
   setupMemoryOptimization();
 
   // Buat HTTP server
