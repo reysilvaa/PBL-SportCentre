@@ -9,7 +9,6 @@ type FieldAvailability = {
   isAvailable: boolean;
   availableTimeSlots?: TimeSlot[];
   currentDate?: Date;
-
 };
 
 /**

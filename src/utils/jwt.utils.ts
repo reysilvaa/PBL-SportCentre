@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/app/env';
-import { User } from '@prisma/client';
+import { User } from '../types';
 
 /**
  * Generate JWT token for user
@@ -28,7 +28,7 @@ export const verifyToken = (token: string): any => {
   try {
     // @ts-ignore ignoring type error for jwt.verify
     return jwt.verify(token, config.jwtSecret);
-  } catch (error) {
+  } catch {
     return null;
   }
 };

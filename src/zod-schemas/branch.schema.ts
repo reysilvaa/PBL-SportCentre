@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { BranchStatus } from '../types';
 
-// Define the BranchStatus enum to match Prisma's enum
-const BranchStatus = z.enum(['active', 'inactive']);
+// Define the BranchStatus enum to match our types
+const BranchStatusEnum = z.nativeEnum(BranchStatus);
 
 // Schema untuk pembuatan cabang baru
 export const branchSchema = z.object({
@@ -32,7 +33,7 @@ export const branchSchema = z.object({
     .positive({
       message: 'ID pemilik harus berupa angka positif',
     }),
-  status: BranchStatus.default('active'),
+  status: BranchStatusEnum.default(BranchStatus.ACTIVE),
 });
 
 // Schema untuk mengupdate cabang
@@ -55,7 +56,7 @@ export const updateBranchSchema = z.object({
       message: 'Lokasi tidak boleh kosong',
     }),
   imageUrl: z.string().nullable().optional(),
-  status: BranchStatus,
+  status: BranchStatusEnum,
 });
 
 // Schema untuk response cabang (termasuk relasi)
@@ -64,7 +65,7 @@ export const branchResponseSchema = z.object({
   name: z.string(),
   location: z.string(),
   ownerId: z.number(),
-  status: BranchStatus,
+  status: BranchStatusEnum,
   createdAt: z.date(),
   owner: z
     .object({
@@ -74,3 +75,7 @@ export const branchResponseSchema = z.object({
     })
     .optional(),
 });
+
+export type CreateBranchInput = z.infer<typeof branchSchema>;
+export type UpdateBranchInput = z.infer<typeof updateBranchSchema>;
+export type BranchResponse = z.infer<typeof branchResponseSchema>;

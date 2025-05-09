@@ -8,6 +8,7 @@ import {
   getCompleteBooking,
   emitBookingEvents,
 } from '../utils/booking/booking.utils';
+import { PaymentMethod } from '../types/enums';
 
 /**
  * Handle booking search request
@@ -197,14 +198,14 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
     }
 
     // Create booking and payment records
-    const { booking, payment } = await createBookingWithPayment(
+    const { booking } = await createBookingWithPayment(
       parseInt(userId.toString()),
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
       endDateTime,
       paymentStatus || 'paid',
-      'cash',
+      PaymentMethod.CASH,
       field.priceDay,
     );
 

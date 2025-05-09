@@ -1,5 +1,10 @@
 import cloudinary from '../config/services/cloudinary';
-// Helper function to extract public ID from Cloudinary URL
+
+/**
+ * Helper function to extract public ID from Cloudinary URL
+ * @param cloudinaryUrl Cloudinary URL
+ * @returns Public ID or null if not found
+ */
 export const extractPublicId = (cloudinaryUrl: string): string | null => {
   if (!cloudinaryUrl) return null;
 
@@ -20,7 +25,10 @@ export const extractPublicId = (cloudinaryUrl: string): string | null => {
   }
 };
 
-// Helper function to delete images from Cloudinary
+/**
+ * Helper function to delete images from Cloudinary
+ * @param publicId Cloudinary public ID
+ */
 export const deleteImage = async (publicId: string): Promise<void> => {
   if (!publicId) return;
 
@@ -32,7 +40,10 @@ export const deleteImage = async (publicId: string): Promise<void> => {
   }
 };
 
-// Helper function to clean up uploaded file
+/**
+ * Helper function to clean up uploaded file
+ * @param fileUrl URL of the file to clean up
+ */
 export const cleanupUploadedFile = async (fileUrl?: string): Promise<void> => {
   if (!fileUrl) return;
 

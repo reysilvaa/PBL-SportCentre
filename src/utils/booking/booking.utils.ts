@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import prisma from '../../config/services/database';
-import { PaymentStatus, PaymentMethod } from '@prisma/client';
+import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field } from '../../types';
 import { isFieldAvailable } from './checkAvailability.utils';
 import { bookingCleanupQueue } from '../../config/services/queue';
 import { formatDateToWIB } from '../variables/timezone.utils';
@@ -22,7 +22,7 @@ export const sendErrorResponse = (
 /**
  * Verify field belongs to branch
  */
-export const verifyFieldBranch = async (fieldId: number, branchId: number) => {
+export const verifyFieldBranch = async (fieldId: number, branchId: number): Promise<Field | null> => {
   const field = await prisma.field.findFirst({
     where: {
       id: fieldId,
@@ -30,7 +30,7 @@ export const verifyFieldBranch = async (fieldId: number, branchId: number) => {
     },
   });
 
-  return field;
+  return field as Field | null;
 };
 
 /**
@@ -41,7 +41,7 @@ export const validateBookingTime = async (
   bookingDate: Date,
   startTime: Date,
   endTime: Date,
-) => {
+): Promise<{ valid: boolean; message?: string; details?: any }> => {
   // Validate start and end times
   if (startTime >= endTime) {
     return {
@@ -82,10 +82,10 @@ export const createBookingWithPayment = async (
   bookingDate: Date,
   startTime: Date,
   endTime: Date,
-  paymentStatus: PaymentStatus = 'pending',
-  paymentMethod: PaymentMethod = 'cash',
+  paymentStatus: PaymentStatus = PaymentStatus.PENDING,
+  paymentMethod: PaymentMethod = PaymentMethod.CASH,
   amount?: any,
-) => {
+): Promise<{ booking: Booking; payment: Payment }> => {
   // Create booking record
   const booking = await prisma.booking.create({
     data: {
@@ -119,19 +119,19 @@ export const createBookingWithPayment = async (
     },
   });
 
-  return { booking, payment };
+  return { booking: booking as Booking, payment: payment as Payment };
 };
 
 /**
  * Process Midtrans payment for booking
  */
 export const processMidtransPayment = async (
-  booking: any,
-  payment: any,
-  field: any,
-  user: any,
+  booking: Booking,
+  payment: Payment,
+  field: Field,
+  user: User,
   totalPrice: number,
-) => {
+): Promise<{ transaction: any; expiryDate: Date }> => {
   // Define the expiry time in Midtrans (5 minutes)
   const expiryMinutes = 5;
 
@@ -198,7 +198,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
     // Only process ones that have an expiresDate set (meaning they've received Midtrans notification)
     const expiredPayments = await prisma.payment.findMany({
       where: {
-        status: PaymentStatus.pending,
+        status: PaymentStatus.PENDING,
         expiresDate: {
           not: null, // Only process payments that have an expiry date set
           lt: currentTime, // Only process expired payments
@@ -221,7 +221,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       await prisma.payment.update({
         where: { id: payment.id },
         data: {
-          status: PaymentStatus.failed,
+          status: PaymentStatus.FAILED,
         },
       });
 
@@ -308,8 +308,8 @@ export const stopBookingCleanupJob = async (): Promise<void> => {
 /**
  * Get complete booking with relations
  */
-export const getCompleteBooking = async (bookingId: number) => {
-  return prisma.booking.findUnique({
+export const getCompleteBooking = async (bookingId: number): Promise<Booking | null> => {
+  const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
@@ -317,6 +317,8 @@ export const getCompleteBooking = async (bookingId: number) => {
       payment: true,
     },
   });
+  
+  return booking as Booking | null;
 };
 
 // Export emitBookingEvents for use elsewhere

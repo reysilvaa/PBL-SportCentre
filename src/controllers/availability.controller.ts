@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { getIO } from '../config/server/socket';
-import {
-  getAllFieldsAvailability,
-} from '../utils/booking/checkAvailability.utils';
+import { getAllFieldsAvailability } from '../utils/booking/checkAvailability.utils';
 import { fieldAvailabilityQueue } from '../config/services/queue';
 
 /**

@@ -44,4 +44,7 @@ export const createActivityLogSchema = z.object({
     )
     .optional()
     .nullable(),
+  ipAddress: z.string().optional(),
 });
+
+export type CreateActivityLogInput = z.infer<typeof createActivityLogSchema>;

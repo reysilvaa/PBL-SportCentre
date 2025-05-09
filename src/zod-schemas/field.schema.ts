@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FieldStatus } from '../types';
 
 // Skema validasi Zod untuk pembuatan lapangan
 export const createFieldSchema = z.object({
@@ -56,8 +57,11 @@ export const createFieldSchema = z.object({
         message: 'Harga malam tidak boleh negatif',
       }),
   ),
-  status: z.enum(['available', 'maintenance', 'booked']).optional().default('available'),
+  status: z.nativeEnum(FieldStatus).optional().default(FieldStatus.AVAILABLE),
 });
 
 // Skema untuk update lapangan (semua field opsional kecuali yang tidak boleh diubah)
 export const updateFieldSchema = createFieldSchema.omit({ branchId: true }).partial();
+
+export type CreateFieldInput = z.infer<typeof createFieldSchema>;
+export type UpdateFieldInput = z.infer<typeof updateFieldSchema>;

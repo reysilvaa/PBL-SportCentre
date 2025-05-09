@@ -3,6 +3,7 @@ import { createActivityLogSchema } from '../zod-schemas/activityLog.schema';
 import { ActivityLogService } from '../utils/activityLog/activityLog.utils';
 import { invalidateActivityLogCache } from '../utils/cache/cacheInvalidation.utils';
 import { User } from '../middlewares/auth.middleware';
+import { Role } from '../types';
 
 /**
  * Unified Activity Log Controller
@@ -14,7 +15,7 @@ export const getActivityLogs = async (req: User, res: Response): Promise<void> =
     // Jika bukan super admin, batasi hanya untuk log sendiri
     let userId: number | undefined;
 
-    if (req.user?.role !== 'super_admin') {
+    if (req.user?.role !== Role.SUPER_ADMIN) {
       userId = req.user?.id;
     } else {
       // Super admin bisa melihat log berdasarkan userId dari query

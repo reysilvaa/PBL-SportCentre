@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/services/database';
 import { invalidatePromotionCache } from '../utils/cache/cacheInvalidation.utils';
 import { User } from '../middlewares/auth.middleware';
+import { PromotionStatus } from '../types';
 
 /**
  * Unified Promotion Controller
@@ -73,7 +74,7 @@ export const createPromotion = async (req: User, res: Response) => {
         maxDiscount,
         validFrom: validFrom ? new Date(validFrom) : new Date(),
         validUntil: validUntil ? new Date(validUntil) : new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        status: status || 'active',
+        status: PromotionStatus.ACTIVE,
       },
     });
 

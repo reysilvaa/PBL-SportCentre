@@ -73,3 +73,6 @@ export const updateFieldReviewSchema = z.object({
     })
     .optional(),
 });
+
+export type CreateFieldReviewInput = z.infer<typeof createFieldReviewSchema>;
+export type UpdateFieldReviewInput = z.infer<typeof updateFieldReviewSchema>;

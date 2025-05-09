@@ -5,6 +5,8 @@ import prisma from '../config/services/database';
 import { getAuthToken } from '../utils/auth.utils';
 import { isTokenBlacklisted } from '../utils/auth.utils';
 import { verifyToken } from '../utils/jwt.utils';
+import { Role, BranchStatus } from '../types/enums';
+import { Branch as BranchType } from '../types/branch';
 
 /**
  * Middleware Autentikasi & Otorisasi Terpadu
@@ -21,14 +23,7 @@ export interface User extends Request {
     id: number;
     role: string;
   };
-  userBranch?: {
-    id: number;
-    name: string;
-    location: string;
-    ownerId: number;
-    status: string;
-    createdAt: Date;
-  };
+  userBranch?: BranchType;
 }
 
 // Opsi untuk konfigurasi middleware Auth
@@ -130,16 +125,16 @@ export const auth = (options: AuthOptions = {}) => {
 
       // BAGIAN 3: SUPER ADMIN BYPASS - Dari permission.middleware.ts
       // Super admin mendapatkan akses istimewa jika diperlukan
-      if (req.user.role === 'super_admin' && options.attachBranch) {
+      if (req.user.role === Role.SUPER_ADMIN && options.attachBranch) {
         // Berikan branch dummy untuk super admin
         req.userBranch = {
           id: 0, // Id 0 untuk menandakan akses super admin
           name: 'All Branches',
           location: 'Global',
           ownerId: 0,
-          status: 'active',
+          status: BranchStatus.ACTIVE,
           createdAt: new Date(),
-        };
+        } as BranchType;
 
         // Jika super admin, skip pemeriksaan cabang dan lanjut
         if (!options.ownerOnly && !options.customCheck) {
@@ -149,18 +144,18 @@ export const auth = (options: AuthOptions = {}) => {
       }
 
       // BAGIAN 4: PEMERIKSAAN BRANCH - Dari adminBranch.middleware.ts dan permission.middleware.ts
-      if (options.attachBranch && req.user.role !== 'super_admin') {
+      if (options.attachBranch && req.user.role !== Role.SUPER_ADMIN) {
         let branch = null;
 
-        if (req.user.role === 'owner_cabang') {
+        if (req.user.role === Role.OWNER_CABANG) {
           // Jika owner, dapatkan cabang yang dimiliki
           branch = await prisma.branch.findFirst({
             where: {
               ownerId: req.user.id,
-              status: 'active',
+              status: BranchStatus.ACTIVE,
             },
           });
-        } else if (req.user.role === 'admin_cabang') {
+        } else if (req.user.role === Role.ADMIN_CABANG) {
           // Jika admin, dapatkan cabang melalui relasi BranchAdmin
           const branchAdmin = await prisma.branchAdmin.findFirst({
             where: {
@@ -172,7 +167,7 @@ export const auth = (options: AuthOptions = {}) => {
           });
 
           // Periksa status cabang aktif
-          if (branchAdmin?.branch && branchAdmin.branch.status === 'active') {
+          if (branchAdmin?.branch && branchAdmin.branch.status === BranchStatus.ACTIVE) {
             branch = branchAdmin.branch;
           }
         }
@@ -186,7 +181,7 @@ export const auth = (options: AuthOptions = {}) => {
         }
 
         // Lampirkan informasi cabang ke request
-        req.userBranch = branch;
+        req.userBranch = branch as BranchType;
       }
 
       // BAGIAN 5: PEMERIKSAAN KEPEMILIKAN RESOURCE - Dari role.middleware.ts
@@ -194,7 +189,7 @@ export const auth = (options: AuthOptions = {}) => {
         const { id } = req.params;
         const resourceType = options.resourceName || 'resource';
 
-        if (id && req.user.role !== 'super_admin') {
+        if (id && req.user.role !== Role.SUPER_ADMIN) {
           // Di sini perlu implementasi spesifik untuk masing-masing model/resource
           // Namun ini adalah pola umum yang bisa digunakan
           try {
@@ -311,7 +306,7 @@ async function checkResourceOwnership(resourceType: string, resourceId: number, 
 // Auth untuk super admin
 export const superAdminAuth = (customOptions: Partial<AuthOptions> = {}) => {
   return auth({
-    allowedRoles: ['super_admin'],
+    allowedRoles: [Role.SUPER_ADMIN],
     ...customOptions,
   });
 };
@@ -319,7 +314,7 @@ export const superAdminAuth = (customOptions: Partial<AuthOptions> = {}) => {
 // Auth untuk admin cabang
 export const branchAdminAuth = (customOptions: Partial<AuthOptions> = {}) => {
   return auth({
-    allowedRoles: ['admin_cabang'],
+    allowedRoles: [Role.ADMIN_CABANG],
     attachBranch: true,
     ...customOptions,
   });
@@ -328,7 +323,7 @@ export const branchAdminAuth = (customOptions: Partial<AuthOptions> = {}) => {
 // Auth untuk owner cabang
 export const ownerAuth = (customOptions: Partial<AuthOptions> = {}) => {
   return auth({
-    allowedRoles: ['owner_cabang'],
+    allowedRoles: [Role.OWNER_CABANG],
     attachBranch: true,
     ...customOptions,
   });
@@ -337,7 +332,7 @@ export const ownerAuth = (customOptions: Partial<AuthOptions> = {}) => {
 // Auth untuk user
 export const userAuth = (customOptions: Partial<AuthOptions> = {}) => {
   return auth({
-    allowedRoles: ['user'],
+    allowedRoles: [Role.USER],
     ...customOptions,
   });
 };

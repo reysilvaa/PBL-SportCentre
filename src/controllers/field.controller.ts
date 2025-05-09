@@ -5,6 +5,7 @@ import { User } from '../middlewares/auth.middleware';
 import { invalidateFieldCache } from '../utils/cache/cacheInvalidation.utils';
 import { MulterRequest } from '../middlewares/multer.middleware';
 import { cleanupUploadedFile } from '../utils/cloudinary.utils';
+import { Role } from '../types';
 
 // Constants for folder paths
 const FIELDS_FOLDER = 'PBL/fields-images';
@@ -388,7 +389,7 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     }
 
     // Super admin bisa menghapus lapangan manapun
-    const whereCondition = req.user?.role === 'super_admin' ? { id: fieldId } : { id: fieldId, branchId };
+    const whereCondition = req.user?.role === Role.SUPER_ADMIN ? { id: fieldId } : { id: fieldId, branchId };
 
     // Check if field exists and belongs to the user's branch
     const existingField = await prisma.field.findFirst({

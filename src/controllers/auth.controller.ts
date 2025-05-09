@@ -114,7 +114,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate access dan refresh token
-    const { accessToken, refreshToken } = generateTokens(user);
+    const { accessToken, refreshToken } = generateTokens({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
     // Set cookies untuk authentication
     setAuthCookie(res, accessToken);
@@ -207,7 +211,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       }
 
       // Generate token baru
-      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+      const { accessToken, refreshToken: newRefreshToken } = generateTokens({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      });
 
       // Set cookies baru
       setAuthCookie(res, accessToken);

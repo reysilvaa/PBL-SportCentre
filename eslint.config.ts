@@ -4,13 +4,7 @@ import tsParser from '@typescript-eslint/parser';
 import unusedImports from 'eslint-plugin-unused-imports';
 import { config } from './src/config/app/env';
 
-// Menentukan environment: development atau production
-// Menggunakan konfigurasi dari env.ts
 const _isDevelopment = !config.isProduction;
-
-// Flag untuk mengaktifkan mode fix-all
-// Jika process.env.ESLINT_FIX_ALL === 'true', maka semua aturan yang biasanya 
-// hanya warning akan dimatikan (off)
 const isFixAll = process.env.ESLINT_FIX_ALL === 'true';
 
 export default [
@@ -48,24 +42,41 @@ export default [
       'unused-imports': unusedImports,
     },
     rules: {
+      // Turn off base rules that conflict with unused-imports
       '@typescript-eslint/no-unused-vars': 'off',
       'no-unused-vars': 'off',
-      'unused-imports/no-unused-imports': 'off',
-      'unused-imports/no-unused-vars': 'off',
-      'no-console': 'off',
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-empty-function': 'off',
-      'no-case-declarations': 'off',
-      '@typescript-eslint/naming-convention': 'off',
-      'eqeqeq': 'off',
-      'no-var': 'off',
-      'prefer-const': 'off',
-      'no-multiple-empty-lines': 'off',
-      'comma-dangle': 'off',
-      'semi': 'off',
-      'quotes': 'off',
-      'no-undef': 'off',
+
+      // Enable auto-remove unused imports
+      'unused-imports/no-unused-imports': 'error',
+
+      // Auto-remove unused vars (vars prefixed with "_" are ignored)
+      'unused-imports/no-unused-vars': [
+        'warn',
+        {
+          vars: 'all',
+          varsIgnorePattern: '^_',
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+        },
+      ],
+
+      // Optional: turn off more rules in "fix-all" mode
+      ...(isFixAll && {
+        'no-console': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-empty-function': 'off',
+        'no-case-declarations': 'off',
+        '@typescript-eslint/naming-convention': 'off',
+        'eqeqeq': 'off',
+        'no-var': 'off',
+        'prefer-const': 'off',
+        'no-multiple-empty-lines': 'off',
+        'comma-dangle': 'off',
+        'semi': 'off',
+        'quotes': 'off',
+        'no-undef': 'off',
+      }),
     },
   },
 ];

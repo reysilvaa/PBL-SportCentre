@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { Role } from '../types';
 
-// Enum Role sesuai dengan Prisma
-const RoleEnum = z.enum(['super_admin', 'admin_cabang', 'owner_cabang', 'user']);
+// Enum Role sesuai dengan tipe
+const RoleEnum = z.nativeEnum(Role);
 
 // Skema validasi Zod untuk registrasi
 export const registerSchema = z.object({
@@ -36,7 +37,7 @@ export const registerSchema = z.object({
     .regex(/^(\+62|62|0)8[1-9][0-9]{6,9}$/, {
       message: 'Format nomor telepon tidak valid',
     }),
-  role: RoleEnum.optional().default('user'),
+  role: RoleEnum.optional().default(Role.USER),
 });
 
 // Skema validasi Zod untuk login
@@ -56,3 +57,6 @@ export const loginSchema = z.object({
       message: 'Password tidak boleh kosong',
     }),
 });
+
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;

@@ -2,8 +2,8 @@ import { Response } from 'express';
 import prisma from '../config/services/database';
 import { hashPassword } from '../utils/password.utils';
 import { invalidateUserCache } from '../utils/cache/cacheInvalidation.utils';
-import { User } from '../middlewares/auth.middleware';
-
+import { User as AuthUser } from '../middlewares/auth.middleware';
+import { Role } from '../types';
 /**
  * Unified User Controller
  * Menggabungkan fungsionalitas dari semua controller user yang ada
@@ -12,7 +12,7 @@ import { User } from '../middlewares/auth.middleware';
 
 // =============== COMMON OPERATIONS =============== //
 
-export const getUserProfile = async (req: User, res: Response): Promise<void> => {
+export const getUserProfile = async (req: AuthUser, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const userId = parseInt(id) || req.user?.id;
@@ -27,7 +27,7 @@ export const getUserProfile = async (req: User, res: Response): Promise<void> =>
 
     // Super admin dapat melihat profil user manapun
     // User biasa hanya dapat melihat profil mereka sendiri
-    if (req.user?.role !== 'super_admin' && userId !== req.user?.id) {
+    if (req.user?.role !== Role.SUPER_ADMIN && userId !== req.user?.id) {
       res.status(403).json({
         status: false,
         message: 'Anda tidak memiliki akses untuk melihat profil user ini',
@@ -69,7 +69,7 @@ export const getUserProfile = async (req: User, res: Response): Promise<void> =>
   }
 };
 
-export const updateUserProfile = async (req: User, res: Response): Promise<void> => {
+export const updateUserProfile = async (req: AuthUser, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { name, email, phone, password } = req.body;
@@ -165,7 +165,7 @@ export const updateUserProfile = async (req: User, res: Response): Promise<void>
 
 // =============== SUPER ADMIN OPERATIONS =============== //
 
-export const getUsers = async (req: User, res: Response): Promise<void> => {
+export const getUsers = async (req: AuthUser, res: Response): Promise<void> => {
   try {
     // Jika user adalah super admin, tampilkan semua user
     if (req.user?.role === 'super_admin') {
@@ -241,7 +241,7 @@ export const getUsers = async (req: User, res: Response): Promise<void> => {
   }
 };
 
-export const createUser = async (req: User, res: Response): Promise<void> => {
+export const createUser = async (req: AuthUser, res: Response): Promise<void> => {
   try {
     const { name, email, password, role, phone } = req.body;
 
@@ -345,7 +345,7 @@ export const createUser = async (req: User, res: Response): Promise<void> => {
   }
 };
 
-export const updateUser = async (req: User, res: Response): Promise<void> => {
+export const updateUser = async (req: AuthUser, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { name, email, password, role, phone } = req.body;
@@ -460,7 +460,7 @@ export const updateUser = async (req: User, res: Response): Promise<void> => {
   }
 };
 
-export const deleteUser = async (req: User, res: Response): Promise<void> => {
+export const deleteUser = async (req: AuthUser, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const userId = parseInt(id);

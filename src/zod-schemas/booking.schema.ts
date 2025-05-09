@@ -51,3 +51,6 @@ export const createBookingSchema = z.object({
 
 // Skema untuk update booking (semua field opsional)
 export const updateBookingSchema = createBookingSchema.partial();
+
+export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;

@@ -1,6 +1,7 @@
 import { isWithinInterval } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { combineDateWithTimeWIB, TIMEZONE } from '../../utils/variables/timezone.utils';
+import { BookingTime } from '../../types/booking';
 
 /**
  * Combines a date with time string
@@ -21,8 +22,8 @@ export const combineDateWithTime = (date: Date, timeString: string): Date => {
  * @returns Total price for the booking
  */
 export const calculateTotalPrice = (
-  startTime: Date,
-  endTime: Date,
+  startTime: BookingTime,
+  endTime: BookingTime,
   dayPrice: number,
   nightPrice: number,
 ): number => {
