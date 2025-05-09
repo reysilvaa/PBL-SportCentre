@@ -9,7 +9,9 @@ import { setupGracefulShutdown } from './utils/gracefulShutdown.utils';
 const app: Application = express();
 
 // Set base URL untuk respons dari aplikasi
-app.set('trust proxy', config.isProduction);
+// Menggunakan konfigurasi trust proxy yang lebih aman
+// Opsi yang lebih aman untuk production: proxy count atau array IP yang dipercaya
+app.set('trust proxy', config.isProduction ? '1' : false);
 app.locals.baseUrl = config.urls.api;
 
 // Inisialisasi aplikasi dan dapatkan server

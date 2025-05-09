@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon src/app.ts",
     "build": "tsc",
+    "build:prod": "npm run build && node scripts/minify.js",
     "start": "cross-env NODE_ENV=production node dist/app.js",
     "format": "prettier --write 'src/**/*.{js,ts}'",
     "lint": "eslint . --ext .ts --fix",
@@ -84,6 +85,7 @@
     "jiti": "^2.4.2",
     "madge": "^8.0.0",
     "prettier": "^3.5.3",
+    "terser": "^5.33.0",
     "ts-unused-exports": "^11.0.1"
   },
   "overrides": {
