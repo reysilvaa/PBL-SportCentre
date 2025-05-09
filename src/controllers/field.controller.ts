@@ -7,9 +7,6 @@ import { MulterRequest } from '../middlewares/multer.middleware';
 import { cleanupUploadedFile } from '../utils/cloudinary.utils';
 import { Role } from '../types';
 
-// Constants for folder paths
-const FIELDS_FOLDER = 'PBL/fields-images';
-
 /**
  * Unified Field Controller
  * Menggabungkan fungsionalitas dari semua controller field yang ada
@@ -31,7 +28,7 @@ export const getAllFields = async (req: Request, res: Response) => {
       },
     });
     res.json(fields);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

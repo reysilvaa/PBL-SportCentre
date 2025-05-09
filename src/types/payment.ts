@@ -1,4 +1,4 @@
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from '@prisma/client/runtime/library';
 import { PaymentMethod, PaymentStatus } from './enums';
 import { Booking } from './booking';
 import { User } from './user';
@@ -14,8 +14,8 @@ export type Payment = {
   expiresDate: Date | null;
   transactionId: string | null;
   paymentUrl: string | null;
-  
+
   // Relations
   booking?: Booking;
   user?: User;
-}; 
+};

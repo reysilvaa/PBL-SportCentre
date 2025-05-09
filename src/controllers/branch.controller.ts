@@ -13,9 +13,6 @@ import { BranchStatus, Role } from '../types';
  * dengan menggunakan middleware permission untuk kontrol akses
  */
 
-// Constants for folder paths
-const BRANCH_FOLDER = 'PBL/branch-images';
-
 export const getBranches = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -117,7 +114,7 @@ export const createBranch = async (req: MulterRequest & User, res: Response): Pr
       name: req.body.name,
       location: req.body.location,
       ownerId: parseInt(req.body.ownerId),
-      status: req.body.status || 'active' as BranchStatus,
+      status: req.body.status || ('active' as BranchStatus),
     });
 
     if (!result.success) {

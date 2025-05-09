@@ -10,7 +10,7 @@ export type Branch = {
   ownerId: number;
   status: BranchStatus;
   createdAt: Date;
-  
+
   // Relations
   owner?: User;
   admins?: BranchAdmin[];
@@ -20,8 +20,8 @@ export type Branch = {
 export type BranchAdmin = {
   branchId: number;
   userId: number;
-  
+
   // Relations
   branch?: Branch;
   user?: User;
-}; 
+};

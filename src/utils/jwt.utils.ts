@@ -61,7 +61,7 @@ export const verifyRefreshToken = (token: string): number | null => {
       return null;
     }
     return decoded.id;
-  } catch (error) {
+  } catch {
     return null;
   }
 };

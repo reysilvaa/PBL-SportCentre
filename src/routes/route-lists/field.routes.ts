@@ -28,7 +28,7 @@ router.get(
     attachBranch: true,
   }),
   cacheMiddleware('admin_fields', 300),
-  getBranchFields,
+  getBranchFields
 );
 
 // Pembuatan lapangan - hanya super_admin dan admin_cabang
@@ -40,7 +40,7 @@ router.post(
   }),
   fieldUpload.single('imageUrl'),
   parseIds,
-  createField,
+  createField
 );
 
 // Update lapangan
@@ -54,7 +54,7 @@ router.put(
   }),
   fieldUpload.single('imageUrl'),
   parseIds,
-  updateField,
+  updateField
 );
 
 // Hapus lapangan
@@ -66,7 +66,7 @@ router.delete(
     ownerOnly: true,
     resourceName: 'field',
   }),
-  deleteField,
+  deleteField
 );
 
 export default router;

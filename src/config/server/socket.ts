@@ -12,7 +12,6 @@ export const SOCKET_CONFIG = {
 };
 
 declare global {
-   
   var io: SocketServer | any;
 }
 
@@ -80,14 +79,14 @@ export function applyAuthMiddleware(namespace: Namespace, requireAuth: boolean =
 
         socket.data.user = user;
         next();
-      } catch (authError) {
+      } catch {
         if (!requireAuth) {
           socket.data.user = null;
           return next();
         }
         next(new Error('Authentication failed'));
       }
-    } catch (log) {
+    } catch {
       if (!requireAuth) {
         socket.data.user = null;
         return next();
@@ -107,7 +106,7 @@ export function setupNamespaceEvents(namespace: Namespace): void {
 
     socket.on('disconnect', (reason) => {
       console.log(
-        `Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`,
+        `Client disconnected from ${namespace.name || '/'} - ID: ${socket.id} - Reason: ${reason}`
       );
     });
 

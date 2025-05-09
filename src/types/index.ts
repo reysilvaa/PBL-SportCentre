@@ -13,4 +13,4 @@ export * from './promotion';
 export * from './notification';
 
 // Ekspor tipe env yang sudah ada
-export * from './env'; 
+export * from './env';

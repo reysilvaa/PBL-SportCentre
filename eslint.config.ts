@@ -51,7 +51,7 @@ export default [
 
       // Auto-remove unused vars (vars prefixed with "_" are ignored)
       'unused-imports/no-unused-vars': [
-        'warn',
+        'error',
         {
           vars: 'all',
           varsIgnorePattern: '^_',

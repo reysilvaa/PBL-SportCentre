@@ -8,8 +8,8 @@ export type FieldReview = {
   rating: number;
   review: string | null;
   createdAt: Date;
-  
+
   // Relations
   user?: User;
   field?: Field;
-}; 
+};

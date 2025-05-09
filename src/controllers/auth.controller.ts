@@ -24,7 +24,7 @@ const generateTokens = (user: { id: number; email: string; role: string }) => {
       role: user.role,
     },
     config.jwtSecret,
-    { expiresIn: '1h' },
+    { expiresIn: '1h' }
   );
 
   // Refresh token (masa aktif panjang)
@@ -227,7 +227,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         token: accessToken,
         user: userWithoutPassword,
       });
-    } catch (error) {
+    } catch {
       // Token tidak valid atau expired
       clearAuthCookie(res);
       clearRefreshTokenCookie(res);
@@ -287,7 +287,7 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
         user: userWithoutPassword,
         token, // Mengembalikan token untuk kompatibilitas dengan client lama
       });
-    } catch (error) {
+    } catch {
       // Token tidak valid
       clearAuthCookie(res);
       clearRefreshTokenCookie(res);

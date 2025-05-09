@@ -48,7 +48,7 @@ export const validateDateRange = (startDate: string, endDate: string, res: Respo
     }
 
     return true;
-  } catch (error) {
+  } catch {
     res.status(400).json({ error: 'Invalid date format' });
     return false;
   }
@@ -64,7 +64,7 @@ export const validateDateRange = (startDate: string, endDate: string, res: Respo
 export const validateId = (
   id: string | undefined,
   res: Response,
-  paramName: string = 'ID',
+  paramName: string = 'ID'
 ): boolean => {
   if (!id) {
     return true; // ID is optional
@@ -90,7 +90,7 @@ export const validateId = (
 export const validatePagination = (
   page: string | undefined,
   limit: string | undefined,
-  res: Response,
+  res: Response
 ): boolean => {
   if (!page && !limit) {
     return true; // Pagination is optional
@@ -122,7 +122,7 @@ export const validatePagination = (
 export const validateRequiredString = (
   value: string | undefined,
   res: Response,
-  paramName: string,
+  paramName: string
 ): boolean => {
   if (!value || value.trim() === '') {
     res.status(400).json({ error: `${paramName} is required` });

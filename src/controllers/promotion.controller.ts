@@ -42,7 +42,7 @@ export const getPromotions = async (req: Request, res: Response) => {
 
 export const createPromotion = async (req: User, res: Response) => {
   try {
-    const { code, description, discountPercent, maxDiscount, validFrom, validUntil, status } = req.body;
+    const { code, description, discountPercent, maxDiscount, validFrom, validUntil } = req.body;
 
     // Validasi data dasar
     if (!code || !description || !discountPercent) {

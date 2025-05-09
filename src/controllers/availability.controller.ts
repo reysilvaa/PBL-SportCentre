@@ -26,7 +26,7 @@ export const checkAllFieldsAvailability = async (req: Request, res: Response) =>
  */
 export const setupFieldAvailabilityProcessor = (): void => {
   // Proses job
-  fieldAvailabilityQueue.process(async (job) => {
+  fieldAvailabilityQueue.process(async () => {
     try {
       const io = getIO();
       const results = await getAllFieldsAvailability();
@@ -55,7 +55,7 @@ export const startFieldAvailabilityUpdates = (): void => {
     {
       jobId: 'availability-recurring',
       repeat: { cron: '*/1 * * * *' },
-    },
+    }
   );
 
   console.log('🚀 Field availability Bull Queue job started');

@@ -18,7 +18,6 @@ class BadRequestError extends Error {
 
 // Import the global type definition
 declare global {
-   
   var activeLocks: Record<string, boolean>;
 }
 
@@ -29,7 +28,7 @@ const createPaymentNotification = async (
   userId: number,
   bookingId: number,
   fieldName: string,
-  status: PaymentStatus,
+  status: PaymentStatus
 ) => {
   try {
     let title = '';
@@ -150,7 +149,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     }
 
     console.log(
-      `[WEBHOOK] Booking #${payment.bookingId} - User: ${payment.booking.user.name} (${payment.booking.user.id}) - Field: ${payment.booking.field.name}`,
+      `[WEBHOOK] Booking #${payment.bookingId} - User: ${payment.booking.user.name} (${payment.booking.user.id}) - Field: ${payment.booking.field.name}`
     );
 
     // Map Midtrans transaction status to our payment status
@@ -180,7 +179,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     }
 
     // Update payment record in database
-    const updatedPayment = await prisma.payment.update({
+    const _updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
       data: {
         status: paymentStatus,
@@ -197,7 +196,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       payment.bookingId,
       payment.booking.fieldId,
       payment.booking.field.branchId,
-      payment.booking.userId,
+      payment.booking.userId
     );
 
     if (!cacheInvalidated) {
@@ -220,7 +219,7 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       payment.booking.userId,
       payment.bookingId,
       payment.booking.field.name,
-      paymentStatus,
+      paymentStatus
     );
 
     // For paid status, add success activity log

@@ -25,7 +25,7 @@ export const updateBookingPaymentSchema = z.object({
       .min(0, {
         message: 'Jumlah pembayaran tidak boleh negatif',
       })
-      .optional(),
+      .optional()
   ),
 });
 

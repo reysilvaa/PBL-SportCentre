@@ -1,4 +1,4 @@
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from '@prisma/client/runtime/library';
 import { PromotionStatus } from './enums';
 import { User } from './user';
 import { Booking } from './booking';
@@ -13,7 +13,7 @@ export type Promotion = {
   validUntil: Date;
   status: PromotionStatus;
   createdAt: Date;
-  
+
   // Relations
   PromoUsages?: PromotionUsage[];
 };
@@ -24,9 +24,9 @@ export type PromotionUsage = {
   bookingId: number;
   promoId: number;
   createdAt: Date;
-  
+
   // Relations
   user?: User;
   booking?: Booking;
   promo?: Promotion;
-}; 
+};

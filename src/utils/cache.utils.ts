@@ -113,7 +113,7 @@ export const deleteCachedData = async (key: string): Promise<number> => {
  */
 export const deleteCachedDataByPattern = async (
   pattern: string,
-  verbose: boolean = false,
+  verbose: boolean = false
 ): Promise<number> => {
   try {
     // Periksa koneksi Redis sebelum akses
@@ -262,7 +262,7 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
           // Only cache successful responses
           if (res.statusCode >= 200 && res.statusCode < 300) {
             // Store data in cache
-            setCachedData(key, data, cacheTTL).catch(err => {
+            setCachedData(key, data, cacheTTL).catch((err) => {
               console.error('[CACHE ERROR] Error storing in cache:', err);
             });
             console.log(`[CACHE] Storing in cache: ${key}`);

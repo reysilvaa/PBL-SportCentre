@@ -27,7 +27,7 @@ export enum FolderType {
   FIELDS = 'fields',
   USERS = 'users',
   BRANCHES = 'branches',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 // Get folder path based on type
@@ -50,7 +50,7 @@ const getFolderPath = (type: FolderType = FolderType.OTHER): string => {
 const createStorage = (folderType: FolderType) => {
   return new CloudinaryStorage({
     cloudinary,
-    params: async (req: MulterRequest, file) => {
+    params: async (req: MulterRequest, _file: Express.Multer.File) => {
       // Get folder from request body if specified, otherwise use the default from folderType
       const folder = req.body?.folder || getFolderPath(folderType);
 

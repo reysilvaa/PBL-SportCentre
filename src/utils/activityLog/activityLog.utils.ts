@@ -19,7 +19,7 @@ export class ActivityLogService {
     action: string,
     details?: string | object,
     relatedId?: number,
-    ipAddress?: string,
+    ipAddress?: string
   ): Promise<ActivityLog> {
     try {
       // Convert object to string if details is provided as an object
@@ -70,7 +70,7 @@ export class ActivityLogService {
     action: string,
     bookingId: number,
     details?: object,
-    ipAddress?: string,
+    ipAddress?: string
   ): Promise<any> {
     const userId = typeof user === 'number' ? user : user.id;
     return this.createLog(userId, action, details, bookingId, ipAddress);
@@ -91,7 +91,7 @@ export class ActivityLogService {
     bookingId: number,
     status: string,
     details?: object,
-    ipAddress?: string,
+    ipAddress?: string
   ): Promise<any> {
     const action = `Payment ${status} for booking ${bookingId}`;
     return this.createLog(
@@ -104,7 +104,7 @@ export class ActivityLogService {
         ...details,
       },
       undefined,
-      ipAddress,
+      ipAddress
     );
   }
 

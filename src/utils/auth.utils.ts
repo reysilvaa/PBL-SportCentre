@@ -24,7 +24,7 @@ export const setCookie = (
     domain?: string;
     path?: string;
     expires?: Date;
-  },
+  }
 ) => {
   // Gabungkan dengan konfigurasi default
   const cookieOptions = {
@@ -63,7 +63,7 @@ export const clearCookie = (
     domain?: string;
     secure?: boolean;
     sameSite?: boolean | 'none' | 'lax' | 'strict';
-  },
+  }
 ) => {
   const cookieOptions = {
     path: '/',

@@ -1,6 +1,5 @@
 import { isWithinInterval } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
-import { combineDateWithTimeWIB, TIMEZONE } from '../../utils/variables/timezone.utils';
+import { combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
 import { BookingTime } from '../../types/booking';
 
 /**
@@ -25,11 +24,10 @@ export const calculateTotalPrice = (
   startTime: BookingTime,
   endTime: BookingTime,
   dayPrice: number,
-  nightPrice: number,
+  nightPrice: number
 ): number => {
   // Daytime is considered from 06:00 to 18:00 WIB
   const bookingDate = startTime;
-  const dateStr = formatInTimeZone(bookingDate, TIMEZONE, 'yyyy-MM-dd');
 
   // Create Date objects for day/night transition points
   const dayStart = combineDateWithTimeWIB(bookingDate, '06:00');

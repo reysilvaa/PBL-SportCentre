@@ -7,7 +7,7 @@ export type ActivityLog = {
   details: string | null;
   ipAddress: string | null;
   createdAt: Date;
-  
+
   // Relations
   user?: User;
-}; 
+};

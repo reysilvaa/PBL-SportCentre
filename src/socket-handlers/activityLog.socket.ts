@@ -87,7 +87,7 @@ export const setupActivityLogSocketHandlers = (): void => {
 
     // Set up listener for when client wants to subscribe to activity logs
     socket.on('subscribe_activity_logs', (options: { userId?: string }) =>
-      handleSubscribeActivityLogs(socket, options),
+      handleSubscribeActivityLogs(socket, options)
     );
 
     // Handle disconnection

@@ -15,7 +15,7 @@ export type User = {
   phone: string | null;
   role: Role;
   createdAt: Date;
-  
+
   // Relations
   Bookings?: Booking[];
   Payments?: Payment[];
@@ -25,4 +25,4 @@ export type User = {
   ownedBranches?: Branch[];
   notifications?: Notification[];
   branches?: BranchAdmin[];
-}; 
+};

@@ -3,7 +3,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { AppError } from '../types/error';
 
-const errorMiddleware = (err: any, req: Request, res: Response, next: NextFunction) => {
+const errorMiddleware = (err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error('Error Middleware:', err);
 
   if (err instanceof PrismaClientKnownRequestError) {

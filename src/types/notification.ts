@@ -9,7 +9,7 @@ export type Notification = {
   type: string;
   linkId: string | null;
   createdAt: Date;
-  
+
   // Relations
   user?: User;
-}; 
+};

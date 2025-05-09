@@ -105,8 +105,8 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
     const updatedPayment = await prisma.payment.update({
       where: { id: booking.payment.id },
       data: {
-        status: result.data.paymentStatus as PaymentStatus || booking.payment.status,
-        paymentMethod: result.data.paymentMethod as PaymentMethod || booking.payment.paymentMethod,
+        status: (result.data.paymentStatus as PaymentStatus) || booking.payment.status,
+        paymentMethod: (result.data.paymentMethod as PaymentMethod) || booking.payment.paymentMethod,
         amount: result.data.amount !== undefined ? result.data.amount : booking.payment.amount,
       },
     });
@@ -125,7 +125,7 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
       bookingId,
       booking.field.id,
       booking.field.branchId,
-      booking.userId,
+      booking.userId
     );
 
     res.status(200).json({
@@ -277,7 +277,7 @@ export const getBookingStats = async (req: Request, res: Response): Promise<void
           }
           return acc;
         },
-        {} as Record<number, { id: number; name: string; total: number }>,
+        {} as Record<number, { id: number; name: string; total: number }>
       );
 
       return {

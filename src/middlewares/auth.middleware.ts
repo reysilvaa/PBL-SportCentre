@@ -241,7 +241,7 @@ export const auth = (options: AuthOptions = {}) => {
 async function checkResourceOwnership(resourceType: string, resourceId: number, userId: number): Promise<boolean> {
   // Pra-deklarasi variabel yang digunakan dalam case blocks
   let booking, field, branch, isAdmin, branchAdmin;
-  
+
   switch (resourceType.toLowerCase()) {
     case 'booking': {
       booking = await prisma.booking.findUnique({

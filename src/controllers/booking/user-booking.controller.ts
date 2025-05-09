@@ -81,7 +81,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       startDateTime,
       endDateTime,
       Number(field.priceDay),
-      Number(field.priceNight),
+      Number(field.priceNight)
     );
 
     if (totalPrice <= 0) {
@@ -99,7 +99,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       endDateTime,
       PaymentStatus.PENDING,
       PaymentMethod.MIDTRANS,
-      totalPrice,
+      totalPrice
     );
 
     console.log('✅ Booking created:', booking.id);
@@ -107,7 +107,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
 
     // Process payment via Midtrans API
     const paymentResult = await processMidtransPayment(
-      booking, 
+      booking,
       payment,
       field as any, // Type casting untuk mengatasi masalah tipe
       user as any, // Type casting untuk mengatasi masalah tipe

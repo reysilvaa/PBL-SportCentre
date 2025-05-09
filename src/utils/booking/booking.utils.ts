@@ -14,7 +14,7 @@ export const sendErrorResponse = (
   res: Response,
   status: number,
   message: any,
-  details?: any,
+  details?: any
 ): void => {
   res.status(status).json({ error: message, ...(details && { details }) });
 };
@@ -22,7 +22,10 @@ export const sendErrorResponse = (
 /**
  * Verify field belongs to branch
  */
-export const verifyFieldBranch = async (fieldId: number, branchId: number): Promise<Field | null> => {
+export const verifyFieldBranch = async (
+  fieldId: number,
+  branchId: number
+): Promise<Field | null> => {
   const field = await prisma.field.findFirst({
     where: {
       id: fieldId,
@@ -40,7 +43,7 @@ export const validateBookingTime = async (
   fieldId: number,
   bookingDate: Date,
   startTime: Date,
-  endTime: Date,
+  endTime: Date
 ): Promise<{ valid: boolean; message?: string; details?: any }> => {
   // Validate start and end times
   if (startTime >= endTime) {
@@ -84,7 +87,7 @@ export const createBookingWithPayment = async (
   endTime: Date,
   paymentStatus: PaymentStatus = PaymentStatus.PENDING,
   paymentMethod: PaymentMethod = PaymentMethod.CASH,
-  amount?: any,
+  amount?: any
 ): Promise<{ booking: Booking; payment: Payment }> => {
   // Create booking record
   const booking = await prisma.booking.create({
@@ -130,7 +133,7 @@ export const processMidtransPayment = async (
   payment: Payment,
   field: Field,
   user: User,
-  totalPrice: number,
+  totalPrice: number
 ): Promise<{ transaction: any; expiryDate: Date }> => {
   // Define the expiry time in Midtrans (5 minutes)
   const expiryMinutes = 5;
@@ -226,7 +229,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       });
 
       console.log(
-        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`,
+        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`
       );
 
       // Emit event for booking cancellation to update field availability
@@ -253,7 +256,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         });
 
         console.log(
-          `🔔 Notified system about canceled booking #${booking.id} due to payment expiry`,
+          `🔔 Notified system about canceled booking #${booking.id} due to payment expiry`
         );
       }
     }
@@ -269,7 +272,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
  */
 export const setupBookingCleanupProcessor = (): void => {
   // Proses job
-  bookingCleanupQueue.process(async (job) => {
+  bookingCleanupQueue.process(async () => {
     console.log('⏰ Running automatic expired booking processing');
     await cleanupPendingBookings();
     return { success: true, timestamp: new Date() };
@@ -291,7 +294,7 @@ export const startBookingCleanupJob = (): void => {
     {
       jobId: 'cleanup-recurring',
       repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
-    },
+    }
   );
 
   console.log('🚀 Expired booking cleanup Bull Queue job started');
@@ -317,7 +320,7 @@ export const getCompleteBooking = async (bookingId: number): Promise<Booking | n
       payment: true,
     },
   });
-  
+
   return booking as Booking | null;
 };
 

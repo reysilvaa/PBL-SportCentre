@@ -74,7 +74,7 @@ export const handleFieldAvailabilityCheck = async (socket: Socket, data: any) =>
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -186,7 +186,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -206,7 +206,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
       endDateTime,
       paymentStatus || 'paid',
       PaymentMethod.CASH,
-      field.priceDay,
+      field.priceDay
     );
 
     // Get complete booking with relations
@@ -324,7 +324,7 @@ export const setupBranchSocketHandlers = (): void => {
         socket.data.user = user;
         socket.data.authenticated = true;
         console.log(
-          `Branch client authenticated: ${socket.id}, User: ${user.id}, Role: ${user.role}`,
+          `Branch client authenticated: ${socket.id}, User: ${user.id}, Role: ${user.role}`
         );
         next();
       } catch (authError) {

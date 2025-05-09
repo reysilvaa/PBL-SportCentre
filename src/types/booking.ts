@@ -14,10 +14,10 @@ export type Booking = {
   startTime: Date;
   endTime: Date;
   createdAt: Date;
-  
+
   // Relations
   user?: User;
   field?: Field;
   payment?: Payment;
   PromoUsages?: PromotionUsage[];
-}; 
+};
