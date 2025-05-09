@@ -1,10 +1,5 @@
 import express, { Application } from 'express';
-import {
-  config,
-  setupHttpCaching,
-  initializeApplication,
-  startServer,
-} from './config';
+import { config, initializeApplication, startServer, setupCacheControl } from './config';
 import router from './routes/index.routes';
 import errorMiddleware from './middlewares/error.middleware';
 import { setupSwagger } from './config/swagger/swagger.config';
@@ -14,7 +9,9 @@ import { setupGracefulShutdown } from './utils/gracefulShutdown.utils';
 const app: Application = express();
 
 // Set base URL untuk respons dari aplikasi
-app.set('trust proxy', config.isProduction);
+// Menggunakan konfigurasi trust proxy yang lebih aman
+// Opsi yang lebih aman untuk production: proxy count atau array IP yang dipercaya
+app.set('trust proxy', config.isProduction ? '1' : false);
 app.locals.baseUrl = config.urls.api;
 
 // Inisialisasi aplikasi dan dapatkan server
@@ -24,7 +21,7 @@ const server = initializeApplication(app);
 setupSwagger(app);
 
 // Routes dengan HTTP browser caching (header Cache-Control)
-app.use('/api', setupHttpCaching(), router);
+app.use('/api', setupCacheControl(), router);
 
 // Error handling middleware
 app.use(errorMiddleware as express.ErrorRequestHandler);
@@ -34,5 +31,3 @@ setupGracefulShutdown(server);
 
 // Mulai server
 startServer(server);
-
-export default app;

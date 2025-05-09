@@ -1,12 +1,7 @@
 import { z } from 'zod';
 
 // Enum Role sesuai dengan Prisma
-const RoleEnum = z.enum([
-  'super_admin',
-  'admin_cabang',
-  'owner_cabang',
-  'user',
-]);
+const RoleEnum = z.enum(['super_admin', 'admin_cabang', 'owner_cabang', 'user']);
 
 // Skema validasi Zod untuk registrasi
 export const registerSchema = z.object({

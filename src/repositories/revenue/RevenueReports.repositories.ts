@@ -37,11 +37,7 @@ export const getBookingsWithPayments = async (start: Date, end: Date) => {
   });
 };
 
-export const getBookingsForOccupancy = async (
-  start: Date,
-  end: Date,
-  branchId?: number
-) => {
+export const getBookingsForOccupancy = async (start: Date, end: Date, branchId?: number) => {
   const whereBooking: any = {
     bookingDate: {
       gte: start,

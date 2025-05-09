@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { DateUtils } from '../../utils/variables/date.utils';
 
 /**
  * Validates that the provided start and end dates are valid and that start date is before end date
@@ -8,11 +7,7 @@ import { DateUtils } from '../../utils/variables/date.utils';
  * @param res - Express Response object to send error if validation fails
  * @returns boolean indicating if validation passed
  */
-export const validateDateRange = (
-  startDate: string,
-  endDate: string,
-  res: Response
-): boolean => {
+export const validateDateRange = (startDate: string, endDate: string, res: Response): boolean => {
   // Check if dates are provided
   if (!startDate || !endDate) {
     res.status(400).json({ error: 'Start date and end date are required' });
@@ -48,9 +43,7 @@ export const validateDateRange = (
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays > maxRangeDays) {
-      res
-        .status(400)
-        .json({ error: `Date range cannot exceed ${maxRangeDays} days` });
+      res.status(400).json({ error: `Date range cannot exceed ${maxRangeDays} days` });
       return false;
     }
 
@@ -71,7 +64,7 @@ export const validateDateRange = (
 export const validateId = (
   id: string | undefined,
   res: Response,
-  paramName: string = 'ID'
+  paramName: string = 'ID',
 ): boolean => {
   if (!id) {
     return true; // ID is optional
@@ -97,7 +90,7 @@ export const validateId = (
 export const validatePagination = (
   page: string | undefined,
   limit: string | undefined,
-  res: Response
+  res: Response,
 ): boolean => {
   if (!page && !limit) {
     return true; // Pagination is optional
@@ -112,9 +105,7 @@ export const validatePagination = (
   }
 
   if (isNaN(limitNum) || limitNum <= 0 || limitNum > 100) {
-    res
-      .status(400)
-      .json({ error: 'Limit must be a positive integer between 1 and 100' });
+    res.status(400).json({ error: 'Limit must be a positive integer between 1 and 100' });
     return false;
   }
 
@@ -131,7 +122,7 @@ export const validatePagination = (
 export const validateRequiredString = (
   value: string | undefined,
   res: Response,
-  paramName: string
+  paramName: string,
 ): boolean => {
   if (!value || value.trim() === '') {
     res.status(400).json({ error: `${paramName} is required` });

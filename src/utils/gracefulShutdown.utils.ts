@@ -1,6 +1,6 @@
 import http from 'http';
-import { cleanupFieldAvailabilityUpdates } from '../controllers/all/availability.controller';
-import { stopBookingCleanupJob } from './booking/bookingCleanup.utils';
+import { cleanupFieldAvailabilityUpdates } from '../controllers/availability.controller';
+import { stopBookingCleanupJob } from './booking/booking.utils';
 import redisClient from '../config/services/redis';
 import prisma from '../config/services/database';
 
@@ -29,10 +29,7 @@ const handleShutdown = async (server: http.Server, signal: string): Promise<void
 
     // Hentikan Bull Queue jobs
     console.log('🔄 Menutup Bull Queue jobs...');
-    await Promise.all([
-      stopBookingCleanupJob(),
-      cleanupFieldAvailabilityUpdates()
-    ]);
+    await Promise.all([stopBookingCleanupJob(), cleanupFieldAvailabilityUpdates()]);
     console.log('✅ Bull Queue jobs dihentikan');
 
     // Tutup koneksi Redis
@@ -51,4 +48,4 @@ const handleShutdown = async (server: http.Server, signal: string): Promise<void
     console.error('❌ Error selama graceful shutdown:', error);
     process.exit(1);
   }
-}; 
+};

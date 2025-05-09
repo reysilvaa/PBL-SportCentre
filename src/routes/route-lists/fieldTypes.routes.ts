@@ -4,10 +4,9 @@ import {
   createFieldType,
   updateFieldType,
   deleteFieldType,
-} from '../../controllers/all/fieldType.controller';
+} from '../../controllers/fieldType.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
-import { authMiddleware } from '../../middlewares/auth.middleware';
-import { roleBasedController } from '../../middlewares/role.middleware';
+import { auth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 
 const router = express.Router();
@@ -18,27 +17,27 @@ router.get('/', cacheMiddleware('field_types', 600), getFieldTypes);
 // Rute khusus admin
 router.post(
   '/',
-  authMiddleware(['super_admin']),
+  auth({
+    allowedRoles: ['super_admin'],
+  }),
   parseIds,
-  roleBasedController({
-    superAdmin: createFieldType,
-  })
+  createFieldType,
 );
 
 router.put(
   '/:id',
-  authMiddleware(['super_admin']),
-  roleBasedController({
-    superAdmin: updateFieldType,
-  })
+  auth({
+    allowedRoles: ['super_admin'],
+  }),
+  updateFieldType,
 );
 
 router.delete(
   '/:id',
-  authMiddleware(['super_admin']),
-  roleBasedController({
-    superAdmin: deleteFieldType,
-  })
+  auth({
+    allowedRoles: ['super_admin'],
+  }),
+  deleteFieldType,
 );
 
 export default router;

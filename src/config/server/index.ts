@@ -10,35 +10,39 @@ import { setupSecurityMiddlewares } from '../server/security';
 import { setupMiddlewares } from '../server/middleware';
 import { initializeSocketIO } from '../server/socket';
 import { initializeAllSocketHandlers } from '../../socket-handlers';
-import { 
-  startFieldAvailabilityUpdates, 
-  setupFieldAvailabilityProcessor 
-} from '../../controllers/all/availability.controller';
+import {
+  startFieldAvailabilityUpdates,
+  setupFieldAvailabilityProcessor,
+} from '../../controllers/availability.controller';
 import { logServerStartup, setupPeriodicHealthCheck } from './monitoring';
 import { setupSwagger } from '../swagger/swagger.config';
-import { 
-  startBookingCleanupJob, 
-  setupBookingCleanupProcessor 
-} from '../../utils/booking/bookingCleanup.utils';
+import {
+  startBookingCleanupJob,
+  setupBookingCleanupProcessor,
+} from '../../utils/booking/booking.utils';
+import { initializeCloudinary } from '../services/cloudinary';
 
 /**
  * Inisialisasi semua komponen sebelum server dimulai
  */
 export const initializeApplication = (app: Application): http.Server => {
+  // Inisialisasi cloudinary
+  initializeCloudinary();
+
   // Inisialisasi optimasi memori
   setupMemoryOptimization();
 
   // Buat HTTP server
   const server = http.createServer(app);
 
-  // Setup optimasi performa
-  setupPerformanceOptimizations(app);
-
   // Setup security middlewares
   setupSecurityMiddlewares(app);
 
   // Setup basic middlewares
   setupMiddlewares(app);
+
+  // Setup optimasi performa
+  setupPerformanceOptimizations(app);
 
   setupSwagger(app);
 
@@ -51,7 +55,7 @@ export const initializeApplication = (app: Application): http.Server => {
 
   // Setup Bull Queue processors
   setupQueueProcessors();
-  
+
   // Mulai Bull Queue jobs
   startBackgroundJobs();
 
@@ -64,10 +68,10 @@ export const initializeApplication = (app: Application): http.Server => {
 export const setupQueueProcessors = (): void => {
   // Setup processor untuk Field Availability queue
   setupFieldAvailabilityProcessor();
-  
+
   // Setup processor untuk Booking Cleanup queue
   setupBookingCleanupProcessor();
-  
+
   console.log('✅ Bull Queue processors telah didaftarkan');
 };
 
@@ -77,10 +81,10 @@ export const setupQueueProcessors = (): void => {
 export const startBackgroundJobs = (): void => {
   // Mulai job untuk memperbarui ketersediaan lapangan
   startFieldAvailabilityUpdates();
-  
+
   // Mulai job untuk membersihkan booking yang kedaluwarsa
   startBookingCleanupJob();
-  
+
   console.log('🚀 Background jobs dimulai dengan Bull Queue');
 };
 

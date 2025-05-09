@@ -1,5 +1,5 @@
 import express from 'express';
-import { handleMidtransNotification } from '../../controllers/webhook-handlers/midtrans.controller';
+import { handleMidtransNotification } from '../../controllers/webhook/midtrans.controller';
 
 const router = express.Router();
 

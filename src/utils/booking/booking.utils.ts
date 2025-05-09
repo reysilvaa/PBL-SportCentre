@@ -1,27 +1,27 @@
 import { Response } from 'express';
 import prisma from '../../config/services/database';
-import { getIO } from '../../config/server/socket';
 import { PaymentStatus, PaymentMethod } from '@prisma/client';
 import { isFieldAvailable } from './checkAvailability.utils';
-import { startBookingCleanupJob } from './bookingCleanup.utils';
+import { bookingCleanupQueue } from '../../config/services/queue';
 import { formatDateToWIB } from '../variables/timezone.utils';
-import { broadcastActivityLogUpdates } from '../../socket-handlers/activityLog.socket';
 import midtrans from '../../config/services/midtrans';
+import { emitBookingEvents } from '../../socket-handlers/booking.socket';
 
-// Initialize booking cleanup job when server starts
-startBookingCleanupJob();
-
-// Standardized error response
+/**
+ * Standardized error response
+ */
 export const sendErrorResponse = (
   res: Response,
   status: number,
   message: any,
-  details?: any
+  details?: any,
 ): void => {
   res.status(status).json({ error: message, ...(details && { details }) });
 };
 
-// Verify field belongs to branch
+/**
+ * Verify field belongs to branch
+ */
 export const verifyFieldBranch = async (fieldId: number, branchId: number) => {
   const field = await prisma.field.findFirst({
     where: {
@@ -33,12 +33,14 @@ export const verifyFieldBranch = async (fieldId: number, branchId: number) => {
   return field;
 };
 
-// Check booking time validity and availability
+/**
+ * Check booking time validity and availability
+ */
 export const validateBookingTime = async (
   fieldId: number,
   bookingDate: Date,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
 ) => {
   // Validate start and end times
   if (startTime >= endTime) {
@@ -53,12 +55,7 @@ export const validateBookingTime = async (
   }
 
   // Check field availability
-  const isAvailable = await isFieldAvailable(
-    fieldId,
-    bookingDate,
-    startTime,
-    endTime
-  );
+  const isAvailable = await isFieldAvailable(fieldId, bookingDate, startTime, endTime);
 
   if (!isAvailable) {
     return {
@@ -76,7 +73,9 @@ export const validateBookingTime = async (
   return { valid: true };
 };
 
-// Create booking and payment records
+/**
+ * Create booking and payment records
+ */
 export const createBookingWithPayment = async (
   userId: number,
   fieldId: number,
@@ -85,7 +84,7 @@ export const createBookingWithPayment = async (
   endTime: Date,
   paymentStatus: PaymentStatus = 'pending',
   paymentMethod: PaymentMethod = 'cash',
-  amount?: any
+  amount?: any,
 ) => {
   // Create booking record
   const booking = await prisma.booking.create({
@@ -123,13 +122,15 @@ export const createBookingWithPayment = async (
   return { booking, payment };
 };
 
-// Process Midtrans payment for booking
+/**
+ * Process Midtrans payment for booking
+ */
 export const processMidtransPayment = async (
   booking: any,
   payment: any,
   field: any,
   user: any,
-  totalPrice: number
+  totalPrice: number,
 ) => {
   // Define the expiry time in Midtrans (5 minutes)
   const expiryMinutes = 5;
@@ -137,7 +138,7 @@ export const processMidtransPayment = async (
   // Create Midtrans transaction with expiry
   const transaction = await midtrans().createTransaction({
     transaction_details: {
-      order_id: `PAY-${payment.id}`,
+      order_id: `PAY-${payment.id}-${Date.now()}`,
       gross_amount: totalPrice,
     },
     customer_details: {
@@ -169,150 +170,144 @@ export const processMidtransPayment = async (
     expiryDate.setMinutes(expiryDate.getMinutes() + expiryMinutes);
   }
 
-  // Update the payment record with the expiry date
+  // Update the payment record with the expiry date, payment URL, and transaction ID
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { expiresDate: expiryDate },
+    data: {
+      expiresDate: expiryDate,
+      paymentUrl: transaction.redirect_url,
+      transactionId: transaction.transaction_id,
+    },
   });
 
   return { transaction, expiryDate };
 };
 
-// Emit booking-related socket events
-export const emitBookingEvents = (eventType: string, data: any) => {
+/**
+ * Function to mark expired pending bookings as failed
+ * Bookings that haven't been paid within 5 minutes after Midtrans confirmation will be marked as failed
+ */
+export const cleanupPendingBookings = async (): Promise<void> => {
   try {
-    const io = getIO();
+    // Find payments with 'pending' status that have passed their expiration date
+    const currentTime = new Date();
 
-    switch (eventType) {
-      case 'new-booking':
-        // Emit to branch channel
-        if (data.branchId) {
-          io.to(`branch-${data.branchId}`).emit(
-            'booking:created',
-            data.booking
-          );
-        }
+    console.log('🧹 Processing expired pending bookings at:', currentTime);
 
-        // Emit to user's personal channel
-        if (data.userId) {
-          io.to(`user-${data.userId}`).emit('booking:created', {
-            booking: data.booking,
-            message: 'A new booking has been created for you',
-          });
-
-          // Log activity
-          prisma.activityLog
-            .create({
-              data: {
-                userId: data.userId,
-                action: 'CREATE_BOOKING',
-                details: JSON.stringify({
-                  bookingId: data.booking.id,
-                  fieldId: data.fieldId,
-                  date: formatDateToWIB(data.bookingDate),
-                }),
-              },
-            })
-            .then(() => {
-              // Broadcast activity log updates
-              broadcastActivityLogUpdates(data.userId);
-            });
-        }
-
-        // Emit to field availability channel
-        if (data.fieldId) {
-          io.to(`field-${data.fieldId}`).emit('field:availability-changed', {
-            fieldId: data.fieldId,
-            date: data.bookingDate,
-            startTime: formatDateToWIB(data.startTime),
-            endTime: formatDateToWIB(data.endTime),
-            available: false,
-          });
-        }
-        break;
-
-      case 'update-payment':
-        // Emit to branch channel
-        if (data.branchId) {
-          io.to(`branch-${data.branchId}`).emit(
-            'booking:updated',
-            data.booking
-          );
-        }
-
-        // Emit to user's personal channel
-        if (data.userId) {
-          io.to(`user-${data.userId}`).emit('booking:updated', {
-            bookingId: data.booking?.id,
-            paymentStatus: data.paymentStatus,
-            message: `Your booking payment status has been updated to: ${data.paymentStatus}`,
-          });
-
-          // Log activity
-          prisma.activityLog
-            .create({
-              data: {
-                userId: data.userId,
-                action: 'UPDATE_PAYMENT',
-                details: JSON.stringify({
-                  bookingId: data.booking?.id,
-                  paymentStatus: data.paymentStatus,
-                }),
-              },
-            })
-            .then(() => {
-              // Broadcast activity log updates
-              broadcastActivityLogUpdates(data.userId);
-            });
-        }
-        break;
-
-      case 'cancel-booking':
-        // Emit to admin channel
-        io.of('/admin/bookings').emit('booking-canceled', {
-          bookingId: data.bookingId,
-          fieldId: data.fieldId,
-          userId: data.userId,
-        });
-
-        // Update field availability
-        io.of('/fields').emit('availability-update', {
-          fieldId: data.fieldId,
-          date: data.bookingDate,
-          timeSlot: {
-            start: formatDateToWIB(data.startTime),
-            end: formatDateToWIB(data.endTime),
+    // Find expired pending payments
+    // Only process ones that have an expiresDate set (meaning they've received Midtrans notification)
+    const expiredPayments = await prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.pending,
+        expiresDate: {
+          not: null, // Only process payments that have an expiry date set
+          lt: currentTime, // Only process expired payments
+        },
+      },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: true,
           },
-          available: true,
+        },
+      },
+    });
+
+    console.log(`🔍 Found ${expiredPayments.length} expired pending payments`);
+
+    // Update the payment status to 'failed' instead of deleting
+    for (const payment of expiredPayments) {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.failed,
+        },
+      });
+
+      console.log(
+        `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`,
+      );
+
+      // Emit event for booking cancellation to update field availability
+      if (payment.booking) {
+        const booking = payment.booking;
+
+        // Emit event to notify system that booking is canceled
+        emitBookingEvents('cancel-booking', {
+          bookingId: booking.id,
+          fieldId: booking.fieldId,
+          userId: booking.userId,
+          branchId: booking.field?.branchId,
+          bookingDate: booking.bookingDate,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
         });
 
-        // Log activity if userId is provided
-        if (data.userId) {
-          prisma.activityLog
-            .create({
-              data: {
-                userId: data.userId,
-                action: 'CANCEL_BOOKING',
-                details: JSON.stringify({
-                  bookingId: data.bookingId,
-                  fieldId: data.fieldId,
-                }),
-              },
-            })
-            .then(() => {
-              // Broadcast activity log updates
-              broadcastActivityLogUpdates(data.userId);
-            });
-        }
-        break;
+        // Emit notification to user
+        emitBookingEvents('booking:updated', {
+          booking: booking,
+          userId: booking.userId,
+          branchId: booking.field?.branchId,
+          paymentStatus: 'failed',
+        });
+
+        console.log(
+          `🔔 Notified system about canceled booking #${booking.id} due to payment expiry`,
+        );
+      }
     }
+
+    console.log('✅ Expired booking processing completed');
   } catch (error) {
-    console.error('❌ Failed to emit Socket.IO events:', error);
-    // Continue even if socket emission fails
+    console.error('❌ Error in cleanupPendingBookings:', error);
   }
 };
 
-// Get complete booking with relations
+/**
+ * Setup processor for booking cleanup job
+ */
+export const setupBookingCleanupProcessor = (): void => {
+  // Proses job
+  bookingCleanupQueue.process(async (job) => {
+    console.log('⏰ Running automatic expired booking processing');
+    await cleanupPendingBookings();
+    return { success: true, timestamp: new Date() };
+  });
+
+  console.log('✅ Booking cleanup processor didaftarkan');
+};
+
+/**
+ * Start booking cleanup job that runs every 1 minute
+ */
+export const startBookingCleanupJob = (): void => {
+  // Menjalankan proses cleanup segera
+  bookingCleanupQueue.add({}, { jobId: 'initial-cleanup' });
+
+  // Tambahkan recurring job (setiap 1 menit)
+  bookingCleanupQueue.add(
+    {},
+    {
+      jobId: 'cleanup-recurring',
+      repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
+    },
+  );
+
+  console.log('🚀 Expired booking cleanup Bull Queue job started');
+};
+
+/**
+ * Stop the booking cleanup job
+ */
+export const stopBookingCleanupJob = async (): Promise<void> => {
+  await bookingCleanupQueue.close();
+  console.log('🛑 Expired booking cleanup Bull Queue job stopped');
+};
+
+/**
+ * Get complete booking with relations
+ */
 export const getCompleteBooking = async (bookingId: number) => {
   return prisma.booking.findUnique({
     where: { id: bookingId },
@@ -323,3 +318,6 @@ export const getCompleteBooking = async (bookingId: number) => {
     },
   });
 };
+
+// Export emitBookingEvents for use elsewhere
+export { emitBookingEvents };

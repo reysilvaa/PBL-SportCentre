@@ -88,4 +88,4 @@ const config: PM2Config = {
   ],
 };
 
-export default config;
+module.exports = config;

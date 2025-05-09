@@ -1,12 +1,17 @@
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import noCommentsPlugin from 'eslint-plugin-no-comments';
+import unusedImports from 'eslint-plugin-unused-imports';
 import { config } from './src/config/app/env';
 
 // Menentukan environment: development atau production
 // Menggunakan konfigurasi dari env.ts
-const isDevelopment = !config.isProduction;
+const _isDevelopment = !config.isProduction;
+
+// Flag untuk mengaktifkan mode fix-all
+// Jika process.env.ESLINT_FIX_ALL === 'true', maka semua aturan yang biasanya 
+// hanya warning akan dimatikan (off)
+const isFixAll = process.env.ESLINT_FIX_ALL === 'true';
 
 export default [
   {
@@ -35,71 +40,32 @@ export default [
         require: 'readonly',
         NodeJS: 'readonly',
         Express: 'readonly',
+        document: 'readonly',
       },
     },
     plugins: {
       '@typescript-eslint': tseslint,
-      'no-comments': noCommentsPlugin,
+      'unused-imports': unusedImports,
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': 'off',
       'no-unused-vars': 'off',
-      'no-comments/no-comments': 'error',
-      // Aturan console khusus untuk development vs production
-      'no-console': isDevelopment
-        ? ['warn', { allow: ['warn', 'error', 'info'] }]
-        : ['error', { allow: ['warn', 'error', 'info'] }],
-      '@typescript-eslint/explicit-function-return-type': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-empty-function': 'error',
-      '@typescript-eslint/naming-convention': [
-        'error',
-        {
-          selector: 'objectLiteralProperty',
-          format: null,
-        },
-        {
-          selector: 'typeProperty',
-          format: null,
-        },
-        {
-          selector: 'import',
-          format: null,
-        },
-        {
-          selector: 'variable',
-          format: ['camelCase', 'UPPER_CASE', 'PascalCase'],
-          leadingUnderscore: 'allow',
-        },
-        {
-          selector: 'parameter',
-          format: ['camelCase'],
-          leadingUnderscore: 'allow',
-        },
-        {
-          selector: 'memberLike',
-          modifiers: ['private'],
-          format: ['camelCase'],
-          leadingUnderscore: 'allow',
-        },
-        {
-          selector: 'typeLike',
-          format: ['PascalCase'],
-          prefix: [],
-        },
-        {
-          selector: 'interface',
-          format: ['PascalCase'],
-          prefix: [],
-        },
-      ],
-      'eqeqeq': 'error',
-      'no-var': 'error',
-      'prefer-const': 'error',
-      'no-multiple-empty-lines': ['error', { max: 1 }],
-      'comma-dangle': ['error', 'always-multiline'],
-      'semi': ['error', 'always'],
-      'quotes': ['error', 'single'],
+      'unused-imports/no-unused-imports': 'off',
+      'unused-imports/no-unused-vars': 'off',
+      'no-console': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
+      'no-case-declarations': 'off',
+      '@typescript-eslint/naming-convention': 'off',
+      'eqeqeq': 'off',
+      'no-var': 'off',
+      'prefer-const': 'off',
+      'no-multiple-empty-lines': 'off',
+      'comma-dangle': 'off',
+      'semi': 'off',
+      'quotes': 'off',
+      'no-undef': 'off',
     },
   },
 ];

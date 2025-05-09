@@ -19,7 +19,7 @@ export interface EnvConfig {
 
   // Cache Configuration
   CACHE_TTL: string;
-  
+
   // Redis Configuration
   REDIS_URL: string;
   REDIS_PASSWORD: string;
@@ -33,9 +33,4 @@ export interface EnvConfig {
   CLOUDINARY_API_KEY: string;
   CLOUDINARY_API_SECRET: string;
   CLOUDINARY_CLOUD_NAME: string;
-
-  // PASETO Keys
-  PASETO_LOCAL_KEY: string;
-  PASETO_SECRET_KEY: string;
-  PASETO_PUBLIC_KEY: string;
 }

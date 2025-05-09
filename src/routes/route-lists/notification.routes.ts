@@ -1,29 +1,25 @@
 // src/routes/notification.routes.ts
 
 import { Router } from 'express';
-import {
-  getNotifications,
-  readNotification,
-} from '../../controllers/webhook-handlers/notification.controller';
-import { authMiddleware } from '../../middlewares/auth.middleware';
-import { roleBasedController } from '../../middlewares/role.middleware';
+import { getNotifications, readNotification } from '../../controllers/webhook/notification.controller';
+import { auth } from '../../middlewares/auth.middleware';
 
 const router = Router();
 
 router.get(
   '/user/:userId',
-  authMiddleware(['user', 'admin_cabang', 'owner_cabang', 'super_admin']),
-  roleBasedController({
-    all: getNotifications,
-  })
+  auth({
+    allowedRoles: ['user', 'admin_cabang', 'owner_cabang', 'super_admin'],
+  }),
+  getNotifications,
 );
 
 router.patch(
   '/:id/read',
-  authMiddleware(['user', 'admin_cabang', 'owner_cabang', 'super_admin']),
-  roleBasedController({
-    all: readNotification,
-  })
+  auth({
+    allowedRoles: ['user', 'admin_cabang', 'owner_cabang', 'super_admin'],
+  }),
+  readNotification,
 );
 
 export default router;

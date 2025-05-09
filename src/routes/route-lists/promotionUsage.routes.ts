@@ -3,36 +3,33 @@ import {
   getPromotionUsages,
   createPromotionUsage,
   deletePromotionUsage,
-} from '../../controllers/all/promotionUsage.controller';
-import { authMiddleware } from '../../middlewares/auth.middleware';
-import { roleBasedController } from '../../middlewares/role.middleware';
+} from '../../controllers/promotionUsage.controller';
+import { auth } from '../../middlewares/auth.middleware';
 
 const router = express.Router();
 
 router.get(
   '/',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: getPromotionUsages,
-    branchAdmin: getPromotionUsages,
-  })
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang'],
+  }),
+  getPromotionUsages,
 );
 
 router.post(
   '/',
-  authMiddleware(['user']),
-  roleBasedController({
-    user: createPromotionUsage,
-  })
+  auth({
+    allowedRoles: ['user'],
+  }),
+  createPromotionUsage,
 );
 
 router.delete(
   '/:id',
-  authMiddleware(['super_admin', 'admin_cabang']),
-  roleBasedController({
-    superAdmin: deletePromotionUsage,
-    branchAdmin: deletePromotionUsage,
-  })
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang'],
+  }),
+  deletePromotionUsage,
 );
 
 export default router;

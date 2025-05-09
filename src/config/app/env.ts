@@ -54,9 +54,7 @@ export const config = {
     ttl: parseInt(getEnvValue('REDIS_TTL')),
   },
   urls: {
-    api: env === 'production' 
-      ? getEnvValue('API_URL') 
-      : getEnvValue('API_URL_DEV'),
+    api: env === 'production' ? getEnvValue('API_URL') : getEnvValue('API_URL_DEV'),
     frontend: getEnvValue('FRONTEND_URL'),
   },
   cookies: {

@@ -13,16 +13,9 @@ import {
   MonthStats,
 } from './revenueReports.interfaces';
 
-export const generateRevenueReport = async (
-  start: Date,
-  end: Date,
-  type: string = 'monthly'
-) => {
+export const generateRevenueReport = async (start: Date, end: Date, type: string = 'monthly') => {
   // Get booking data with payments
-  const bookingsWithPayments = await RevenueRepository.getBookingsWithPayments(
-    start,
-    end
-  );
+  const bookingsWithPayments = await RevenueRepository.getBookingsWithPayments(start, end);
 
   // Process time series data based on requested grouping
   let timeSeriesData: RevenueData[] = [];
@@ -43,7 +36,7 @@ export const generateRevenueReport = async (
   // Calculate totals
   const totalRevenue = bookingsWithPayments.reduce(
     (sum, booking) => sum + Number(booking.payment?.amount || 0),
-    0
+    0,
   );
 
   const totals: TotalStats = {
@@ -59,28 +52,15 @@ export const generateRevenueReport = async (
   });
 };
 
-export const generateOccupancyReport = async (
-  start: Date,
-  end: Date,
-  branchId?: number
-) => {
+export const generateOccupancyReport = async (start: Date, end: Date, branchId?: number) => {
   // Get field bookings
-  const bookings = await RevenueRepository.getBookingsForOccupancy(
-    start,
-    end,
-    branchId
-  );
+  const bookings = await RevenueRepository.getBookingsForOccupancy(start, end, branchId);
 
   // Get all fields
   const allFields = await RevenueRepository.getAllFields(branchId);
 
   // Calculate field occupancy
-  const fieldOccupancy = calculateFieldOccupancy(
-    allFields,
-    bookings,
-    start,
-    end
-  );
+  const fieldOccupancy = calculateFieldOccupancy(allFields, bookings, start, end);
 
   // Get time slot popularity
   const timeSlotPopularity = calculateTimeSlotPopularity(bookings);
@@ -97,18 +77,14 @@ export const generateBusinessPerformanceReport = async () => {
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-  const bookings =
-    await RevenueRepository.getBookingsWithDetails(twelveMonthsAgo);
+  const bookings = await RevenueRepository.getBookingsWithDetails(twelveMonthsAgo);
 
   // Group bookings by month
   const bookingsByMonth = processMonthlyBookingTrends(bookings);
 
   // Get branch performance
   const branches = await prisma.branch.findMany();
-  const branchPerformance = await calculateBranchPerformance(
-    branches,
-    bookings
-  );
+  const branchPerformance = await calculateBranchPerformance(branches, bookings);
 
   // Calculate customer retention
   const customerRetention = calculateCustomerRetention(bookings);
@@ -126,8 +102,7 @@ export const generateBusinessPerformanceReport = async () => {
 
 export const generateBookingForecast = async () => {
   // Get all bookings with payments
-  const bookingsWithPayments =
-    await RevenueRepository.getAllBookingsWithPayments();
+  const bookingsWithPayments = await RevenueRepository.getAllBookingsWithPayments();
 
   // Group by month
   const historicalData = processMonthlyData(bookingsWithPayments);
@@ -327,12 +302,7 @@ function processFieldRevenue(bookings: any[]): FieldRevenue[] {
     .sort((a, b) => b.revenue - a.revenue);
 }
 
-function calculateFieldOccupancy(
-  fields: any[],
-  bookings: any[],
-  start: Date,
-  end: Date
-) {
+function calculateFieldOccupancy(fields: any[], bookings: any[], start: Date, end: Date) {
   return fields.map((field) => {
     const fieldBookings = bookings.filter((b) => b.fieldId === field.id);
 
@@ -341,15 +311,12 @@ function calculateFieldOccupancy(
     fieldBookings.forEach((booking) => {
       const startTime = new Date(booking.startTime);
       const endTime = new Date(booking.endTime);
-      const hours =
-        (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
       totalBookedHours += hours;
     });
 
     // Calculate potential available hours (12 hours per day * days in range)
-    const daysDiff = Math.ceil(
-      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     const potentialHours = daysDiff * 12; // Assuming 12 operating hours per day
 
     // Calculate revenue from payments
@@ -387,10 +354,7 @@ function calculateTimeSlotPopularity(bookings: any[]) {
     timeSlotPopularity.push({
       timeSlot: `${startTime} - ${endTime}`,
       bookingCount: bookingsInSlot.length,
-      popularity:
-        bookings.length > 0
-          ? (bookingsInSlot.length / bookings.length) * 100
-          : 0,
+      popularity: bookings.length > 0 ? (bookingsInSlot.length / bookings.length) * 100 : 0,
     });
   }
 
@@ -398,10 +362,7 @@ function calculateTimeSlotPopularity(bookings: any[]) {
 }
 
 function processMonthlyBookingTrends(bookings: any[]): MonthlyStats[] {
-  const bookingsByMonthMap = new Map<
-    string,
-    { bookings: number; revenue: number }
-  >();
+  const bookingsByMonthMap = new Map<string, { bookings: number; revenue: number }>();
 
   bookings.forEach((booking) => {
     const date = booking.bookingDate;
@@ -430,13 +391,11 @@ function processMonthlyBookingTrends(bookings: any[]): MonthlyStats[] {
 
 async function calculateBranchPerformance(
   branches: any[],
-  bookings: any[]
+  bookings: any[],
 ): Promise<BranchPerformance[]> {
   return branches
     .map((branch) => {
-      const branchBookings = bookings.filter(
-        (b) => b.field?.branchId === branch.id
-      );
+      const branchBookings = bookings.filter((b) => b.field?.branchId === branch.id);
 
       // Get unique customers
       const uniqueCustomers = new Set(branchBookings.map((b) => b.userId));
@@ -474,14 +433,10 @@ function calculateCustomerRetention(bookings: any[]): CustomerRetention {
 
   const totalCustomers = userBookingsMap.size;
   const returningCustomers = Array.from(userBookingsMap.values()).filter(
-    (count) => count > 1
+    (count) => count > 1,
   ).length;
-  const totalBookings = Array.from(userBookingsMap.values()).reduce(
-    (sum, count) => sum + count,
-    0
-  );
-  const avgBookingsPerCustomer =
-    totalCustomers > 0 ? totalBookings / totalCustomers : 0;
+  const totalBookings = Array.from(userBookingsMap.values()).reduce((sum, count) => sum + count, 0);
+  const avgBookingsPerCustomer = totalCustomers > 0 ? totalBookings / totalCustomers : 0;
 
   return {
     totalCustomers,
@@ -492,27 +447,15 @@ function calculateCustomerRetention(bookings: any[]): CustomerRetention {
 
 function calculateMonthComparison(bookings: any[]) {
   const currentDate = new Date();
-  const firstDayCurrentMonth = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth(),
-    1
-  );
-  const firstDayPreviousMonth = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth() - 1,
-    1
-  );
+  const firstDayCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const firstDayPreviousMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
 
   // Current month bookings
-  const currentMonthBookings = bookings.filter(
-    (b) => b.bookingDate >= firstDayCurrentMonth
-  );
+  const currentMonthBookings = bookings.filter((b) => b.bookingDate >= firstDayCurrentMonth);
 
   // Previous month bookings
   const previousMonthBookings = bookings.filter(
-    (b) =>
-      b.bookingDate >= firstDayPreviousMonth &&
-      b.bookingDate < firstDayCurrentMonth
+    (b) => b.bookingDate >= firstDayPreviousMonth && b.bookingDate < firstDayCurrentMonth,
   );
 
   // Calculate stats
@@ -522,18 +465,14 @@ function calculateMonthComparison(bookings: any[]) {
   // Calculate growth rates
   const bookingGrowth =
     previousMonth.bookings > 0
-      ? ((currentMonth.bookings - previousMonth.bookings) /
-          previousMonth.bookings) *
-        100
+      ? ((currentMonth.bookings - previousMonth.bookings) / previousMonth.bookings) * 100
       : currentMonth.bookings > 0
         ? 100
         : 0;
 
   const revenueGrowth =
     previousMonth.revenue > 0
-      ? ((currentMonth.revenue - previousMonth.revenue) /
-          previousMonth.revenue) *
-        100
+      ? ((currentMonth.revenue - previousMonth.revenue) / previousMonth.revenue) * 100
       : currentMonth.revenue > 0
         ? 100
         : 0;
@@ -558,10 +497,7 @@ function calculateMonthStats(bookings: any[]): MonthStats {
 }
 
 function processMonthlyData(bookings: any[]): MonthlyStats[] {
-  const monthlyDataMap = new Map<
-    string,
-    { bookings: number; revenue: number }
-  >();
+  const monthlyDataMap = new Map<string, { bookings: number; revenue: number }>();
 
   bookings.forEach((booking) => {
     const date = booking.bookingDate;
@@ -607,16 +543,14 @@ function calculateGrowthMetrics(historicalData: MonthlyStats[]) {
   }
 
   return {
-    bookingGrowth:
-      monthsWithData > 0 ? totalBookingGrowth / monthsWithData : 0.05,
-    revenueGrowth:
-      monthsWithData > 0 ? totalRevenueGrowth / monthsWithData : 0.07,
+    bookingGrowth: monthsWithData > 0 ? totalBookingGrowth / monthsWithData : 0.05,
+    revenueGrowth: monthsWithData > 0 ? totalRevenueGrowth / monthsWithData : 0.07,
   };
 }
 
 function generateForecast(
   historicalData: MonthlyStats[],
-  growthMetrics: { bookingGrowth: number; revenueGrowth: number }
+  growthMetrics: { bookingGrowth: number; revenueGrowth: number },
 ): MonthlyStats[] {
   const forecast: MonthlyStats[] = [];
   const lastMonth =
@@ -634,12 +568,8 @@ function generateForecast(
   for (let i = 1; i <= 6; i++) {
     const forecastMonth = DateUtils.getNextMonth(lastMonth.month, i);
 
-    forecastBookings = Math.round(
-      forecastBookings * (1 + growthMetrics.bookingGrowth)
-    );
-    forecastRevenue = Math.round(
-      forecastRevenue * (1 + growthMetrics.revenueGrowth)
-    );
+    forecastBookings = Math.round(forecastBookings * (1 + growthMetrics.bookingGrowth));
+    forecastRevenue = Math.round(forecastRevenue * (1 + growthMetrics.revenueGrowth));
 
     forecast.push({
       month: forecastMonth,

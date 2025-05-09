@@ -45,4 +45,4 @@ const setupQueueMonitoring = (queue: Queue.Queue) => {
 setupQueueMonitoring(bookingCleanupQueue);
 setupQueueMonitoring(fieldAvailabilityQueue);
 
-console.info('🚀 Bull Queue siap digunakan dengan Redis'); 
+console.info('🚀 Bull Queue siap digunakan dengan Redis');

@@ -2,10 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/services/database';
 
-export const getNotifications = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getNotifications = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
     const notifications = await prisma.notification.findMany({
@@ -24,10 +21,7 @@ export const getNotifications = async (
   }
 };
 
-export const readNotification = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const readNotification = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const notification = await prisma.notification.update({

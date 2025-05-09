@@ -1,7 +1,7 @@
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from '../config/services/cloudinary';
-import { NextFunction, Request } from 'express';
+import { Request } from 'express';
 
 // Define interfaces for Multer request types
 export interface MulterRequest extends Request {
@@ -62,9 +62,7 @@ const createStorage = (folderType: FolderPath) => {
 
       // Apply specific transformations based on folder type
       if (folderType === 'fields') {
-        options.transformation = [
-          { width: 800, height: 600, crop: 'limit', quality: 'auto' },
-        ];
+        options.transformation = [{ width: 800, height: 600, crop: 'limit', quality: 'auto' }];
       } else if (folderType === 'users') {
         options.transformation = [
           {
@@ -76,9 +74,7 @@ const createStorage = (folderType: FolderPath) => {
           },
         ];
       } else if (folderType === 'branches') {
-        options.transformation = [
-          { width: 1200, height: 800, crop: 'limit', quality: 'auto' },
-        ];
+        options.transformation = [{ width: 1200, height: 800, crop: 'limit', quality: 'auto' }];
       }
 
       return options;
@@ -87,11 +83,7 @@ const createStorage = (folderType: FolderPath) => {
 };
 
 // File filter to restrict uploads to images only
-const imageFileFilter = (
-  req: Request,
-  file: Express.Multer.File,
-  cb: multer.FileFilterCallback
-) => {
+const imageFileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
