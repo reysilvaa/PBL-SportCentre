@@ -220,13 +220,18 @@ export const isFieldAvailable = async (
 };
 
 /**
- * Mendapatkan ketersediaan semua lapangan untuk hari ini
+ * Mendapatkan ketersediaan semua lapangan untuk tanggal tertentu
  */
-export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set ke awal hari
+export const getAllFieldsAvailability = async (selectedDate?: string): Promise<FieldAvailability[]> => {
+  // Gunakan tanggal yang dipilih, atau tanggal hari ini jika tidak ada yang dipilih
+  const date = selectedDate ? new Date(selectedDate) : new Date();
+  
+  // Set ke awal hari
+  date.setHours(0, 0, 0, 0);
+  
+  console.log('🔍 Checking availability for date:', date.toISOString().split('T')[0]);
 
-  const hourlyTimeSlots = generateHourlyTimeSlots(today);
+  const hourlyTimeSlots = generateHourlyTimeSlots(date);
   const fields = await prisma.field.findMany({
     include: { branch: true },
   });
@@ -235,7 +240,7 @@ export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> =
 
   for (const field of fields) {
     const fieldAvailability: FieldAvailability = {
-      currentDate: new Date(),
+      currentDate: date,
       fieldId: field.id,
       fieldName: field.name,
       branch: field.branch.name,
@@ -243,15 +248,15 @@ export const getAllFieldsAvailability = async (): Promise<FieldAvailability[]> =
       availableTimeSlots: [],
     };
 
-    // Dapatkan semua booking valid untuk field ini pada hari ini
-    const validBookings = await getValidBookings(field.id, today);
+    // Dapatkan semua booking valid untuk field ini pada tanggal yang dipilih
+    const validBookings = await getValidBookings(field.id, date);
     const bookedSlots = validBookings.map((booking) => ({
       start: new Date(booking.startTime),
       end: new Date(booking.endTime),
     }));
+    
     // Inside getAllFieldsAvailability, before checking hourly slots:
-    console.log('All valid bookings for field:', field.id);
-    console.log(
+    console.log(`All valid bookings for field ${field.id} on date ${date.toISOString().split('T')[0]}:`, 
       validBookings.map((b) => ({
         id: b.id,
         date: b.bookingDate,

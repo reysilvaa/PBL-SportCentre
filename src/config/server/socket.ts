@@ -30,9 +30,119 @@ export function initializeSocketIO(server: HttpServer): SocketServer {
     });
 
     console.log('Socket.IO server initialized');
+    
+    // Buat namespace untuk ketersediaan lapangan
+    const fieldsNamespace = global.io.of('/fields');
+    setupFieldsNamespace(fieldsNamespace);
   }
 
   return global.io;
+}
+
+/**
+ * Setup namespace khusus untuk ketersediaan lapangan
+ * @param namespace Socket.IO namespace
+ */
+export function setupFieldsNamespace(namespace: Namespace): void {
+  namespace.on('connection', (socket) => {
+    console.log(`Client connected to fields namespace - ID: ${socket.id}`);
+
+    // Event untuk bergabung ke room
+    socket.on('join_room', ({ room, branchId }) => {
+      // Join room berdasarkan nama room yang dikirim
+      if (room) {
+        socket.join(room);
+        console.log(`Client ${socket.id} joined room: ${room}, branchId: ${branchId || 'none'}`);
+        
+        // Emit event bahwa client berhasil bergabung ke room
+        socket.emit('joined_room', { room, success: true });
+      }
+    });
+
+    // Event untuk meninggalkan room
+    socket.on('leave_room', ({ room }) => {
+      if (room) {
+        socket.leave(room);
+        console.log(`Client ${socket.id} left room: ${room}`);
+        
+        // Emit event bahwa client berhasil keluar dari room
+        socket.emit('left_room', { room, success: true });
+      }
+    });
+    
+    // Event untuk meminta pembaruan ketersediaan lapangan
+    socket.on('request_availability_update', async ({ date, branchId }) => {
+      try {
+        console.log(`Client ${socket.id} requested availability update for date: ${date || 'all'}, branchId: ${branchId || 'all'}`);
+        
+        // Import di sini untuk menghindari circular dependency
+        const { getAllFieldsAvailability } = require('../../utils/booking/checkAvailability.utils');
+        
+        // Dapatkan data ketersediaan terbaru
+        const availabilityData = await getAllFieldsAvailability(date);
+        
+        // Filter data berdasarkan branchId jika ada
+        const filteredData = branchId 
+          ? availabilityData.filter((field: any) => {
+              const fieldBranchId = field.branchId || 
+                (field.field && field.field.branchId) || 
+                (field.branch && field.branch.id);
+              return fieldBranchId === branchId;
+            })
+          : availabilityData;
+        
+        // Emit langsung ke client yang meminta
+        socket.emit('fieldsAvailabilityUpdate', filteredData);
+        
+        console.log(`Sent availability update to client ${socket.id} for date: ${date || 'all'}`);
+      } catch (error) {
+        console.error(`Error sending availability update to client ${socket.id}:`, error);
+        socket.emit('error', { message: 'Failed to get availability data' });
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log(`Client disconnected from fields namespace - ID: ${socket.id} - Reason: ${reason}`);
+    });
+  });
+}
+
+/**
+ * Emit pembaruan ketersediaan lapangan ke semua client di room tertentu
+ * @param data Data ketersediaan lapangan
+ * @param date Tanggal (untuk filter room)
+ */
+export function emitFieldAvailabilityUpdate(data: any, date?: string): void {
+  try {
+    const io = getIO();
+    const fieldsNamespace = io.of('/fields');
+    
+    // Emit ke room spesifik berdasarkan tanggal
+    if (date) {
+      const roomId = `field_availability_${date}`;
+      console.log(`Emitting field availability update to room: ${roomId}, clients: ${getClientsInRoom(fieldsNamespace, roomId)}`);
+      fieldsNamespace.to(roomId).emit('fieldsAvailabilityUpdate', data);
+    } 
+    // Emit ke semua client di namespace fields
+    else {
+      console.log(`Emitting field availability update to all clients in fields namespace`);
+      fieldsNamespace.emit('fieldsAvailabilityUpdate', data);
+    }
+  } catch (error) {
+    console.error('Failed to emit field availability update:', error);
+  }
+}
+
+/**
+ * Bantuan untuk mendapatkan jumlah client dalam room tertentu
+ * @param namespace Socket.IO namespace
+ * @param room Nama room
+ * @returns Jumlah client dalam room
+ */
+export function getClientsInRoom(namespace: Namespace, room: string): number {
+  const adapter = namespace.adapter;
+  // @ts-ignore - Room property exists but is not in typings
+  return adapter.rooms.get(room)?.size || 0;
 }
 
 /**
