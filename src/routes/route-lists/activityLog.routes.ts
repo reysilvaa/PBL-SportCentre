@@ -17,7 +17,7 @@ router.delete(
   auth({
     allowedRoles: ['super_admin'],
   }),
-  deleteActivityLog,
+  deleteActivityLog
 );
 
 export default router;

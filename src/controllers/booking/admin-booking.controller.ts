@@ -11,6 +11,7 @@ import {
 import { calculateTotalPrice, combineDateWithTime } from '../../utils/booking/calculateBooking.utils';
 import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
 import { User } from '../../middlewares/auth.middleware';
+import { PaymentMethod, PaymentStatus } from '../../types';
 
 /**
  * Branch Admin Booking Controller
@@ -181,7 +182,7 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       startDateTime,
       endDateTime,
       Number(field.priceDay),
-      Number(field.priceNight),
+      Number(field.priceNight)
     );
 
     // Create booking and payment records
@@ -191,9 +192,9 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       bookingDateTime,
       startDateTime,
       endDateTime,
-      paymentStatus || 'paid',
-      'cash',
-      totalPrice,
+      paymentStatus ? (paymentStatus as PaymentStatus) : PaymentStatus.PAID,
+      PaymentMethod.CASH,
+      totalPrice
     );
 
     // Emit real-time events

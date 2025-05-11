@@ -12,7 +12,7 @@ export const createFieldReviewSchema = z.object({
     ],
     {
       message: 'ID pengguna harus berupa angka',
-    },
+    }
   ),
   fieldId: z.union(
     [
@@ -24,7 +24,7 @@ export const createFieldReviewSchema = z.object({
     ],
     {
       message: 'ID lapangan harus berupa angka',
-    },
+    }
   ),
   rating: z
     .number({
@@ -73,3 +73,6 @@ export const updateFieldReviewSchema = z.object({
     })
     .optional(),
 });
+
+export type CreateFieldReviewInput = z.infer<typeof createFieldReviewSchema>;
+export type UpdateFieldReviewInput = z.infer<typeof updateFieldReviewSchema>;

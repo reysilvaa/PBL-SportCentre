@@ -1,4 +1,6 @@
 import redisClient from '../config/services/redis';
+import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 
 // Waktu TTL default yang lebih rendah untuk responsivitas
 const DEFAULT_TTL = Number(process.env.CACHE_TTL || 30); // 30 detik (lebih responsif)
@@ -20,7 +22,7 @@ const DYNAMIC_ENDPOINTS = [
  * @param req Request object
  * @param res Response object
  */
-export const setCacheControlHeaders = (req: any, res: any): void => {
+export const setCacheControlHeaders = (req: Request, res: Response): void => {
   const url = req.originalUrl?.toLowerCase() || '';
 
   // Untuk endpoint dinamis, cache hanya 2 detik
@@ -111,7 +113,7 @@ export const deleteCachedData = async (key: string): Promise<number> => {
  */
 export const deleteCachedDataByPattern = async (
   pattern: string,
-  verbose: boolean = false,
+  verbose: boolean = false
 ): Promise<number> => {
   try {
     // Periksa koneksi Redis sebelum akses
@@ -189,7 +191,7 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
   // Gunakan TTL yang lebih rendah untuk semua endpoint
   const cacheTTL = ttl || DEFAULT_TTL; // Default 30 detik jika tidak diatur
 
-  return async (req: any, res: any, next: any) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Atur header cache control sesuai jenis endpoint
       setCacheControlHeaders(req, res);
@@ -197,13 +199,15 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
       // Skip cache completely if DISABLE_CACHE query param exists
       if (req.query.noCache === 'true' || req.query.refresh === 'true') {
         console.log(`[CACHE] Cache disabled via query param for: ${req.originalUrl}`);
-        return next();
+        next();
+        return;
       }
 
       // Skip cache untuk metode mutasi (POST, PUT, DELETE, PATCH)
       if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
         console.log(`[CACHE] Skipping cache for mutating method: ${req.method}`);
-        return next();
+        next();
+        return;
       }
 
       // Tambahkan timestamp ke key cache untuk mendukung versioning
@@ -213,7 +217,8 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
       // Periksa koneksi Redis sebelum akses
       if (!redisClient.isOpen) {
         console.warn('[CACHE] Redis connection not open, skipping cache middleware');
-        return next();
+        next();
+        return;
       }
 
       // Check if data exists in cache
@@ -221,7 +226,6 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
 
       if (cachedData) {
         // Hitung ETag berdasarkan konten data dengan MD5
-        const crypto = require('crypto');
         const etag = `W/"${crypto.createHash('md5').update(JSON.stringify(cachedData)).digest('hex')}"`;
         res.setHeader('ETag', etag);
 
@@ -230,7 +234,8 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
         if (clientEtag === etag) {
           // Data tidak berubah, kirim 304 Not Modified
           console.log(`[CACHE] ETag match, sending 304 Not Modified: ${key}`);
-          return res.status(304).end();
+          res.status(304).end();
+          return;
         }
 
         // Log hit ratio untuk monitoring
@@ -238,7 +243,8 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
 
         // Add cache header for transparency
         res.set('X-Cache', 'HIT');
-        return res.send(cachedData);
+        res.send(cachedData);
+        return;
       }
 
       // Add cache header for transparency
@@ -246,18 +252,19 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
 
       // Override res.json method to store response in cache
       const originalJson = res.json;
-      res.json = async function (data: any) {
+      res.json = function (data: any) {
         // Check if headers have been sent already
         if (!res.headersSent) {
           // Hitung dan kirim ETag untuk respons baru
-          const crypto = require('crypto');
           const etag = `W/"${crypto.createHash('md5').update(JSON.stringify(data)).digest('hex')}"`;
           this.setHeader('ETag', etag);
 
           // Only cache successful responses
           if (res.statusCode >= 200 && res.statusCode < 300) {
             // Store data in cache
-            await setCachedData(key, data, cacheTTL);
+            setCachedData(key, data, cacheTTL).catch((err) => {
+              console.error('[CACHE ERROR] Error storing in cache:', err);
+            });
             console.log(`[CACHE] Storing in cache: ${key}`);
           }
 
@@ -280,7 +287,14 @@ export const cacheMiddleware = (keyPrefix: string, ttl?: number) => {
 /**
  * Get cache statistics
  */
-export const getCacheStats = async () => {
+export const getCacheStats = async (): Promise<{
+  keys: number;
+  hits: number;
+  misses: number;
+  memory: string;
+  clients: number;
+  connected: boolean;
+}> => {
   try {
     // Periksa koneksi Redis sebelum akses
     if (!redisClient.isOpen) {

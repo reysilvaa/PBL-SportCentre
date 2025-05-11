@@ -1,6 +1,6 @@
 import prisma from '../../config/services/database';
 import { broadcastActivityLogUpdates } from '../../socket-handlers/activityLog.socket';
-import { User } from '@prisma/client';
+import { User, ActivityLog } from '../../types';
 
 /**
  * Service to handle activity log operations with real-time updates
@@ -19,8 +19,8 @@ export class ActivityLogService {
     action: string,
     details?: string | object,
     relatedId?: number,
-    ipAddress?: string,
-  ) {
+    ipAddress?: string
+  ): Promise<ActivityLog> {
     try {
       // Convert object to string if details is provided as an object
       const detailsStr = details
@@ -50,7 +50,7 @@ export class ActivityLogService {
       // Emit updates to specific rooms and all clients
       await broadcastActivityLogUpdates(userId);
 
-      return newLog;
+      return newLog as ActivityLog;
     } catch (error) {
       console.error('Error creating activity log:', error);
       throw error;
@@ -70,8 +70,8 @@ export class ActivityLogService {
     action: string,
     bookingId: number,
     details?: object,
-    ipAddress?: string,
-  ) {
+    ipAddress?: string
+  ): Promise<any> {
     const userId = typeof user === 'number' ? user : user.id;
     return this.createLog(userId, action, details, bookingId, ipAddress);
   }
@@ -91,8 +91,8 @@ export class ActivityLogService {
     bookingId: number,
     status: string,
     details?: object,
-    ipAddress?: string,
-  ) {
+    ipAddress?: string
+  ): Promise<any> {
     const action = `Payment ${status} for booking ${bookingId}`;
     return this.createLog(
       userId,
@@ -104,7 +104,7 @@ export class ActivityLogService {
         ...details,
       },
       undefined,
-      ipAddress,
+      ipAddress
     );
   }
 
@@ -112,7 +112,7 @@ export class ActivityLogService {
    * Broadcast activity log updates to all connected clients and user-specific rooms
    * @param userId - Optional user ID to filter logs for specific rooms
    */
-  static async broadcastActivityLogUpdates(userId?: number) {
+  static async broadcastActivityLogUpdates(userId?: number): Promise<void> {
     await broadcastActivityLogUpdates(userId);
   }
 
@@ -121,7 +121,7 @@ export class ActivityLogService {
    * @param userId - Optional user ID to filter logs
    * @returns Array of activity logs with user information
    */
-  static async getLogs(userId?: number) {
+  static async getLogs(userId?: number): Promise<any[]> {
     return prisma.activityLog.findMany({
       where: userId ? { userId } : {},
       include: {
@@ -144,7 +144,7 @@ export class ActivityLogService {
    * @param id - Activity log ID
    * @returns The deleted activity log
    */
-  static async deleteLog(id: number) {
+  static async deleteLog(id: number): Promise<any> {
     const deletedLog = await prisma.activityLog.delete({
       where: { id },
       include: {

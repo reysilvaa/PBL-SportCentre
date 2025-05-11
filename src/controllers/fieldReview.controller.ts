@@ -3,6 +3,7 @@ import prisma from '../config/services/database';
 import { createFieldReviewSchema, updateFieldReviewSchema } from '../zod-schemas/fieldReview.schema';
 import { invalidateFieldReviewCache } from '../utils/cache/cacheInvalidation.utils';
 import { User } from '../middlewares/auth.middleware';
+import { Role } from '../types';
 
 /**
  * Unified Field Review Controller
@@ -216,7 +217,7 @@ export const updateFieldReview = async (req: User, res: Response) => {
     }
 
     // Pastikan hanya pemilik ulasan yang bisa mengubahnya
-    if (existingReview.userId !== req.user?.id && req.user?.role !== 'super_admin') {
+    if (existingReview.userId !== req.user?.id && req.user?.role !== Role.SUPER_ADMIN) {
       res.status(403).json({
         status: false,
         message: 'Anda tidak memiliki izin untuk mengubah ulasan ini',
@@ -320,7 +321,7 @@ export const deleteFieldReview = async (req: User, res: Response) => {
     }
 
     // Pastikan hanya pemilik ulasan atau admin yang bisa menghapusnya
-    if (existingReview.userId !== req.user?.id && req.user?.role !== 'super_admin') {
+    if (existingReview.userId !== req.user?.id && req.user?.role !== Role.SUPER_ADMIN) {
       res.status(403).json({
         status: false,
         message: 'Anda tidak memiliki izin untuk menghapus ulasan ini',

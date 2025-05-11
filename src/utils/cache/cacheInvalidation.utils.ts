@@ -15,7 +15,7 @@ import redisClient from '../../config/services/redis';
  */
 const logInvalidation = (entityName: string, entityId?: number): void => {
   console.log(
-    `[CACHE] Invalidating ${entityName} cache${entityId ? ` for ${entityName} #${entityId}` : ''}`,
+    `[CACHE] Invalidating ${entityName} cache${entityId ? ` for ${entityName} #${entityId}` : ''}`
   );
 };
 
@@ -47,7 +47,7 @@ export const invalidateBookingCache = async (
   bookingId?: number,
   fieldId?: number,
   branchId?: number,
-  userId?: number,
+  userId?: number
 ): Promise<boolean> => {
   try {
     logInvalidation('booking', bookingId);
@@ -96,7 +96,7 @@ export const invalidatePaymentCache = async (
   bookingId?: number,
   fieldId?: number,
   branchId?: number,
-  userId?: number,
+  userId?: number
 ): Promise<boolean> => {
   try {
     logInvalidation('payment', paymentId);
@@ -128,7 +128,7 @@ export const invalidatePaymentCache = async (
  */
 export const invalidateFieldCache = async (
   fieldId?: number,
-  branchId?: number,
+  branchId?: number
 ): Promise<boolean> => {
   try {
     logInvalidation('field', fieldId);

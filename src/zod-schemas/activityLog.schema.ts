@@ -12,7 +12,7 @@ export const createActivityLogSchema = z.object({
     ],
     {
       message: 'ID pengguna harus berupa angka',
-    },
+    }
   ),
   action: z
     .string({
@@ -40,8 +40,11 @@ export const createActivityLogSchema = z.object({
       ],
       {
         message: 'ID terkait harus berupa angka atau null',
-      },
+      }
     )
     .optional()
     .nullable(),
+  ipAddress: z.string().optional(),
 });
+
+export type CreateActivityLogInput = z.infer<typeof createActivityLogSchema>;

@@ -16,3 +16,6 @@ export const createFieldTypeSchema = z.object({
 
 // Skema untuk update tipe lapangan
 export const updateFieldTypeSchema = createFieldTypeSchema;
+
+export type CreateFieldTypeInput = z.infer<typeof createFieldTypeSchema>;
+export type UpdateFieldTypeInput = z.infer<typeof updateFieldTypeSchema>;

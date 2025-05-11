@@ -1,17 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
+import { AppError } from '../types/error';
 
-class AppError extends Error {
-  statusCode: number;
-  constructor(message: string, statusCode: number = 400) {
-    super(message);
-    this.statusCode = statusCode;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
-
-const errorMiddleware = (err: any, req: Request, res: Response, next: NextFunction) => {
+const errorMiddleware = (err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error('Error Middleware:', err);
 
   if (err instanceof PrismaClientKnownRequestError) {

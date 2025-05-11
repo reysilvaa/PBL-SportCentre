@@ -8,6 +8,7 @@ import {
   getCompleteBooking,
   emitBookingEvents,
 } from '../utils/booking/booking.utils';
+import { PaymentMethod } from '../types/enums';
 
 /**
  * Handle booking search request
@@ -73,7 +74,7 @@ export const handleFieldAvailabilityCheck = async (socket: Socket, data: any) =>
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -185,7 +186,7 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
-      endDateTime,
+      endDateTime
     );
 
     if (!timeValidation.valid) {
@@ -197,15 +198,15 @@ export const handleCreateManualBooking = async (socket: Socket, data: any) => {
     }
 
     // Create booking and payment records
-    const { booking, payment } = await createBookingWithPayment(
+    const { booking } = await createBookingWithPayment(
       parseInt(userId.toString()),
       parseInt(fieldId.toString()),
       bookingDateTime,
       startDateTime,
       endDateTime,
       paymentStatus || 'paid',
-      'cash',
-      field.priceDay,
+      PaymentMethod.CASH,
+      field.priceDay
     );
 
     // Get complete booking with relations
@@ -323,7 +324,7 @@ export const setupBranchSocketHandlers = (): void => {
         socket.data.user = user;
         socket.data.authenticated = true;
         console.log(
-          `Branch client authenticated: ${socket.id}, User: ${user.id}, Role: ${user.role}`,
+          `Branch client authenticated: ${socket.id}, User: ${user.id}, Role: ${user.role}`
         );
         next();
       } catch (authError) {

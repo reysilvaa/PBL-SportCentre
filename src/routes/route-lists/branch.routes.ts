@@ -17,7 +17,7 @@ router.get(
   auth({
     allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
   }),
-  getBranches,
+  getBranches
 );
 
 // Pendekatan minimalis untuk operasi cabang
@@ -32,7 +32,7 @@ router.put(
     resourceName: 'branch',
   }),
   branchUpload.single('imageUrl'),
-  updateBranch,
+  updateBranch
 );
 
 // Hapus cabang (hanya super admin)

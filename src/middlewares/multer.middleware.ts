@@ -23,18 +23,23 @@ export interface MulterRequestWithFiles extends Request {
 }
 
 // Define folder path types for better organization
-export type FolderPath = 'fields' | 'users' | 'branches' | 'other';
+export enum FolderType {
+  FIELDS = 'fields',
+  USERS = 'users',
+  BRANCHES = 'branches',
+  OTHER = 'other',
+}
 
 // Get folder path based on type
-const getFolderPath = (type: FolderPath = 'other'): string => {
+const getFolderPath = (type: FolderType = FolderType.OTHER): string => {
   const basePath = 'PBL';
 
   switch (type) {
-    case 'fields':
+    case FolderType.FIELDS:
       return `${basePath}/fields-images`;
-    case 'users':
+    case FolderType.USERS:
       return `${basePath}/users-images`;
-    case 'branches':
+    case FolderType.BRANCHES:
       return `${basePath}/branches-images`;
     default:
       return `${basePath}/uploads`;
@@ -42,10 +47,10 @@ const getFolderPath = (type: FolderPath = 'other'): string => {
 };
 
 // Configure Cloudinary storage with dynamic folder path
-const createStorage = (folderType: FolderPath) => {
+const createStorage = (folderType: FolderType) => {
   return new CloudinaryStorage({
     cloudinary,
-    params: async (req: MulterRequest, file) => {
+    params: async (req: MulterRequest, _file: Express.Multer.File) => {
       // Get folder from request body if specified, otherwise use the default from folderType
       const folder = req.body?.folder || getFolderPath(folderType);
 
@@ -61,9 +66,9 @@ const createStorage = (folderType: FolderPath) => {
       };
 
       // Apply specific transformations based on folder type
-      if (folderType === 'fields') {
+      if (folderType === FolderType.FIELDS) {
         options.transformation = [{ width: 800, height: 600, crop: 'limit', quality: 'auto' }];
-      } else if (folderType === 'users') {
+      } else if (folderType === FolderType.USERS) {
         options.transformation = [
           {
             width: 400,
@@ -73,7 +78,7 @@ const createStorage = (folderType: FolderPath) => {
             quality: 'auto',
           },
         ];
-      } else if (folderType === 'branches') {
+      } else if (folderType === FolderType.BRANCHES) {
         options.transformation = [{ width: 1200, height: 800, crop: 'limit', quality: 'auto' }];
       }
 
@@ -93,7 +98,7 @@ const imageFileFilter = (req: Request, file: Express.Multer.File, cb: multer.Fil
 
 // Create specialized upload middlewares
 export const fieldUpload = multer({
-  storage: createStorage('fields'),
+  storage: createStorage(FolderType.FIELDS),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -101,7 +106,7 @@ export const fieldUpload = multer({
 });
 
 export const userUpload = multer({
-  storage: createStorage('users'),
+  storage: createStorage(FolderType.USERS),
   limits: {
     fileSize: 2 * 1024 * 1024, // 2MB limit
   },
@@ -109,7 +114,7 @@ export const userUpload = multer({
 });
 
 export const branchUpload = multer({
-  storage: createStorage('branches'),
+  storage: createStorage(FolderType.BRANCHES),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -117,14 +122,14 @@ export const branchUpload = multer({
 });
 
 export const genericUpload = multer({
-  storage: createStorage('other'),
+  storage: createStorage(FolderType.OTHER),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
 });
 
 // Helper method to allow dynamic folder selection at runtime
-export const dynamicUpload = (folderType: FolderPath = 'other') => {
+export const dynamicUpload = (folderType: FolderType = FolderType.OTHER) => {
   return multer({
     storage: createStorage(folderType),
     limits: {

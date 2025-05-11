@@ -12,7 +12,7 @@ export const createBookingSchema = z.object({
     ],
     {
       message: 'ID pengguna harus berupa angka',
-    },
+    }
   ),
   fieldId: z.union(
     [
@@ -24,7 +24,7 @@ export const createBookingSchema = z.object({
     ],
     {
       message: 'ID lapangan harus berupa angka',
-    },
+    }
   ),
   bookingDate: z
     .string({
@@ -51,3 +51,6 @@ export const createBookingSchema = z.object({
 
 // Skema untuk update booking (semua field opsional)
 export const updateBookingSchema = createBookingSchema.partial();
+
+export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;

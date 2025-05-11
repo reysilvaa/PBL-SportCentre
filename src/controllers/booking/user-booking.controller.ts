@@ -15,6 +15,7 @@ import { TIMEZONE, formatDateToWIB, combineDateWithTimeWIB } from '../../utils/v
 import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
 import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 import { User } from '../../middlewares/auth.middleware';
+import { PaymentMethod, PaymentStatus } from '../../types';
 
 /**
  * User Booking Controller
@@ -80,7 +81,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       startDateTime,
       endDateTime,
       Number(field.priceDay),
-      Number(field.priceNight),
+      Number(field.priceNight)
     );
 
     if (totalPrice <= 0) {
@@ -96,16 +97,22 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       bookingDateTime,
       startDateTime,
       endDateTime,
-      'pending',
-      'midtrans',
-      totalPrice,
+      PaymentStatus.PENDING,
+      PaymentMethod.MIDTRANS,
+      totalPrice
     );
 
     console.log('✅ Booking created:', booking.id);
     console.log('💳 Payment created:', payment.id);
 
     // Process payment via Midtrans API
-    const paymentResult = await processMidtransPayment(booking, payment, field, user, totalPrice);
+    const paymentResult = await processMidtransPayment(
+      booking,
+      payment,
+      field as any, // Type casting untuk mengatasi masalah tipe
+      user as any, // Type casting untuk mengatasi masalah tipe
+      totalPrice
+    );
 
     if (!paymentResult) {
       // Jika gagal membuat pembayaran, lacak sebagai percobaan gagal
@@ -127,7 +134,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       where: { id: payment.id },
       data: {
         expiresDate: paymentResult.expiryDate,
-        status: 'pending',
+        status: PaymentStatus.PENDING,
         transactionId: paymentResult.transaction.transaction_id,
         paymentUrl: paymentResult.transaction.redirect_url,
       },
@@ -149,7 +156,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
         payment: {
           ...payment,
           paymentUrl: paymentResult.transaction.redirect_url,
-          status: 'pending',
+          status: PaymentStatus.PENDING,
         },
       },
     });
@@ -250,7 +257,7 @@ export const cancelBooking = async (req: User, res: Response): Promise<void> => 
     }
 
     // Only allow cancellation of pending and unpaid bookings
-    if (booking.payment?.status === 'paid') {
+    if (booking.payment?.status === PaymentStatus.PAID) {
       return sendErrorResponse(res, 400, 'Cannot cancel a booking that has been paid. Please contact administrator.');
     }
 

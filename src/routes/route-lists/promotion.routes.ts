@@ -17,7 +17,7 @@ router.post(
   auth({
     allowedRoles: ['super_admin', 'admin_cabang'],
   }),
-  createPromotion,
+  createPromotion
 );
 
 router.put(
@@ -25,7 +25,7 @@ router.put(
   auth({
     allowedRoles: ['super_admin', 'admin_cabang'],
   }),
-  updatePromotion,
+  updatePromotion
 );
 
 router.delete(
@@ -33,7 +33,7 @@ router.delete(
   auth({
     allowedRoles: ['super_admin', 'admin_cabang'],
   }),
-  deletePromotion,
+  deletePromotion
 );
 
 export default router;

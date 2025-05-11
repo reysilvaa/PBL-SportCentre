@@ -27,7 +27,7 @@ export const getFieldTypes = async (req: Request, res: Response) => {
       },
     });
     res.json(fieldTypes);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -143,8 +143,8 @@ export const updateFieldType = async (req: User, res: Response) => {
       message: 'Berhasil memperbarui tipe lapangan',
       data: updatedFieldType,
     });
-  } catch (error) {
-    console.error('Error updating field type:', error);
+  } catch {
+    console.error('Error updating field type:');
     res.status(500).json({
       status: false,
       message: 'Internal Server Error',
@@ -212,8 +212,7 @@ export const deleteFieldType = async (req: User, res: Response): Promise<void> =
       status: true,
       message: 'Berhasil menghapus tipe lapangan',
     });
-  } catch (error) {
-    console.error('Error deleting field type:', error);
+  } catch {
     res.status(500).json({
       status: false,
       message: 'Internal Server Error',

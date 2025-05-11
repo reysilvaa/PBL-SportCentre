@@ -21,7 +21,7 @@ router.post(
     allowedRoles: ['super_admin'],
   }),
   parseIds,
-  createFieldType,
+  createFieldType
 );
 
 router.put(
@@ -29,7 +29,7 @@ router.put(
   auth({
     allowedRoles: ['super_admin'],
   }),
-  updateFieldType,
+  updateFieldType
 );
 
 router.delete(
@@ -37,7 +37,7 @@ router.delete(
   auth({
     allowedRoles: ['super_admin'],
   }),
-  deleteFieldType,
+  deleteFieldType
 );
 
 export default router;

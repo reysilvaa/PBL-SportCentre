@@ -24,7 +24,7 @@ const generateTokens = (user: { id: number; email: string; role: string }) => {
       role: user.role,
     },
     config.jwtSecret,
-    { expiresIn: '1h' },
+    { expiresIn: '1h' }
   );
 
   // Refresh token (masa aktif panjang)
@@ -114,7 +114,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate access dan refresh token
-    const { accessToken, refreshToken } = generateTokens(user);
+    const { accessToken, refreshToken } = generateTokens({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
     // Set cookies untuk authentication
     setAuthCookie(res, accessToken);
@@ -207,7 +211,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       }
 
       // Generate token baru
-      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+      const { accessToken, refreshToken: newRefreshToken } = generateTokens({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      });
 
       // Set cookies baru
       setAuthCookie(res, accessToken);
@@ -219,7 +227,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         token: accessToken,
         user: userWithoutPassword,
       });
-    } catch (error) {
+    } catch {
       // Token tidak valid atau expired
       clearAuthCookie(res);
       clearRefreshTokenCookie(res);
@@ -279,7 +287,7 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
         user: userWithoutPassword,
         token, // Mengembalikan token untuk kompatibilitas dengan client lama
       });
-    } catch (error) {
+    } catch {
       // Token tidak valid
       clearAuthCookie(res);
       clearRefreshTokenCookie(res);

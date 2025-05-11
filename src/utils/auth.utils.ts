@@ -24,7 +24,7 @@ export const setCookie = (
     domain?: string;
     path?: string;
     expires?: Date;
-  },
+  }
 ) => {
   // Gabungkan dengan konfigurasi default
   const cookieOptions = {
@@ -63,7 +63,7 @@ export const clearCookie = (
     domain?: string;
     secure?: boolean;
     sameSite?: boolean | 'none' | 'lax' | 'strict';
-  },
+  }
 ) => {
   const cookieOptions = {
     path: '/',
@@ -93,6 +93,16 @@ export const setAuthCookie = (res: Response, token: string) => {
     sameSite: config.cookies.sameSite,
     path: '/',
   });
+  
+  // Tambahkan cookie penanda yang bisa diakses JavaScript
+  setCookie(res, 'is_logged_in', 'true', {
+    httpOnly: false, // Bisa diakses JavaScript
+    signed: false,
+    maxAge: config.cookies.maxAge,
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite,
+    path: '/',
+  });
 };
 
 /**
@@ -112,6 +122,12 @@ export const clearAuthCookie = (res: Response) => {
     secure: config.cookies.secure,
     sameSite: config.cookies.sameSite,
   });
+  
+  // Juga hapus cookie penanda
+  clearCookie(res, 'is_logged_in', {
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite,
+  });
 };
 
 /**
@@ -123,6 +139,16 @@ export const setRefreshTokenCookie = (res: Response, token: string) => {
   setCookie(res, 'refresh_token', token, {
     httpOnly: true,
     signed: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
+    secure: config.cookies.secure,
+    sameSite: config.cookies.sameSite,
+    path: '/',
+  });
+  
+  // Tambahkan cookie penanda yang bisa diakses JavaScript
+  setCookie(res, 'is_logged_in', 'true', {
+    httpOnly: false, // Bisa diakses JavaScript
+    signed: false,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 hari
     secure: config.cookies.secure,
     sameSite: config.cookies.sameSite,

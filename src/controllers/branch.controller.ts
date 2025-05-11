@@ -5,15 +5,13 @@ import { invalidateBranchCache } from '../utils/cache/cacheInvalidation.utils';
 import { MulterRequest } from '../middlewares/multer.middleware';
 import { cleanupUploadedFile } from '../utils/cloudinary.utils';
 import { User } from '../middlewares/auth.middleware';
+import { BranchStatus, Role } from '../types';
 
 /**
  * Unified Branch Controller
  * Menggabungkan fungsionalitas dari semua controller branch yang ada
  * dengan menggunakan middleware permission untuk kontrol akses
  */
-
-// Constants for folder paths
-const BRANCH_FOLDER = 'PBL/branch-images';
 
 export const getBranches = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -116,7 +114,7 @@ export const createBranch = async (req: MulterRequest & User, res: Response): Pr
       name: req.body.name,
       location: req.body.location,
       ownerId: parseInt(req.body.ownerId),
-      status: req.body.status || 'active',
+      status: req.body.status || ('active' as BranchStatus),
     });
 
     if (!result.success) {
@@ -217,7 +215,7 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
     const dataToValidate = {
       name: req.body.name,
       location: req.body.location,
-      status: req.body.status,
+      status: req.body.status as BranchStatus,
       imageUrl: req.file?.path || undefined,
     };
 
@@ -295,7 +293,7 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
     const updateData = { ...result.data };
 
     // Tambahkan ownerId jika ada dan izinkan (untuk superadmin)
-    if (ownerId && req.user?.role === 'super_admin') {
+    if (ownerId && req.user?.role === Role.SUPER_ADMIN) {
       (updateData as any).ownerId = ownerId;
     }
 

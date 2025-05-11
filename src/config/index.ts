@@ -22,4 +22,3 @@ export * from './swagger/swagger.config';
 
 // Export dari konfigurasi services
 export * from './services/cloudinary';
-

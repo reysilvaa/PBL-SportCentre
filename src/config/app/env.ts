@@ -61,8 +61,8 @@ export const config = {
     secret: getEnvValue('COOKIE_SECRET'),
     maxAge: parseInt(getEnvValue('COOKIE_MAX_AGE')),
     httpOnly: true,
-    secure: env === 'production',
-    sameSite: (env === 'production' ? 'none' : 'lax') as SameSiteOption,
+    secure: true,
+    sameSite: 'none' as SameSiteOption,
     domain: process.env.COOKIE_DOMAIN || undefined,
   },
   cloudinary: {

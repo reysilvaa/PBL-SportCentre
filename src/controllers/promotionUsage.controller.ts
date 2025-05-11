@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../config/services/database';
 import { User } from '../middlewares/auth.middleware';
+import { Role } from '../types';
 
 /**
  * Unified Promotion Usage Controller
@@ -27,7 +28,7 @@ export const getPromotionUsages = async (req: User, res: Response) => {
     }
 
     // Admin cabang dan owner hanya dapat melihat penggunaan promo terkait cabang mereka
-    if (req.user?.role !== 'super_admin' && req.userBranch?.id) {
+    if (req.user?.role !== Role.SUPER_ADMIN && req.userBranch?.id) {
       whereCondition.booking = {
         field: {
           branchId: req.userBranch.id,
@@ -206,7 +207,7 @@ export const deletePromotionUsage = async (req: User, res: Response) => {
     }
 
     // Cek kepemilikan (hanya pemilik atau admin yang bisa menghapus)
-    if (req.user?.role !== 'super_admin' && req.user?.role !== 'admin_cabang' && usage.userId !== req.user?.id) {
+    if (req.user?.role !== Role.SUPER_ADMIN && req.user?.role !== Role.ADMIN_CABANG && usage.userId !== req.user?.id) {
       res.status(403).json({
         status: false,
         message: 'Anda tidak memiliki izin untuk menghapus penggunaan promo ini',

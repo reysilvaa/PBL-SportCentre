@@ -113,7 +113,7 @@ export const getBlacklistSize = async (): Promise<number> => {
  */
 export const blacklistTokens = async (
   tokens: string[],
-  expiryInSeconds?: number,
+  expiryInSeconds?: number
 ): Promise<void> => {
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || DEFAULT_TTL;

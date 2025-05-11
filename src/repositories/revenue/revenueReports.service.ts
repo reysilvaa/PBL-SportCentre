@@ -36,7 +36,7 @@ export const generateRevenueReport = async (start: Date, end: Date, type: string
   // Calculate totals
   const totalRevenue = bookingsWithPayments.reduce(
     (sum, booking) => sum + Number(booking.payment?.amount || 0),
-    0,
+    0
   );
 
   const totals: TotalStats = {
@@ -391,7 +391,7 @@ function processMonthlyBookingTrends(bookings: any[]): MonthlyStats[] {
 
 async function calculateBranchPerformance(
   branches: any[],
-  bookings: any[],
+  bookings: any[]
 ): Promise<BranchPerformance[]> {
   return branches
     .map((branch) => {
@@ -433,7 +433,7 @@ function calculateCustomerRetention(bookings: any[]): CustomerRetention {
 
   const totalCustomers = userBookingsMap.size;
   const returningCustomers = Array.from(userBookingsMap.values()).filter(
-    (count) => count > 1,
+    (count) => count > 1
   ).length;
   const totalBookings = Array.from(userBookingsMap.values()).reduce((sum, count) => sum + count, 0);
   const avgBookingsPerCustomer = totalCustomers > 0 ? totalBookings / totalCustomers : 0;
@@ -455,7 +455,7 @@ function calculateMonthComparison(bookings: any[]) {
 
   // Previous month bookings
   const previousMonthBookings = bookings.filter(
-    (b) => b.bookingDate >= firstDayPreviousMonth && b.bookingDate < firstDayCurrentMonth,
+    (b) => b.bookingDate >= firstDayPreviousMonth && b.bookingDate < firstDayCurrentMonth
   );
 
   // Calculate stats
@@ -550,7 +550,7 @@ function calculateGrowthMetrics(historicalData: MonthlyStats[]) {
 
 function generateForecast(
   historicalData: MonthlyStats[],
-  growthMetrics: { bookingGrowth: number; revenueGrowth: number },
+  growthMetrics: { bookingGrowth: number; revenueGrowth: number }
 ): MonthlyStats[] {
   const forecast: MonthlyStats[] = [];
   const lastMonth =
