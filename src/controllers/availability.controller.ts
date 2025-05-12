@@ -6,6 +6,11 @@ import { fieldAvailabilityQueue } from '../config/services/queue';
 /**
  * Unified Availability Controller
  * Mengelola endpoint terkait ketersediaan lapangan
+ * 
+ * CATATAN PENTING TENTANG TIME SLOTS:
+ * - Semua endTime bersifat exclusive (tidak termasuk dalam booking)
+ * - Contoh: booking 21:00-23:00 berarti slot waktu dari 21:00:00 sampai 22:59:59.999
+ * - Slot waktu tersedia berikutnya dimulai pada 23:00:00.000
  */
 
 export const checkAllFieldsAvailability = async (req: Request, res: Response) => {

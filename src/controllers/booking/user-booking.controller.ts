@@ -37,18 +37,26 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
 
     // Convert strings to Date objects
     const bookingDateTime = parseISO(bookingDate);
-    console.log('📆 Booking Date (WIB):', formatDateToWIB(bookingDateTime));
+    console.log('🗓️ Booking Date (WIB):', formatDateToWIB(bookingDateTime));
 
     // Combine date with time in WIB timezone
-    const startDateTime = toZonedTime(combineDateWithTimeWIB(bookingDateTime, startTime), TIMEZONE);
+    // PENTING: startTime bersifat inclusive, endTime bersifat exclusive
+    // Contoh: booking 08:00-10:00 berarti dari jam 08:00 sampai 09:59:59
+    const startDateTimeWIB = toZonedTime(combineDateWithTimeWIB(bookingDateTime, startTime), TIMEZONE);
+    const endDateTimeWIB = toZonedTime(combineDateWithTimeWIB(bookingDateTime, endTime), TIMEZONE);
 
-    const endDateTime = toZonedTime(combineDateWithTimeWIB(bookingDateTime, endTime), TIMEZONE);
+    // Konversi ke UTC untuk penyimpanan di database
+    const startDateTime = new Date(startDateTimeWIB.toISOString());
+    const endDateTime = new Date(endDateTimeWIB.toISOString());
 
-    console.log('⏰ Start Time (WIB):', formatDateToWIB(startDateTime));
-    console.log('⏰ End Time (WIB):', formatDateToWIB(endDateTime));
+    console.log('⏰ Start Time (WIB):', formatDateToWIB(startDateTimeWIB));
+    console.log('⏰ End Time (WIB) (exclusive):', formatDateToWIB(endDateTimeWIB));
+    console.log('⏰ Start Time (UTC):', startDateTime.toISOString());
+    console.log('⏰ End Time (UTC):', endDateTime.toISOString());
+    console.log('⏰ Durasi booking:', Math.floor((endDateTimeWIB.getTime() - startDateTimeWIB.getTime()) / (1000 * 60 * 60)), 'jam');
 
-    // Validate booking time and availability
-    const timeValidation = await validateBookingTime(fieldId, bookingDateTime, startDateTime, endDateTime);
+    // Validate booking time and availability (tetap gunakan waktu WIB untuk validasi)
+    const timeValidation = await validateBookingTime(fieldId, bookingDateTime, startDateTimeWIB, endDateTimeWIB);
 
     if (!timeValidation.valid) {
       return sendErrorResponse(res, 400, timeValidation.message, timeValidation.details);

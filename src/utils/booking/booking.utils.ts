@@ -38,6 +38,7 @@ export const verifyFieldBranch = async (
 
 /**
  * Check booking time validity and availability
+ * Fungsi menggunakan waktu dalam timezone WIB untuk pengecekan
  */
 export const validateBookingTime = async (
   fieldId: number,
@@ -56,6 +57,12 @@ export const validateBookingTime = async (
       },
     };
   }
+
+  // Log untuk debugging
+  console.log('Validating booking time:');
+  console.log(`Field ID: ${fieldId}`);
+  console.log(`Start Time: ${startTime.toISOString()}`);
+  console.log(`End Time: ${endTime.toISOString()}`);
 
   // Check field availability
   const isAvailable = await isFieldAvailable(fieldId, bookingDate, startTime, endTime);
@@ -78,6 +85,7 @@ export const validateBookingTime = async (
 
 /**
  * Create booking and payment records
+ * PENTING: Semua parameter waktu harus dalam format UTC untuk konsistensi di database
  */
 export const createBookingWithPayment = async (
   userId: number,
@@ -89,6 +97,12 @@ export const createBookingWithPayment = async (
   paymentMethod: PaymentMethod = PaymentMethod.CASH,
   amount?: any
 ): Promise<{ booking: Booking; payment: Payment }> => {
+  // Log nilai waktu untuk debugging
+  console.log('Creating booking with UTC times:');
+  console.log(`Booking Date: ${bookingDate.toISOString()}`);
+  console.log(`Start Time: ${startTime.toISOString()}`);
+  console.log(`End Time: ${endTime.toISOString()}`);
+
   // Create booking record
   const booking = await prisma.booking.create({
     data: {
