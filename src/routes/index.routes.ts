@@ -11,6 +11,7 @@ import promotionUsageRoutes from './route-lists/promotionUsage.routes';
 import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
 import notificationRoutes from './route-lists/notification.routes';
+import dashboardRoutes from './route-lists/dashboard.routes';
 import redisClient, { getCacheStats } from '../utils/cache.utils';
 import { auth } from '../middlewares/auth.middleware';
 
@@ -29,6 +30,7 @@ router.use('/promotions', promotionRoutes);
 router.use('/promotion-usages', promotionUsageRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 // Endpoint untuk health check dan monitoring
 router.get('/health', (req, res) => {
