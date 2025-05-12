@@ -17,7 +17,7 @@ const router = express.Router();
 
 // Public routes - tidak memerlukan autentikasi
 router.get('/', cacheMiddleware('fields', 300), getAllFields);
-router.get('/availability', cacheMiddleware('fields_availability', 60), checkAllFieldsAvailability);
+router.get('/availability', checkAllFieldsAvailability);
 router.get('/:id', cacheMiddleware('field_detail', 300), getFieldById);
 
 // Admin routes - memerlukan autentikasi dan permission

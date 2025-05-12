@@ -1,7 +1,9 @@
 import { setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
-// Tetapkan timezone WIB
+/**
+ * Tetapkan timezone WIB
+ */
 export const TIMEZONE = 'Asia/Jakarta';
 
 /**
