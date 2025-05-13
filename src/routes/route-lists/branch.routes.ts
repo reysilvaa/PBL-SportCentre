@@ -1,5 +1,6 @@
 import express from 'express';
-import { getBranches, createBranch, updateBranch, deleteBranch, getUserBranches } from '../../controllers/branch.controller';
+import { getBranches, createBranch, updateBranch, deleteBranch, getUserBranches, getBranchAdmins } from '../../controllers/branch.controller';
+import { getBranchFields } from '../../controllers/field.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { auth, superAdminAuth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
@@ -27,6 +28,25 @@ router.get(
     allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
   }),
   getBranches
+);
+
+// Mendapatkan daftar admin cabang berdasarkan ID cabang
+router.get(
+  '/:id/admins',
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'],
+  }),
+  getBranchAdmins
+);
+
+// Mendapatkan daftar lapangan cabang berdasarkan ID cabang
+router.get(
+  '/:id/fields',
+  cacheMiddleware('branch_fields', 10),
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
+  }),
+  getBranchFields
 );
 
 // Pendekatan minimalis untuk operasi cabang
