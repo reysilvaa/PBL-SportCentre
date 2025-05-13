@@ -2,6 +2,7 @@
 import * as UserBookingController from './booking/user-booking.controller';
 import * as AdminBookingController from './booking/admin-booking.controller';
 import * as SuperAdminBookingController from './booking/super-admin-booking.controller';
+import * as OwnerBookingController from './booking/owner-booking.controller';
 
 /**
  * Booking Controller (Simplified)
@@ -28,7 +29,8 @@ export const deleteBooking = SuperAdminBookingController.deleteBooking;
 export const getBookingStats = SuperAdminBookingController.getBookingStats;
 
 // Export Owner Operations
-// export const getRevenueReports = OwnerBookingController.getRevenueReports;
-// export const getOccupancyReports = OwnerBookingController.getOccupancyReports;
-// export const getBusinessPerformance = OwnerBookingController.getBusinessPerformance;
-// export const getBookingForecast = OwnerBookingController.getBookingForecast;
+export const getRevenueReports = OwnerBookingController.getRevenueReports;
+export const getOccupancyReports = OwnerBookingController.getOccupancyReports;
+export const getBusinessPerformance = OwnerBookingController.getBusinessPerformance;
+export const getBookingForecast = OwnerBookingController.getBookingForecast;
+export const getOwnerDashboardStats = OwnerBookingController.getOwnerDashboardStats;

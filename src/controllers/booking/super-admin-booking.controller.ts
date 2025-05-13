@@ -4,6 +4,7 @@ import { updateBookingPaymentSchema } from '../../zod-schemas/bookingPayment.sch
 import { emitBookingEvents } from '../../utils/booking/booking.utils';
 import { invalidateBookingCache, invalidatePaymentCache } from '../../utils/cache/cacheInvalidation.utils';
 import { PaymentMethod, PaymentStatus } from '../../types';
+import * as UnifiedStatsService from '../../repositories/statistics/unifiedStats.service';
 
 /**
  * Super Admin Booking Controller
@@ -209,90 +210,7 @@ export const deleteBooking = async (req: Request, res: Response): Promise<void> 
 
 export const getBookingStats = async (req: Request, res: Response): Promise<void> => {
   try {
-    const stats = await prisma.$transaction(async (prisma) => {
-      // Total bookings
-      const totalBookings = await prisma.booking.count();
-
-      // Bookings by status
-      const bookingsByStatus = await prisma.payment.groupBy({
-        by: ['status'],
-        _count: {
-          id: true,
-        },
-      });
-
-      // Bookings by date (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const bookingsByDate = await prisma.booking.groupBy({
-        by: ['bookingDate'],
-        where: {
-          bookingDate: {
-            gte: thirtyDaysAgo,
-          },
-        },
-        _count: {
-          id: true,
-        },
-        orderBy: {
-          bookingDate: 'asc',
-        },
-      });
-
-      // Revenue by branch
-      const revenueByBranch = await prisma.payment.findMany({
-        where: {
-          status: PaymentStatus.PAID,
-        },
-        select: {
-          amount: true,
-          booking: {
-            select: {
-              field: {
-                select: {
-                  branch: {
-                    select: {
-                      id: true,
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      const branchRevenue = revenueByBranch.reduce(
-        (acc, payment) => {
-          const branchId = payment.booking?.field?.branch?.id;
-          const branchName = payment.booking?.field?.branch?.name;
-
-          if (branchId && branchName) {
-            if (!acc[branchId]) {
-              acc[branchId] = { id: branchId, name: branchName, total: 0 };
-            }
-            acc[branchId].total += Number(payment.amount);
-          }
-          return acc;
-        },
-        {} as Record<number, { id: number; name: string; total: number }>
-      );
-
-      return {
-        totalBookings,
-        bookingsByStatus: bookingsByStatus.map((item) => ({
-          status: item.status,
-          count: item._count.id,
-        })),
-        bookingsByDate: bookingsByDate.map((item) => ({
-          date: item.bookingDate,
-          count: item._count.id,
-        })),
-        revenueByBranch: Object.values(branchRevenue),
-      };
-    });
+    const stats = await UnifiedStatsService.getBookingStats();
 
     res.status(200).json({
       status: true,

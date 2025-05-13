@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as bookingController from '../../controllers/booking.controller';
-import { userAuth, branchAdminAuth, superAdminAuth } from '../../middlewares/auth.middleware';
+import { userAuth, branchAdminAuth, superAdminAuth, ownerAuth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { bookingRateLimiter } from '../../middlewares/security.middleware';
 
@@ -94,31 +94,43 @@ router.get(
 );
 
 // Laporan pendapatan untuk owner
-// router.get(
-//   '/owner/reports/revenue',
-//   ownerAuth(),
-//   bookingController.getRevenueReports
-// );
+router.get(
+  '/owner/reports/revenue',
+  ownerAuth(),
+  cacheMiddleware('owner_revenue_reports', 120),
+  bookingController.getRevenueReports
+);
 
-// // Laporan okupansi
-// router.get(
-//   '/owner/reports/occupancy',
-//   ownerAuth(),
-//   bookingController.getOccupancyReports
-// );
+// Laporan okupansi
+router.get(
+  '/owner/reports/occupancy',
+  ownerAuth(),
+  cacheMiddleware('owner_occupancy_reports', 120),
+  bookingController.getOccupancyReports
+);
 
-// // Laporan performa bisnis
-// router.get(
-//   '/owner/reports/performance',
-//   ownerAuth(),
-//   bookingController.getBusinessPerformance
-// );
+// Laporan performa bisnis
+router.get(
+  '/owner/reports/performance',
+  ownerAuth(),
+  cacheMiddleware('owner_performance_reports', 240),
+  bookingController.getBusinessPerformance
+);
 
-// // Prediksi booking
-// router.get(
-//   '/owner/reports/forecast',
-//   ownerAuth(),
-//   bookingController.getBookingForecast
-// );
+// Prediksi booking
+router.get(
+  '/owner/reports/forecast',
+  ownerAuth(),
+  cacheMiddleware('owner_booking_forecast', 240),
+  bookingController.getBookingForecast
+);
+
+// Dashboard stats untuk owner (menggunakan service unifiedStats)
+router.get(
+  '/owner/dashboard/stats',
+  ownerAuth(),
+  cacheMiddleware('owner_dashboard_stats', 120),
+  bookingController.getOwnerDashboardStats
+);
 
 export default router;
