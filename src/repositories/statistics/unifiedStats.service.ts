@@ -240,8 +240,11 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
           // Format tahun: "YYYY"
           dateKey = bookingDate.getFullYear().toString();
         } else {
-          // Format bulan: gunakan formatFn
-          dateKey = formatFn(bookingDate);
+          // Format bulan: gunakan formatFn untuk konsistensi
+          dateKey = formatFn(new Date(bookingDate.getFullYear(), bookingDate.getMonth(), 1));
+          
+          // Log untuk debugging
+          console.log(`Booking pada tanggal ${bookingDate.toISOString()} menggunakan key: ${dateKey}`);
         }
         
         // Hitung booking per periode
@@ -280,7 +283,26 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
     categories = Array.from({ length: pastPeriods }, (_, i) => (currentYear - pastPeriods + i + 1).toString());
   } else {
     // Kategori per bulan
-    categories = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    
+    // Jika menggunakan formatFn untuk menghasilkan nama bulan,
+    // buat kumpulan bulan lengkap menggunakan formatFn yang sama
+    if (formatFn) {
+      // Buat daftar 12 bulan terakhir dengan format yang konsisten
+      const now = new Date();
+      const year = now.getFullYear();
+      categories = monthNames.map((_, index) => {
+        const date = new Date(year, index, 1);
+        return formatFn(date);
+      });
+    } else {
+      categories = monthNames;
+    }
+    
+    // Log untuk debugging
+    console.log('Kategori bulan:', categories);
+    console.log('Data pendapatan per bulan:', incomeByDate);
+    console.log('Data booking per bulan:', bookingsByDate);
   }
   
   // Isi data berdasarkan kategori
@@ -288,8 +310,19 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
   bookingData.categories = categories;
   
   // Isi series dengan data real atau 0 jika tidak ada
-  revenueData.series = categories.map(cat => incomeByDate[cat] || 0);
-  bookingData.series = categories.map(cat => bookingsByDate[cat] || 0);
+  revenueData.series = categories.map(cat => {
+    const value = incomeByDate[cat] || 0;
+    return value;
+  });
+  
+  bookingData.series = categories.map(cat => {
+    const value = bookingsByDate[cat] || 0;
+    return value;
+  });
+  
+  // Log untuk debugging
+  console.log('Series pendapatan:', revenueData.series);
+  console.log('Series booking:', bookingData.series);
 
   // Format data cabang untuk tampilan tabel
   const branchesData = branches.map((branch) => {
