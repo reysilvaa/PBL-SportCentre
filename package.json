@@ -18,7 +18,8 @@
     "check:unused-exports": "ts-unused-exports ./scripts/ts-unused-exports.config.js",
     "check:structure": "madge --circular --orphans --extensions ts src",
     "check:deps": "depcheck --config ./scripts/depcheck.config.js",
-    "clean:code": "npm run check:unused-exports && npm run lint && npm run check:structure && npm run check:deps"
+    "clean:code": "npm run check:unused-exports && npm run lint && npm run check:structure && npm run check:deps",
+    "seed:faker": "ts-node prisma/factories/index.ts"
   },
   "postinstall": "prisma generate",
   "prisma": {
@@ -69,6 +70,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
+    "@faker-js/faker": "^9.7.0",
     "@types/bull": "^4.10.0",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",

@@ -1,583 +1,401 @@
-import prisma from '../../config/services/database';
-import { convertBigIntToNumber } from '../../utils/variables/bigInt.utils';
-import { DateUtils } from '../../utils/variables/date.utils';
-import * as RevenueRepository from './RevenueReports.repositories';
-import {
-  RevenueData,
-  BranchRevenue,
-  FieldRevenue,
-  TotalStats,
-  MonthlyStats,
-  CustomerRetention,
-  BranchPerformance,
-  MonthStats,
-} from './revenueReports.interfaces';
+import { prisma } from '../../config';
+import { Decimal } from '@prisma/client/runtime/library';
+import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
+import { id } from 'date-fns/locale';
 
-export const generateRevenueReport = async (start: Date, end: Date, type: string = 'monthly') => {
-  // Get booking data with payments
-  const bookingsWithPayments = await RevenueRepository.getBookingsWithPayments(start, end);
 
-  // Process time series data based on requested grouping
-  let timeSeriesData: RevenueData[] = [];
+/**
+ * Menghasilkan laporan pendapatan berdasarkan periode waktu
+ */
+export const generateRevenueReport = async (
+  start: Date,
+  end: Date,
+  type: string = 'daily',
+  branchId?: number
+): Promise<any> => {
+  try {
+    // Query semua pembayaran yang sudah dibayar dalam periode
+    const payments = await prisma.payment.findMany({
+      where: {
+        status: 'paid',
+        booking: {
+          bookingDate: {
+            gte: start,
+            lte: end,
+          },
+          field: branchId ? { branchId } : undefined,
+        },
+      },
+      include: {
+        booking: {
+          include: {
+            field: {
+              include: {
+                branch: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
 
-  if (type === 'daily') {
-    timeSeriesData = processDailyRevenue(bookingsWithPayments);
-  } else if (type === 'weekly') {
-    timeSeriesData = processWeeklyRevenue(bookingsWithPayments);
-  } else {
-    // Default: monthly
-    timeSeriesData = processMonthlyRevenue(bookingsWithPayments);
+    // Format data untuk laporan
+    const formatReportData = (data: any[], timeFormat: string) => {
+      // Kelompokkan data berdasarkan periode waktu
+      const groupedData: Record<string, { total: Decimal; count: number }> = {};
+
+      data.forEach((payment) => {
+        const date = new Date(payment.booking.bookingDate);
+        const periodKey = format(date, timeFormat, { locale: id });
+
+        if (!groupedData[periodKey]) {
+          groupedData[periodKey] = { total: new Decimal(0), count: 0 };
+        }
+
+        groupedData[periodKey].total = groupedData[periodKey].total.plus(payment.amount);
+        groupedData[periodKey].count += 1;
+      });
+
+      // Konversi ke array untuk chart
+      return Object.entries(groupedData).map(([period, data]) => ({
+        period,
+        total: data.total.toNumber(),
+        count: data.count,
+      }));
+    };
+
+    // Format berdasarkan tipe laporan
+    let reportData;
+    let timeFormat;
+
+    switch (type) {
+      case 'daily':
+        timeFormat = 'dd MMM yyyy';
+        reportData = formatReportData(payments, timeFormat);
+        break;
+      case 'monthly':
+        timeFormat = 'MMM yyyy';
+        reportData = formatReportData(payments, timeFormat);
+        break;
+      case 'yearly':
+        timeFormat = 'yyyy';
+        reportData = formatReportData(payments, timeFormat);
+        break;
+      default:
+        timeFormat = 'dd MMM yyyy';
+        reportData = formatReportData(payments, timeFormat);
+    }
+
+    // Hitung total pendapatan
+    const totalRevenue = payments.reduce((sum, payment) => sum.plus(payment.amount), new Decimal(0)).toNumber();
+    const totalBookings = payments.length;
+
+    return {
+      reportType: type,
+      dateRange: {
+        start: format(start, 'dd MMM yyyy', { locale: id }),
+        end: format(end, 'dd MMM yyyy', { locale: id }),
+      },
+      totalRevenue,
+      totalBookings,
+      data: reportData,
+    };
+  } catch (error) {
+    console.error('Error generating revenue report:', error);
+    throw error;
   }
-
-  // Get branch and field revenue
-  const branchRevenue = processBranchRevenue(bookingsWithPayments);
-  const fieldRevenue = processFieldRevenue(bookingsWithPayments);
-
-  // Calculate totals
-  const totalRevenue = bookingsWithPayments.reduce(
-    (sum, booking) => sum + Number(booking.payment?.amount || 0),
-    0
-  );
-
-  const totals: TotalStats = {
-    totalRevenue,
-    totalBookings: bookingsWithPayments.length,
-  };
-
-  return convertBigIntToNumber({
-    timeSeriesData,
-    branchRevenue,
-    fieldRevenue,
-    summary: totals,
-  });
 };
 
-export const generateOccupancyReport = async (start: Date, end: Date, branchId?: number) => {
-  // Get field bookings
-  const bookings = await RevenueRepository.getBookingsForOccupancy(start, end, branchId);
+/**
+ * Menghasilkan laporan okupansi lapangan berdasarkan periode waktu
+ */
+export const generateOccupancyReport = async (start: Date, end: Date, branchId?: number): Promise<any> => {
+  try {
+    // Query semua booking dalam periode
+    const bookings = await prisma.booking.findMany({
+      where: {
+        bookingDate: {
+          gte: start,
+          lte: end,
+        },
+        field: branchId ? { branchId } : undefined,
+      },
+      include: {
+        field: {
+          include: {
+            branch: true,
+          },
+        },
+      },
+      orderBy: {
+        bookingDate: 'asc',
+      },
+    });
 
-  // Get all fields
-  const allFields = await RevenueRepository.getAllFields(branchId);
+    // Group by field
+    const fieldOccupancy: Record<string, { bookings: number; hours: number; field: any }> = {};
 
-  // Calculate field occupancy
-  const fieldOccupancy = calculateFieldOccupancy(allFields, bookings, start, end);
-
-  // Get time slot popularity
-  const timeSlotPopularity = calculateTimeSlotPopularity(bookings);
-
-  return convertBigIntToNumber({
-    fieldOccupancy,
-    timeSlotPopularity,
-    totalBookings: bookings.length,
-  });
-};
-
-export const generateBusinessPerformanceReport = async () => {
-  // Get bookings from last 12 months
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-
-  const bookings = await RevenueRepository.getBookingsWithDetails(twelveMonthsAgo);
-
-  // Group bookings by month
-  const bookingsByMonth = processMonthlyBookingTrends(bookings);
-
-  // Get branch performance
-  const branches = await prisma.branch.findMany();
-  const branchPerformance = await calculateBranchPerformance(branches, bookings);
-
-  // Calculate customer retention
-  const customerRetention = calculateCustomerRetention(bookings);
-
-  // Compare current month with previous month
-  const monthComparison = calculateMonthComparison(bookings);
-
-  return convertBigIntToNumber({
-    bookingTrends: bookingsByMonth,
-    branchPerformance,
-    customerRetention,
-    monthComparison,
-  });
-};
-
-export const generateBookingForecast = async () => {
-  // Get all bookings with payments
-  const bookingsWithPayments = await RevenueRepository.getAllBookingsWithPayments();
-
-  // Group by month
-  const historicalData = processMonthlyData(bookingsWithPayments);
-
-  // Calculate growth metrics
-  const growthMetrics = calculateGrowthMetrics(historicalData);
-
-  // Generate forecast
-  const forecast = generateForecast(historicalData, growthMetrics);
-
-  return convertBigIntToNumber({
-    historicalData,
-    forecast,
-    growthMetrics: {
-      avgMonthlyBookingGrowth: growthMetrics.bookingGrowth * 100,
-      avgMonthlyRevenueGrowth: growthMetrics.revenueGrowth * 100,
-    },
-  });
-};
-
-// Helper functions
-function processDailyRevenue(bookings: any[]): RevenueData[] {
-  const dailyData = new Map<string, { revenue: number; bookings: number }>();
-
-  bookings.forEach((booking) => {
-    const dateKey = booking.bookingDate.toISOString().split('T')[0];
-    const amount = Number(booking.payment?.amount || 0);
-
-    if (dailyData.has(dateKey)) {
-      const current = dailyData.get(dateKey)!;
-      dailyData.set(dateKey, {
-        revenue: current.revenue + amount,
-        bookings: current.bookings + 1,
-      });
-    } else {
-      dailyData.set(dateKey, { revenue: amount, bookings: 1 });
-    }
-  });
-
-  return Array.from(dailyData.entries()).map(([date, data]) => ({
-    date,
-    revenue: data.revenue,
-    bookings: data.bookings,
-  }));
-}
-
-function processWeeklyRevenue(bookings: any[]): RevenueData[] {
-  const weeklyData = new Map<
-    string,
-    {
-      revenue: number;
-      bookings: number;
-      weekStart: Date;
-    }
-  >();
-
-  bookings.forEach((booking) => {
-    const date = booking.bookingDate;
-    const amount = Number(booking.payment?.amount || 0);
-
-    const yearWeek = DateUtils.getYearWeek(date);
-    const weekStart = DateUtils.getWeekStart(date);
-
-    if (weeklyData.has(yearWeek)) {
-      const current = weeklyData.get(yearWeek)!;
-      weeklyData.set(yearWeek, {
-        revenue: current.revenue + amount,
-        bookings: current.bookings + 1,
-        weekStart: current.weekStart,
-      });
-    } else {
-      weeklyData.set(yearWeek, {
-        revenue: amount,
-        bookings: 1,
-        weekStart,
-      });
-    }
-  });
-
-  return Array.from(weeklyData.entries()).map(([weekNumber, data]) => ({
-    weekNumber: parseInt(weekNumber.split('-')[1]),
-    weekStart: data.weekStart,
-    revenue: data.revenue,
-    bookings: data.bookings,
-  }));
-}
-
-function processMonthlyRevenue(bookings: any[]): RevenueData[] {
-  const monthlyData = new Map<string, { revenue: number; bookings: number }>();
-
-  bookings.forEach((booking) => {
-    const date = booking.bookingDate;
-    const amount = Number(booking.payment?.amount || 0);
-
-    const monthKey = DateUtils.formatYearMonth(date);
-
-    if (monthlyData.has(monthKey)) {
-      const current = monthlyData.get(monthKey)!;
-      monthlyData.set(monthKey, {
-        revenue: current.revenue + amount,
-        bookings: current.bookings + 1,
-      });
-    } else {
-      monthlyData.set(monthKey, { revenue: amount, bookings: 1 });
-    }
-  });
-
-  return Array.from(monthlyData.entries()).map(([month, data]) => ({
-    month,
-    revenue: data.revenue,
-    bookings: data.bookings,
-  }));
-}
-
-function processBranchRevenue(bookings: any[]): BranchRevenue[] {
-  const branchRevenueMap = new Map<
-    number,
-    { branchName: string; revenue: number; bookings: number }
-  >();
-
-  bookings.forEach((booking) => {
-    if (booking.field?.branch) {
-      const { id, name } = booking.field.branch;
-      const amount = Number(booking.payment?.amount || 0);
-
-      if (branchRevenueMap.has(id)) {
-        const current = branchRevenueMap.get(id)!;
-        branchRevenueMap.set(id, {
-          branchName: name,
-          revenue: current.revenue + amount,
-          bookings: current.bookings + 1,
-        });
-      } else {
-        branchRevenueMap.set(id, {
-          branchName: name,
-          revenue: amount,
-          bookings: 1,
-        });
-      }
-    }
-  });
-
-  return Array.from(branchRevenueMap.entries())
-    .map(([branchId, data]) => ({
-      branchId,
-      branchName: data.branchName,
-      revenue: data.revenue,
-      bookings: data.bookings,
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-}
-
-function processFieldRevenue(bookings: any[]): FieldRevenue[] {
-  const fieldRevenueMap = new Map<
-    number,
-    {
-      fieldName: string;
-      branchName: string;
-      revenue: number;
-      bookings: number;
-    }
-  >();
-
-  bookings.forEach((booking) => {
-    if (booking.field) {
-      const { id, name } = booking.field;
-      const branchName = booking.field.branch?.name || '';
-      const amount = Number(booking.payment?.amount || 0);
-
-      if (fieldRevenueMap.has(id)) {
-        const current = fieldRevenueMap.get(id)!;
-        fieldRevenueMap.set(id, {
-          fieldName: name,
-          branchName,
-          revenue: current.revenue + amount,
-          bookings: current.bookings + 1,
-        });
-      } else {
-        fieldRevenueMap.set(id, {
-          fieldName: name,
-          branchName,
-          revenue: amount,
-          bookings: 1,
-        });
-      }
-    }
-  });
-
-  return Array.from(fieldRevenueMap.entries())
-    .map(([fieldId, data]) => ({
-      fieldId,
-      fieldName: data.fieldName,
-      branchName: data.branchName,
-      revenue: data.revenue,
-      bookings: data.bookings,
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-}
-
-function calculateFieldOccupancy(fields: any[], bookings: any[], start: Date, end: Date) {
-  return fields.map((field) => {
-    const fieldBookings = bookings.filter((b) => b.fieldId === field.id);
-
-    // Calculate total booked hours
-    let totalBookedHours = 0;
-    fieldBookings.forEach((booking) => {
+    bookings.forEach((booking) => {
+      const fieldId = booking.fieldId.toString();
       const startTime = new Date(booking.startTime);
       const endTime = new Date(booking.endTime);
       const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-      totalBookedHours += hours;
+
+      if (!fieldOccupancy[fieldId]) {
+        fieldOccupancy[fieldId] = {
+          bookings: 0,
+          hours: 0,
+          field: booking.field,
+        };
+      }
+
+      fieldOccupancy[fieldId].bookings += 1;
+      fieldOccupancy[fieldId].hours += hours;
     });
 
-    // Calculate potential available hours (12 hours per day * days in range)
-    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const potentialHours = daysDiff * 12; // Assuming 12 operating hours per day
+    // Format data untuk laporan
+    const occupancyData = Object.entries(fieldOccupancy).map(([fieldId, data]) => ({
+      fieldId,
+      fieldName: data.field.name,
+      branchName: data.field.branch.name,
+      totalBookings: data.bookings,
+      totalHours: Math.round(data.hours * 10) / 10, // Round to 1 decimal place
+      averageHoursPerBooking: data.bookings > 0 ? Math.round((data.hours / data.bookings) * 10) / 10 : 0,
+    }));
 
-    // Calculate revenue from payments
-    const revenue = fieldBookings.reduce((sum, booking) => {
-      if (booking.payment) {
-        return sum + Number(booking.payment.amount);
-      }
-      return sum;
-    }, 0);
+    // Menghitung statistik umum
+    const totalBookings = bookings.length;
+    const totalHours = occupancyData.reduce((sum, item) => sum + item.totalHours, 0);
+    const averageHoursPerBooking = totalBookings > 0 ? totalHours / totalBookings : 0;
 
     return {
-      fieldId: field.id,
-      fieldName: field.name,
-      branchName: field.branch.name,
-      totalBookings: fieldBookings.length,
-      totalHoursBooked: totalBookedHours,
-      occupancyRate: (totalBookedHours / potentialHours) * 100,
-      revenue,
+      dateRange: {
+        start: format(start, 'dd MMM yyyy', { locale: id }),
+        end: format(end, 'dd MMM yyyy', { locale: id }),
+      },
+      totalBookings,
+      totalHours,
+      averageHoursPerBooking: Math.round(averageHoursPerBooking * 10) / 10,
+      data: occupancyData,
     };
-  });
-}
-
-function calculateTimeSlotPopularity(bookings: any[]) {
-  const timeSlotPopularity = [];
-  for (let hour = 6; hour < 24; hour++) {
-    // Assuming operating hours 6 AM to 11 PM
-    const startTime = `${hour.toString().padStart(2, '0')}:00`;
-    const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
-
-    const bookingsInSlot = bookings.filter((b) => {
-      const bookingStartHour = new Date(b.startTime).getHours();
-      return bookingStartHour === hour;
-    });
-
-    timeSlotPopularity.push({
-      timeSlot: `${startTime} - ${endTime}`,
-      bookingCount: bookingsInSlot.length,
-      popularity: bookings.length > 0 ? (bookingsInSlot.length / bookings.length) * 100 : 0,
-    });
+  } catch (error) {
+    console.error('Error generating occupancy report:', error);
+    throw error;
   }
+};
 
-  return timeSlotPopularity;
-}
+/**
+ * Menghasilkan laporan performa bisnis
+ */
+export const generateBusinessPerformanceReport = async (branchId?: number): Promise<any> => {
+  try {
+    // Mendapatkan data 6 bulan terakhir
+    const now = new Date();
+    const sixMonthsAgo = subMonths(now, 6);
 
-function processMonthlyBookingTrends(bookings: any[]): MonthlyStats[] {
-  const bookingsByMonthMap = new Map<string, { bookings: number; revenue: number }>();
+    // Dapatkan data booking dan pendapatan per bulan
+    const monthlyRevenueData = [];
+    const monthlyBookingData = [];
 
-  bookings.forEach((booking) => {
-    const date = booking.bookingDate;
-    const monthKey = DateUtils.formatYearMonth(date);
-    const amount = booking.payment ? Number(booking.payment.amount) : 0;
+    for (let i = 0; i < 6; i++) {
+      const monthStart = startOfMonth(subMonths(now, i));
+      const monthEnd = endOfMonth(subMonths(now, i));
+      const monthLabel = format(monthStart, 'MMM', { locale: id });
 
-    if (bookingsByMonthMap.has(monthKey)) {
-      const current = bookingsByMonthMap.get(monthKey)!;
-      bookingsByMonthMap.set(monthKey, {
-        bookings: current.bookings + 1,
-        revenue: current.revenue + amount,
+      // Query pendapatan bulan ini
+      const payments = await prisma.payment.findMany({
+        where: {
+          status: 'paid',
+          booking: {
+            bookingDate: {
+              gte: monthStart,
+              lte: monthEnd,
+            },
+            field: branchId ? { branchId } : undefined,
+          },
+        },
+        include: {
+          booking: true,
+        },
       });
-    } else {
-      bookingsByMonthMap.set(monthKey, { bookings: 1, revenue: amount });
+
+      // Hitung total pendapatan bulan ini
+      const totalRevenue = payments.reduce((sum, payment) => sum.plus(payment.amount), new Decimal(0)).toNumber();
+      
+      // Masukkan ke array data
+      monthlyRevenueData.unshift({
+        month: monthLabel,
+        revenue: totalRevenue,
+      });
+      
+      monthlyBookingData.unshift({
+        month: monthLabel,
+        bookings: payments.length,
+      });
     }
-  });
 
-  return Array.from(bookingsByMonthMap.entries())
-    .map(([month, data]) => ({
-      month,
-      bookings: data.bookings,
-      revenue: data.revenue,
-    }))
-    .sort((a, b) => a.month.localeCompare(b.month));
-}
+    // Mendapatkan lapangan terpopuler (most booked)
+    const popularFields = await prisma.booking.groupBy({
+      by: ['fieldId'],
+      where: {
+        bookingDate: {
+          gte: sixMonthsAgo,
+          lte: now,
+        },
+        field: branchId ? { branchId } : undefined,
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _count: {
+          id: 'desc',
+        },
+      },
+      take: 5,
+    });
 
-async function calculateBranchPerformance(
-  branches: any[],
-  bookings: any[]
-): Promise<BranchPerformance[]> {
-  return branches
-    .map((branch) => {
-      const branchBookings = bookings.filter((b) => b.field?.branchId === branch.id);
+    // Dapatkan detail dari field populer
+    const fieldIds = popularFields.map(item => item.fieldId);
+    const fields = await prisma.field.findMany({
+      where: {
+        id: {
+          in: fieldIds,
+        },
+      },
+      include: {
+        branch: true,
+      },
+    });
 
-      // Get unique customers
-      const uniqueCustomers = new Set(branchBookings.map((b) => b.userId));
-
-      // Calculate revenue
-      const totalRevenue = branchBookings.reduce((sum, booking) => {
-        return sum + (booking.payment ? Number(booking.payment.amount) : 0);
-      }, 0);
-
-      // Calculate average booking value
-      const averageBookingValue =
-        branchBookings.length > 0 ? totalRevenue / branchBookings.length : 0;
-
+    // Gabungkan data field dengan jumlah booking
+    const topFields = popularFields.map(item => {
+      const field = fields.find(f => f.id === item.fieldId);
       return {
-        branchName: branch.name,
-        branchId: branch.id,
-        totalBookings: branchBookings.length,
-        uniqueCustomers: uniqueCustomers.size,
-        totalRevenue,
-        averageBookingValue,
+        fieldId: item.fieldId.toString(),
+        fieldName: field?.name || 'Unknown',
+        branchName: field?.branch.name || 'Unknown',
+        bookingCount: item._count.id,
       };
-    })
-    .sort((a, b) => b.totalRevenue - a.totalRevenue);
-}
-
-function calculateCustomerRetention(bookings: any[]): CustomerRetention {
-  const userBookingsMap = new Map<number, number>();
-
-  bookings.forEach((booking) => {
-    if (booking.userId) {
-      const count = userBookingsMap.get(booking.userId) || 0;
-      userBookingsMap.set(booking.userId, count + 1);
-    }
-  });
-
-  const totalCustomers = userBookingsMap.size;
-  const returningCustomers = Array.from(userBookingsMap.values()).filter(
-    (count) => count > 1
-  ).length;
-  const totalBookings = Array.from(userBookingsMap.values()).reduce((sum, count) => sum + count, 0);
-  const avgBookingsPerCustomer = totalCustomers > 0 ? totalBookings / totalCustomers : 0;
-
-  return {
-    totalCustomers,
-    returningCustomers,
-    avgBookingsPerCustomer,
-  };
-}
-
-function calculateMonthComparison(bookings: any[]) {
-  const currentDate = new Date();
-  const firstDayCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const firstDayPreviousMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-
-  // Current month bookings
-  const currentMonthBookings = bookings.filter((b) => b.bookingDate >= firstDayCurrentMonth);
-
-  // Previous month bookings
-  const previousMonthBookings = bookings.filter(
-    (b) => b.bookingDate >= firstDayPreviousMonth && b.bookingDate < firstDayCurrentMonth
-  );
-
-  // Calculate stats
-  const currentMonth = calculateMonthStats(currentMonthBookings);
-  const previousMonth = calculateMonthStats(previousMonthBookings);
-
-  // Calculate growth rates
-  const bookingGrowth =
-    previousMonth.bookings > 0
-      ? ((currentMonth.bookings - previousMonth.bookings) / previousMonth.bookings) * 100
-      : currentMonth.bookings > 0
-        ? 100
-        : 0;
-
-  const revenueGrowth =
-    previousMonth.revenue > 0
-      ? ((currentMonth.revenue - previousMonth.revenue) / previousMonth.revenue) * 100
-      : currentMonth.revenue > 0
-        ? 100
-        : 0;
-
-  return {
-    currentMonth,
-    previousMonth,
-    bookingGrowth,
-    revenueGrowth,
-  };
-}
-
-function calculateMonthStats(bookings: any[]): MonthStats {
-  const revenue = bookings.reduce((sum, booking) => {
-    return sum + (booking.payment ? Number(booking.payment.amount) : 0);
-  }, 0);
-
-  return {
-    bookings: bookings.length,
-    revenue,
-  };
-}
-
-function processMonthlyData(bookings: any[]): MonthlyStats[] {
-  const monthlyDataMap = new Map<string, { bookings: number; revenue: number }>();
-
-  bookings.forEach((booking) => {
-    const date = booking.bookingDate;
-    const monthKey = DateUtils.formatYearMonth(date);
-    const amount = booking.payment ? Number(booking.payment.amount) : 0;
-
-    if (monthlyDataMap.has(monthKey)) {
-      const current = monthlyDataMap.get(monthKey)!;
-      monthlyDataMap.set(monthKey, {
-        bookings: current.bookings + 1,
-        revenue: current.revenue + amount,
-      });
-    } else {
-      monthlyDataMap.set(monthKey, { bookings: 1, revenue: amount });
-    }
-  });
-
-  return Array.from(monthlyDataMap.entries())
-    .map(([month, data]) => ({
-      month,
-      bookings: data.bookings,
-      revenue: data.revenue,
-    }))
-    .sort((a, b) => a.month.localeCompare(b.month));
-}
-
-function calculateGrowthMetrics(historicalData: MonthlyStats[]) {
-  let totalBookingGrowth = 0;
-  let totalRevenueGrowth = 0;
-  let monthsWithData = 0;
-
-  for (let i = 1; i < historicalData.length; i++) {
-    const prevBookings = historicalData[i - 1].bookings;
-    const currBookings = historicalData[i].bookings;
-    const prevRevenue = historicalData[i - 1].revenue;
-    const currRevenue = historicalData[i].revenue;
-
-    if (prevBookings > 0 && prevRevenue > 0) {
-      totalBookingGrowth += (currBookings - prevBookings) / prevBookings;
-      totalRevenueGrowth += (currRevenue - prevRevenue) / prevRevenue;
-      monthsWithData++;
-    }
-  }
-
-  return {
-    bookingGrowth: monthsWithData > 0 ? totalBookingGrowth / monthsWithData : 0.05,
-    revenueGrowth: monthsWithData > 0 ? totalRevenueGrowth / monthsWithData : 0.07,
-  };
-}
-
-function generateForecast(
-  historicalData: MonthlyStats[],
-  growthMetrics: { bookingGrowth: number; revenueGrowth: number }
-): MonthlyStats[] {
-  const forecast: MonthlyStats[] = [];
-  const lastMonth =
-    historicalData.length > 0
-      ? historicalData[historicalData.length - 1]
-      : {
-          month: DateUtils.getCurrentYearMonth(),
-          bookings: 100,
-          revenue: 5000,
-        };
-
-  let forecastBookings = lastMonth.bookings;
-  let forecastRevenue = lastMonth.revenue;
-
-  for (let i = 1; i <= 6; i++) {
-    const forecastMonth = DateUtils.getNextMonth(lastMonth.month, i);
-
-    forecastBookings = Math.round(forecastBookings * (1 + growthMetrics.bookingGrowth));
-    forecastRevenue = Math.round(forecastRevenue * (1 + growthMetrics.revenueGrowth));
-
-    forecast.push({
-      month: forecastMonth,
-      bookings: forecastBookings,
-      revenue: forecastRevenue,
-      isProjection: true,
     });
-  }
 
-  return forecast;
-}
+    return {
+      revenueData: monthlyRevenueData,
+      bookingData: monthlyBookingData,
+      topFields,
+    };
+  } catch (error) {
+    console.error('Error generating business performance report:', error);
+    throw error;
+  }
+};
+
+/**
+ * Menghasilkan prediksi booking (contoh sederhana)
+ */
+export const generateBookingForecast = async (branchId?: number): Promise<any> => {
+  try {
+    // Mendapatkan data 3 bulan terakhir
+    const now = new Date();
+    const threeMonthsAgo = subMonths(now, 3);
+
+    // Query jumlah booking per bulan
+    const bookings = await prisma.booking.findMany({
+      where: {
+        bookingDate: {
+          gte: threeMonthsAgo,
+          lte: now,
+        },
+        field: branchId ? { branchId } : undefined,
+      },
+      include: {
+        field: true,
+      },
+      orderBy: {
+        bookingDate: 'asc',
+      },
+    });
+
+    // Group by month
+    const bookingsByMonth: Record<string, number> = {};
+    
+    bookings.forEach(booking => {
+      const monthKey = format(new Date(booking.bookingDate), 'MMM', { locale: id });
+      bookingsByMonth[monthKey] = (bookingsByMonth[monthKey] || 0) + 1;
+    });
+
+    // Contoh data historis
+    const historicalData = Object.entries(bookingsByMonth).map(([month, count]) => ({
+      month,
+      bookings: count,
+      type: 'historical',
+    }));
+
+    // Contoh prediksi sederhana (rata-rata * 1.1 untuk 3 bulan ke depan)
+    const avgBookings = historicalData.reduce((sum, item) => sum + item.bookings, 0) / historicalData.length;
+    const currentMonthIndex = now.getMonth();
+    
+    const forecastData = [];
+    for (let i = 1; i <= 3; i++) {
+      const futureMonth = new Date(now.getFullYear(), currentMonthIndex + i, 1);
+      forecastData.push({
+        month: format(futureMonth, 'MMM', { locale: id }),
+        bookings: Math.round(avgBookings * (1 + 0.05 * i)),
+        type: 'forecast',
+      });
+    }
+
+    // Lapangan dengan peningkatan booking terbesar
+    const trendingFields = await prisma.booking.groupBy({
+      by: ['fieldId'],
+      where: {
+        bookingDate: {
+          gte: threeMonthsAgo,
+        },
+        field: branchId ? { branchId } : undefined,
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _count: {
+          id: 'desc',
+        },
+      },
+      take: 3,
+    });
+
+    // Mendapatkan detail field dan branch
+    const fieldIds = trendingFields.map(item => item.fieldId);
+    const fieldsWithBranch = await prisma.field.findMany({
+      where: {
+        id: { in: fieldIds },
+      },
+      include: {
+        branch: true,
+      },
+    });
+
+    // Format hasil untuk response
+    const formattedTrendingFields = trendingFields.map(item => {
+      const fieldData = fieldsWithBranch.find(f => f.id === item.fieldId);
+      return {
+        id: item.fieldId.toString(),
+        name: fieldData?.name || 'Unknown',
+        branch_name: fieldData?.branch.name || 'Unknown',
+        total_bookings: item._count.id,
+      };
+    });
+
+    return {
+      bookingTrend: [...historicalData, ...forecastData],
+      trendingFields: formattedTrendingFields,
+    };
+  } catch (error) {
+    console.error('Error generating booking forecast:', error);
+    throw error;
+  }
+}; 

@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import { User } from '../../middlewares/auth.middleware';
 import * as RevenueService from '../../repositories/revenue/revenueReports.service';
+import * as UnifiedStatsService from '../../repositories/statistics/unifiedStats.service';
 import { validateDateRange } from '../../repositories/revenue/validation.utils';
-import { Role } from '@/types/enums';
 
 /**
  * Owner Booking Controller
@@ -22,7 +22,7 @@ export const getRevenueReports = async (req: User, res: Response): Promise<void>
     // Owner hanya bisa melihat data cabang mereka sendiri
     // Super admin bisa melihat data semua cabang atau pilih specific branch
     const targetBranchId =
-      req.user?.role === Role.SUPER_ADMIN && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
+      req.user?.role === 'super_admin' && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
 
     const result = await RevenueService.generateRevenueReport(
       start,
@@ -58,7 +58,7 @@ export const getOccupancyReports = async (req: User, res: Response): Promise<voi
     // Owner hanya bisa melihat data cabang mereka sendiri
     // Super admin bisa melihat data semua cabang atau pilih specific branch
     const targetBranchId =
-      req.user?.role === Role.SUPER_ADMIN && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
+      req.user?.role === 'super_admin' && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
 
     const result = await RevenueService.generateOccupancyReport(
       start,
@@ -118,6 +118,42 @@ export const getBookingForecast = async (req: User, res: Response): Promise<void
     res.status(500).json({
       status: false,
       message: 'Internal Server Error',
+    });
+  }
+};
+
+// Tambahan method untuk mendapatkan dashboard stats lengkap
+export const getOwnerDashboardStats = async (req: User, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      res.status(401).json({
+        status: false,
+        message: 'Unauthorized'
+      });
+      return;
+    }
+
+    // Mendapatkan periode dari query parameter (default: monthly)
+    const { period = 'monthly' } = req.query as { period?: 'daily' | 'monthly' | 'yearly' };
+    
+    // Mendapatkan rentang waktu berdasarkan periode
+    const timeRange = UnifiedStatsService.getTimeRange(period);
+    
+    // Mendapatkan statistik owner cabang
+    const stats = await UnifiedStatsService.getOwnerCabangStats(userId, timeRange);
+
+    res.status(200).json({
+      status: true,
+      message: 'Berhasil mendapatkan statistik dashboard owner',
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error getting owner dashboard stats:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Terjadi kesalahan saat mengambil statistik dashboard'
     });
   }
 };
