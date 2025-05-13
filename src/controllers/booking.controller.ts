@@ -33,4 +33,3 @@ export const getRevenueReports = OwnerBookingController.getRevenueReports;
 export const getOccupancyReports = OwnerBookingController.getOccupancyReports;
 export const getBusinessPerformance = OwnerBookingController.getBusinessPerformance;
 export const getBookingForecast = OwnerBookingController.getBookingForecast;
-export const getOwnerDashboardStats = OwnerBookingController.getOwnerDashboardStats;

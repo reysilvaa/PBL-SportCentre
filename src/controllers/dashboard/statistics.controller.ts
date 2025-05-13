@@ -35,7 +35,7 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
     let stats: UnifiedStatsService.DashboardStats;
     switch (req.user?.role) {
       case Role.SUPER_ADMIN:
-        stats = await UnifiedStatsService.getSuperAdminStats(timeRange);
+        stats = await UnifiedStatsService.getSuperAdminStatsWithCharts(timeRange);
         break;
       case Role.OWNER_CABANG:
         stats = await UnifiedStatsService.getOwnerCabangStats(userId, timeRange);

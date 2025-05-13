@@ -125,12 +125,4 @@ router.get(
   bookingController.getBookingForecast
 );
 
-// Dashboard stats untuk owner (menggunakan service unifiedStats)
-router.get(
-  '/owner/dashboard/stats',
-  ownerAuth(),
-  cacheMiddleware('owner_dashboard_stats', 120),
-  bookingController.getOwnerDashboardStats
-);
-
 export default router;
