@@ -169,7 +169,7 @@ export const getSuperAdminStats = async (timeRange: any): Promise<DashboardStats
  */
 export const getOwnerCabangStats = async (userId: number, timeRange: any): Promise<DashboardStats> => {
   // Hanya menggunakan variabel yang benar-benar digunakan
-  const { start, end, interval, pastPeriods } = timeRange;
+  const { start, end, interval, pastPeriods, formatFn } = timeRange;
 
   // Mendapatkan semua cabang yang dimiliki oleh owner
   const branches = await prisma.branch.findMany({
@@ -177,7 +177,6 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
       ownerId: userId,
     },
     include: {
-      admins: true,
       Fields: {
         include: {
           Bookings: {
@@ -196,28 +195,69 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
     },
   });
 
+  // Mendapatkan semua admin dengan query langsung untuk mendapatkan data lengkap
+  const branchIds = branches.map(branch => branch.id);
+  
+  // Query admin berdasarkan branchIds
+  const branchAdminsWithDetails = await prisma.branchAdmin.findMany({
+    where: {
+      branchId: {
+        in: branchIds
+      }
+    },
+    include: {
+      user: true,
+      branch: true
+    }
+  });
+
   // Menghitung total cabang
   const totalBranches = branches.length;
 
   // Menghitung total admin di semua cabang
-  const totalAdmins = branches.reduce((sum: number, branch: any) => sum + branch.admins.length, 0);
+  const totalAdmins = branchAdminsWithDetails.length;
 
-  // Menghitung total pendapatan dari semua booking yang sudah dibayar di periode ini
+  // Data untuk analisis booking dan pendapatan
   let totalIncome = new Decimal(0);
   let totalBookings = 0;
+  const bookingsByDate: Record<string, number> = {};
+  const incomeByDate: Record<string, number> = {};
 
-  branches.forEach((branch: any) => {
-    branch.Fields.forEach((field: any) => {
-      field.Bookings.forEach((booking: any) => {
+  // Proses semua booking untuk mendapatkan statistik real
+  branches.forEach((branch) => {
+    branch.Fields.forEach((field) => {
+      field.Bookings.forEach((booking) => {
         totalBookings++;
+        
+        // Mendapatkan tanggal booking
+        let dateKey;
+        const bookingDate = new Date(booking.bookingDate);
+        
+        if (interval === 'hour') {
+          // Format jam: "HH:00"
+          dateKey = `${bookingDate.getHours().toString().padStart(2, '0')}:00`;
+        } else if (interval === 'year') {
+          // Format tahun: "YYYY"
+          dateKey = bookingDate.getFullYear().toString();
+        } else {
+          // Format bulan: gunakan formatFn
+          dateKey = formatFn(bookingDate);
+        }
+        
+        // Hitung booking per periode
+        bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
+
+        // Hitung pendapatan jika booking sudah dibayar
         if (booking.payment && booking.payment.status === 'paid') {
-          totalIncome = totalIncome.plus(booking.payment.amount);
+          const amount = Number(booking.payment.amount);
+          totalIncome = totalIncome.plus(amount);
+          incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
         }
       });
     });
   });
 
-  // Generate data untuk grafik (contoh implementasi sederhana)
+  // Generate data untuk grafik pendapatan dan booking berdasarkan data real
   const revenueData = {
     categories: [] as string[],
     series: [] as number[],
@@ -228,62 +268,66 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
     series: [] as number[],
   };
 
+  // Buat kategori berdasarkan interval
+  let categories: string[] = [];
+  
   if (interval === 'hour') {
-    // Implementasi untuk periode harian (per jam)
-    const hours = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
-    revenueData.categories = hours;
-    revenueData.series = [580000, 420000, 350000, 450000, 600000, 850000, 900000];
-    
-    bookingData.categories = hours;
-    bookingData.series = [12, 8, 9, 11, 15, 28, 32];
+    // Kategori per jam (06:00 - 23:00)
+    categories = Array.from({ length: 18 }, (_, i) => `${(i + 6).toString().padStart(2, '0')}:00`);
   } else if (interval === 'year') {
-    // Implementasi untuk periode tahunan
+    // Kategori per tahun (6 tahun terakhir)
     const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: pastPeriods }, (_, i) => (currentYear - pastPeriods + i + 1).toString());
-    
-    revenueData.categories = years;
-    revenueData.series = [28000000, 25000000, 18000000, 32000000, 42000000, 15000000];
-    
-    bookingData.categories = years;
-    bookingData.series = [850, 720, 680, 920, 1100, 450];
+    categories = Array.from({ length: pastPeriods }, (_, i) => (currentYear - pastPeriods + i + 1).toString());
   } else {
-    // Default: periode bulanan
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    revenueData.categories = months;
-    revenueData.series = [1500000, 1800000, 1400000, 1200000, 1900000, 2100000, 1800000, 1600000, 2000000, 2400000, 1700000, 2200000];
-    
-    bookingData.categories = months;
-    bookingData.series = [45, 52, 38, 35, 48, 55, 49, 42, 50, 58, 46, 52];
+    // Kategori per bulan
+    categories = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   }
+  
+  // Isi data berdasarkan kategori
+  revenueData.categories = categories;
+  bookingData.categories = categories;
+  
+  // Isi series dengan data real atau 0 jika tidak ada
+  revenueData.series = categories.map(cat => incomeByDate[cat] || 0);
+  bookingData.series = categories.map(cat => bookingsByDate[cat] || 0);
 
   // Format data cabang untuk tampilan tabel
-  const branchesData = branches.map((branch: any) => ({
-    id: branch.id.toString(),
-    name: branch.name,
-    location: branch.location,
-    status: branch.status.toLowerCase(),
-    adminCount: branch.admins.length,
-    fieldCount: branch.Fields.length,
-  }));
+  const branchesData = branches.map((branch) => {
+    // Hitung jumlah admin untuk cabang ini
+    const adminCount = branchAdminsWithDetails.filter(admin => admin.branchId === branch.id).length;
+    
+    return {
+      id: branch.id.toString(),
+      name: branch.name,
+      location: branch.location,
+      status: branch.status.toLowerCase(),
+      adminCount: adminCount,
+      fieldCount: branch.Fields.length,
+    };
+  });
 
-  // Format data admin untuk tampilan tabel
-  const adminsData = branches.flatMap((branch: any) =>
-    branch.admins.map((admin: any) => ({
+  // Format data admin untuk tampilan tabel dengan data yang lebih lengkap
+  const adminsData = branchAdminsWithDetails.map((admin) => {
+    // Format data admin sesuai dengan schema dan kebutuhan tampilan
+    return {
       id: admin.userId.toString(),
-      name: admin.user?.name || 'Unknown',
-      email: admin.user?.email || 'N/A',
-      phone: admin.user?.phone || 'N/A',
-      branch: branch.name,
-      status: admin.user?.status || 'inactive',
-      role: admin.user?.role || 'admin_cabang',
-      lastActive: admin.user?.lastActiveAt || new Date().toISOString(),
-    }))
-  );
+      name: admin.user.name,
+      email: admin.user.email,
+      phone: admin.user.phone || 'N/A', // phone bisa null dalam schema
+      branch: admin.branch.name,
+      // Status sesuai dengan cabang
+      status: admin.branch.status.toLowerCase() === 'active' ? 'active' : 'inactive',
+      // Role dari user (ubah format sesuai yang diinginkan frontend)
+      role: formatRole(admin.user.role),
+      // Format tanggal
+      lastActive: formatDate(admin.user.createdAt),
+    };
+  });
 
   return {
     totalBranches,
     totalAdmins,
-    totalIncome,
+    totalIncome: Number(totalIncome),
     totalBookings,
     revenueData,
     bookingData,
@@ -291,6 +335,34 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
     admins: adminsData,
   };
 };
+
+// Helper functions untuk format data
+function formatRole(role: any): string {
+  // Format role agar lebih user friendly
+  switch(role) {
+    case 'admin_cabang':
+      return 'Admin Cabang';
+    case 'owner_cabang':
+      return 'Owner Cabang';
+    case 'super_admin':
+      return 'Super Admin';
+    case 'user':
+      return 'User';
+    default:
+      return role;
+  }
+}
+
+function formatDate(date: any): string {
+  if (!date) return 'N/A';
+  // Format: DD-MM-YYYY HH:MM
+  const d = new Date(date);
+  return `${d.getDate().toString().padStart(2, '0')}-${
+    (d.getMonth() + 1).toString().padStart(2, '0')
+  }-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${
+    d.getMinutes().toString().padStart(2, '0')
+  }`;
+}
 
 /**
  * Mendapatkan statistik untuk Admin Cabang
