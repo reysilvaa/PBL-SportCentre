@@ -432,3 +432,116 @@ export const deleteBranch = async (req: User, res: Response): Promise<void> => {
     });
   }
 };
+
+/**
+ * Mendapatkan cabang yang dimiliki atau dikelola oleh user yang sedang login
+ */
+export const getUserBranches = async (req: User, res: Response): Promise<void> => {
+  try {
+    const { q, page = '1', limit = '10' } = req.query;
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+
+    const pageNumber = parseInt(page as string) || 1;
+    const limitNumber = parseInt(limit as string) || 10;
+    const skip = (pageNumber - 1) * limitNumber;
+
+    // Buat kondisi pencarian
+    let whereCondition: any = {};
+    
+    // Filter berdasarkan peran pengguna
+    if (userRole === Role.OWNER_CABANG) {
+      // Jika owner cabang, ambil cabang yang dimiliki
+      whereCondition.ownerId = userId;
+    } else if (userRole === Role.ADMIN_CABANG) {
+      // Jika admin cabang, ambil cabang yang dikelola
+      whereCondition.admins = {
+        some: {
+          userId: userId
+        }
+      };
+    } else if (userRole !== Role.SUPER_ADMIN) {
+      // Jika bukan super admin, owner, atau admin cabang, user tidak memiliki cabang
+      res.status(200).json({
+        status: true,
+        message: 'Berhasil mendapatkan daftar cabang',
+        data: [],
+        meta: {
+          page: pageNumber,
+          limit: limitNumber,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      });
+      return;
+    }
+    
+    // Tambahkan filter pencarian jika parameter q ada
+    if (q) {
+      whereCondition = {
+        ...whereCondition,
+        OR: [
+          { name: { contains: q as string } }, 
+          { location: { contains: q as string } }
+        ],
+      };
+    }
+
+    // Hitung total data
+    const totalItems = await prisma.branch.count({
+      where: whereCondition,
+    });
+
+    // Ambil data dengan paginasi dan pencarian
+    const branches = await prisma.branch.findMany({
+      where: whereCondition,
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        admins: {
+          select: {
+            userId: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              }
+            }
+          }
+        }
+      },
+      skip,
+      take: limitNumber,
+    });
+
+    const totalPages = Math.ceil(totalItems / limitNumber);
+
+    res.status(200).json({
+      status: true,
+      message: 'Berhasil mendapatkan daftar cabang',
+      data: branches,
+      meta: {
+        page: pageNumber,
+        limit: limitNumber,
+        totalItems,
+        totalPages,
+        hasNextPage: pageNumber < totalPages,
+        hasPrevPage: pageNumber > 1,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getUserBranches:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
+};
