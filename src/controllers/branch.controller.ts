@@ -545,3 +545,56 @@ export const getUserBranches = async (req: User, res: Response): Promise<void> =
     });
   }
 };
+
+/**
+ * Mendapatkan daftar admin untuk cabang tertentu
+ */
+export const getBranchAdmins = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const branchId = parseInt(id);
+
+    if (isNaN(branchId)) {
+      res.status(400).json({
+        status: false,
+        message: 'ID cabang tidak valid',
+      });
+      return;
+    }
+
+    // Periksa apakah cabang ada
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        status: false,
+        message: 'Cabang tidak ditemukan',
+      });
+      return;
+    }
+
+    // Dapatkan semua admin untuk cabang ini
+    const branchAdmins = await prisma.branchAdmin.findMany({
+      where: { branchId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json(branchAdmins);
+  } catch (error) {
+    console.error('Error getting branch admins:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
+};

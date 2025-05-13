@@ -33,28 +33,36 @@ export const getAllFields = async (req: Request, res: Response) => {
   }
 };
 
-// Endpoint admin - Dapatkan lapangan cabang tertentu
-export const getBranchFields = async (req: User, res: Response): Promise<void> => {
-  if (res.headersSent) return;
-
+// Endpoint untuk mendapatkan lapangan berdasarkan ID cabang (dengan parameter di path)
+export const getBranchFields = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Get branch ID from middleware
-    const branchId = req.userBranch?.id;
+    const { id } = req.params;
+    const branchId = parseInt(id);
 
-    if (!branchId) {
+    if (isNaN(branchId)) {
       res.status(400).json({
         status: false,
-        message: 'Branch ID is required',
+        message: 'ID cabang tidak valid',
       });
       return;
     }
 
-    // Super admin bisa mengakses lapangan dari cabang tertentu
-    const whereCondition =
-      branchId === 0 && req.query.branchId ? { branchId: parseInt(req.query.branchId as string) } : { branchId };
+    // Check jika branch ada
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+    });
 
+    if (!branch) {
+      res.status(404).json({
+        status: false,
+        message: 'Cabang tidak ditemukan',
+      });
+      return;
+    }
+
+    // Dapatkan semua lapangan untuk cabang ini
     const fields = await prisma.field.findMany({
-      where: whereCondition,
+      where: { branchId },
       include: {
         branch: {
           select: {
@@ -66,19 +74,13 @@ export const getBranchFields = async (req: User, res: Response): Promise<void> =
       },
     });
 
-    res.status(200).json({
-      status: true,
-      message: 'Berhasil mendapatkan data lapangan',
-      data: fields,
-    });
+    res.status(200).json(fields);
   } catch (error) {
-    console.error('Error getting fields:', error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        status: false,
-        message: 'Internal Server Error',
-      });
-    }
+    console.error('Error getting branch fields:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
   }
 };
 
