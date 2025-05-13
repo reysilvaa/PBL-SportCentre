@@ -165,11 +165,174 @@ export const getSuperAdminStats = async (timeRange: any): Promise<DashboardStats
 };
 
 /**
+ * Menambahkan grafik data untuk Super Admin
+ */
+export const getSuperAdminStatsWithCharts = async (timeRange: any): Promise<DashboardStats> => {
+  // Dapatkan stats dasar
+  const basicStats = await getSuperAdminStats(timeRange);
+  const { start, end, interval } = timeRange;
+  
+  // Dapatkan seluruh data booking untuk pembuatan grafik
+  const bookings = await prisma.booking.findMany({
+    include: {
+      payment: true,
+    }
+  });
+  
+  // Mengelompokkan data booking dan pendapatan
+  const bookingsByDate: Record<string, number> = {};
+  const incomeByDate: Record<string, number> = {};
+  
+  // Menghitung total booking dan pendapatan untuk periode ini
+  let totalBookings = 0;
+  let totalIncome = 0;
+  
+  // Proses semua booking untuk statistik
+  bookings.forEach((booking) => {
+    const bookingDate = new Date(booking.bookingDate);
+    
+    // Menghitung total untuk periode yang dipilih
+    if (bookingDate >= start && bookingDate <= end) {
+      totalBookings++;
+      
+      if (booking.payment && booking.payment.status === 'paid') {
+        totalIncome += Number(booking.payment.amount);
+      }
+    }
+    
+    // Mendapatkan tanggal booking untuk grafik
+    let dateKey;
+    
+    if (interval === 'hour') {
+      // Filter untuk hanya menampilkan data hari ini pada chart hourly
+      const today = new Date().setHours(0, 0, 0, 0);
+      const bookingDay = new Date(bookingDate).setHours(0, 0, 0, 0);
+      if (bookingDay === today) {
+        // Format jam: "HH:00"
+        dateKey = `${bookingDate.getHours().toString().padStart(2, '0')}:00`;
+        // Hitung booking per periode untuk grafik
+        bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
+
+        // Hitung pendapatan jika booking sudah dibayar
+        if (booking.payment && booking.payment.status === 'paid') {
+          const amount = Number(booking.payment.amount);
+          incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+        }
+      }
+    } else if (interval === 'year') {
+      // Format tahun: "YYYY"
+      dateKey = bookingDate.getFullYear().toString();
+      // Hitung booking per periode untuk grafik
+      bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
+
+      // Hitung pendapatan jika booking sudah dibayar
+      if (booking.payment && booking.payment.status === 'paid') {
+        const amount = Number(booking.payment.amount);
+        incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+      }
+    } else {
+      // Format bulan: indeks 0-11
+      // Filter untuk hanya menampilkan data di tahun ini pada chart monthly
+      const currentYear = new Date().getFullYear();
+      if (bookingDate.getFullYear() === currentYear) {
+        dateKey = bookingDate.getMonth().toString();
+        // Hitung booking per periode untuk grafik (untuk bulan di tahun ini saja)
+        bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
+
+        // Hitung pendapatan jika booking sudah dibayar
+        if (booking.payment && booking.payment.status === 'paid') {
+          const amount = Number(booking.payment.amount);
+          incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+        }
+      }
+    }
+  });
+
+  // Generate data untuk grafik
+  const revenueData = {
+    categories: [] as string[],
+    series: [] as number[],
+  };
+
+  const bookingData = {
+    categories: [] as string[],
+    series: [] as number[],
+  };
+  
+  // Kategori grafik berdasarkan interval
+  if (interval === 'hour') {
+    // Kategori per jam (06:00 - 23:00)
+    const hours = Array.from({ length: 18 }, (_, i) => `${(i + 6).toString().padStart(2, '0')}:00`);
+    bookingData.categories = hours;
+    revenueData.categories = hours;
+    
+    // Mengisi data berdasarkan data real
+    bookingData.series = hours.map(hour => bookingsByDate[hour] || 0);
+    revenueData.series = hours.map(hour => incomeByDate[hour] || 0);
+  } else if (interval === 'year') {
+    // Kategori per tahun
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 6 }, (_, i) => (currentYear - 5 + i).toString());
+    
+    // Tambahkan tahun dari data booking yang ada
+    const allYears = new Set<string>(years);
+    for (const dateKey in bookingsByDate) {
+      allYears.add(dateKey);
+    }
+    
+    // Konversi ke array dan urutkan
+    const sortedYears = Array.from(allYears).sort();
+    bookingData.categories = sortedYears;
+    revenueData.categories = sortedYears;
+    
+    // Mengisi data berdasarkan data real
+    bookingData.series = sortedYears.map(year => bookingsByDate[year] || 0);
+    revenueData.series = sortedYears.map(year => incomeByDate[year] || 0);
+  } else {
+    // Default: periode bulanan (berdasarkan bulan 0-11)
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+    bookingData.categories = months;
+    revenueData.categories = months;
+    
+    // Array untuk menyimpan data per bulan pada tahun ini
+    const bookingsByMonth: number[] = Array(12).fill(0);
+    const incomeByMonth: number[] = Array(12).fill(0);
+    
+    // Mengelompokkan data berdasarkan bulan (hanya untuk tahun ini)
+    for (const monthKey in bookingsByDate) {
+      const monthIndex = parseInt(monthKey);
+      if (monthIndex >= 0 && monthIndex < 12) {
+        bookingsByMonth[monthIndex] += bookingsByDate[monthKey];
+      }
+    }
+    
+    for (const monthKey in incomeByDate) {
+      const monthIndex = parseInt(monthKey);
+      if (monthIndex >= 0 && monthIndex < 12) {
+        incomeByMonth[monthIndex] += incomeByDate[monthKey];
+      }
+    }
+    
+    bookingData.series = bookingsByMonth;
+    revenueData.series = incomeByMonth;
+  }
+  
+  // Gabungkan stats dasar dengan data grafik
+  return {
+    ...basicStats,
+    totalBookings,
+    totalIncome,
+    revenueData,
+    bookingData,
+  };
+};
+
+/**
  * Mendapatkan statistik untuk Owner Cabang
  */
 export const getOwnerCabangStats = async (userId: number, timeRange: any): Promise<DashboardStats> => {
   // Hanya menggunakan variabel yang benar-benar digunakan
-  const { start, end, interval, pastPeriods, formatFn } = timeRange;
+  const { start, end, interval, pastPeriods } = timeRange;
 
   // Mendapatkan semua cabang yang dimiliki oleh owner
   const branches = await prisma.branch.findMany({
@@ -180,12 +343,6 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
       Fields: {
         include: {
           Bookings: {
-            where: {
-              bookingDate: {
-                gte: start,
-                lte: end,
-              },
-            },
             include: {
               payment: true,
             },
@@ -223,35 +380,72 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
   const bookingsByDate: Record<string, number> = {};
   const incomeByDate: Record<string, number> = {};
 
+  // Menghitung pendapatan dan booking berdasarkan periode
+  let periodStart = start;
+  let periodEnd = end;
+  
   // Proses semua booking untuk mendapatkan statistik real
   branches.forEach((branch) => {
     branch.Fields.forEach((field) => {
       field.Bookings.forEach((booking) => {
-        totalBookings++;
-        
-        // Mendapatkan tanggal booking
-        let dateKey;
         const bookingDate = new Date(booking.bookingDate);
         
+        // Hanya count booking dan pendapatan dalam periode yang dipilih untuk totalIncome dan totalBookings
+        if (bookingDate >= periodStart && bookingDate <= periodEnd) {
+          totalBookings++;
+          
+          // Hitung pendapatan jika booking sudah dibayar
+          if (booking.payment && booking.payment.status === 'paid') {
+            const amount = Number(booking.payment.amount);
+            totalIncome = totalIncome.plus(amount);
+          }
+        }
+        
+        // Mendapatkan tanggal booking untuk grafik
+        let dateKey;
+        
         if (interval === 'hour') {
-          // Format jam: "HH:00"
-          dateKey = `${bookingDate.getHours().toString().padStart(2, '0')}:00`;
+          // Filter untuk hanya menampilkan data hari ini pada chart hourly
+          const today = new Date().setHours(0, 0, 0, 0);
+          const bookingDay = new Date(bookingDate).setHours(0, 0, 0, 0);
+          if (bookingDay === today) {
+            // Format jam: "HH:00"
+            dateKey = `${bookingDate.getHours().toString().padStart(2, '0')}:00`;
+            // Hitung booking per periode untuk grafik
+            bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
+
+            // Hitung pendapatan jika booking sudah dibayar
+            if (booking.payment && booking.payment.status === 'paid') {
+              const amount = Number(booking.payment.amount);
+              incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+            }
+          }
         } else if (interval === 'year') {
           // Format tahun: "YYYY"
           dateKey = bookingDate.getFullYear().toString();
-        } else {
-          // Format bulan: gunakan formatFn
-          dateKey = formatFn(bookingDate);
-        }
-        
-        // Hitung booking per periode
-        bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
+          // Hitung booking per periode untuk grafik
+          bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
 
-        // Hitung pendapatan jika booking sudah dibayar
-        if (booking.payment && booking.payment.status === 'paid') {
-          const amount = Number(booking.payment.amount);
-          totalIncome = totalIncome.plus(amount);
-          incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+          // Hitung pendapatan jika booking sudah dibayar
+          if (booking.payment && booking.payment.status === 'paid') {
+            const amount = Number(booking.payment.amount);
+            incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+          }
+        } else {
+          // Format bulan: indeks 0-11
+          // Filter untuk hanya menampilkan data di tahun ini pada chart monthly
+          const currentYear = new Date().getFullYear();
+          if (bookingDate.getFullYear() === currentYear) {
+            dateKey = bookingDate.getMonth().toString();
+            // Hitung booking per periode untuk grafik (untuk bulan di tahun ini saja)
+            bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
+
+            // Hitung pendapatan jika booking sudah dibayar
+            if (booking.payment && booking.payment.status === 'paid') {
+              const amount = Number(booking.payment.amount);
+              incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+            }
+          }
         }
       });
     });
@@ -268,29 +462,64 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
     series: [] as number[],
   };
 
-  // Buat kategori berdasarkan interval
-  let categories: string[] = [];
-  
+  // Kategori grafik berdasarkan interval
   if (interval === 'hour') {
     // Kategori per jam (06:00 - 23:00)
-    categories = Array.from({ length: 18 }, (_, i) => `${(i + 6).toString().padStart(2, '0')}:00`);
+    const hours = Array.from({ length: 18 }, (_, i) => `${(i + 6).toString().padStart(2, '0')}:00`);
+    bookingData.categories = hours;
+    revenueData.categories = hours;
+    
+    // Mengisi data berdasarkan data real
+    bookingData.series = hours.map(hour => bookingsByDate[hour] || 0);
+    revenueData.series = hours.map(hour => incomeByDate[hour] || 0);
   } else if (interval === 'year') {
-    // Kategori per tahun (6 tahun terakhir)
+    // Kategori per tahun
     const currentYear = new Date().getFullYear();
-    categories = Array.from({ length: pastPeriods }, (_, i) => (currentYear - pastPeriods + i + 1).toString());
+    const years = Array.from({ length: pastPeriods }, (_, i) => (currentYear - pastPeriods + i + 1).toString());
+    
+    // Tambahkan tahun dari data booking yang ada
+    const allYears = new Set<string>(years);
+    for (const dateKey in bookingsByDate) {
+      allYears.add(dateKey);
+    }
+    
+    // Konversi ke array dan urutkan
+    const sortedYears = Array.from(allYears).sort();
+    bookingData.categories = sortedYears;
+    revenueData.categories = sortedYears;
+    
+    // Mengisi data berdasarkan data real
+    bookingData.series = sortedYears.map(year => bookingsByDate[year] || 0);
+    revenueData.series = sortedYears.map(year => incomeByDate[year] || 0);
   } else {
-    // Kategori per bulan
-    categories = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    // Default: periode bulanan (berdasarkan bulan 0-11)
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+    bookingData.categories = months;
+    revenueData.categories = months;
+    
+    // Array untuk menyimpan data per bulan pada tahun ini
+    const bookingsByMonth: number[] = Array(12).fill(0);
+    const incomeByMonth: number[] = Array(12).fill(0);
+    
+    // Mengelompokkan data berdasarkan bulan (hanya untuk tahun ini)
+    for (const monthKey in bookingsByDate) {
+      const monthIndex = parseInt(monthKey);
+      if (monthIndex >= 0 && monthIndex < 12) {
+        bookingsByMonth[monthIndex] += bookingsByDate[monthKey];
+      }
+    }
+    
+    for (const monthKey in incomeByDate) {
+      const monthIndex = parseInt(monthKey);
+      if (monthIndex >= 0 && monthIndex < 12) {
+        incomeByMonth[monthIndex] += incomeByDate[monthKey];
+      }
+    }
+    
+    bookingData.series = bookingsByMonth;
+    revenueData.series = incomeByMonth;
   }
   
-  // Isi data berdasarkan kategori
-  revenueData.categories = categories;
-  bookingData.categories = categories;
-  
-  // Isi series dengan data real atau 0 jika tidak ada
-  revenueData.series = categories.map(cat => incomeByDate[cat] || 0);
-  bookingData.series = categories.map(cat => bookingsByDate[cat] || 0);
-
   // Format data cabang untuk tampilan tabel
   const branchesData = branches.map((branch) => {
     // Hitung jumlah admin untuk cabang ini
@@ -392,12 +621,6 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
       Fields: {
         include: {
           Bookings: {
-            where: {
-              bookingDate: {
-                gte: start,
-                lte: end,
-              },
-            },
             include: {
               payment: true,
               user: true,
@@ -421,34 +644,74 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
   let customerBookingCounts: Record<string, { count: number; user: any }> = {};
 
   // Menghitung field yang tersedia (tidak dibooking) untuk hari ini
+  const today = new Date();
   const availableFields = branch.Fields.filter((field) => {
     const fieldBookingsToday = field.Bookings.filter(
-      (booking) => new Date(booking.bookingDate).toDateString() === new Date().toDateString()
+      (booking) => new Date(booking.bookingDate).toDateString() === today.toDateString()
     );
     return fieldBookingsToday.length === 0;
   }).length;
 
   branch.Fields.forEach((field) => {
     field.Bookings.forEach((booking) => {
-      totalBookings++;
+      const bookingDate = new Date(booking.bookingDate);
+      
+      // Hanya count booking dan pendapatan dalam periode yang dipilih
+      if (bookingDate >= start && bookingDate <= end) {
+        totalBookings++;
 
-      // Menghitung pembayaran pending
-      if (booking.payment && booking.payment.status === PaymentStatus.PENDING) {
-        pendingPayments++;
-      }
+        // Menghitung pembayaran pending
+        if (booking.payment && booking.payment.status === PaymentStatus.PENDING) {
+          pendingPayments++;
+        }
 
-      // Menghitung total pendapatan dari booking yang sudah dibayar
-      if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
-        totalIncome = totalIncome.plus(booking.payment.amount);
+        // Menghitung total pendapatan dari booking yang sudah dibayar
+        if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
+          totalIncome = totalIncome.plus(booking.payment.amount);
+        }
       }
 
       // Mengelompokkan booking berdasarkan tanggal untuk grafik
-      const bookingDate = new Date(booking.bookingDate).toISOString().split('T')[0];
-      bookingsPerDay[bookingDate] = (bookingsPerDay[bookingDate] || 0) + 1;
+      let dateKey;
+      
+      if (interval === 'hour') {
+        // Filter untuk hanya menampilkan data hari ini pada chart hourly
+        const todayDate = new Date().setHours(0, 0, 0, 0);
+        const bookingDay = new Date(bookingDate).setHours(0, 0, 0, 0);
+        if (bookingDay === todayDate) {
+          // Format jam: "HH:00"
+          dateKey = `${bookingDate.getHours().toString().padStart(2, '0')}:00`;
+          // Mengelompokkan booking berdasarkan jam
+          bookingsPerDay[dateKey] = (bookingsPerDay[dateKey] || 0) + 1;
 
-      // Mengelompokkan pendapatan berdasarkan tanggal untuk grafik
-      if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
-        incomePerDay[bookingDate] = (incomePerDay[bookingDate] || 0) + Number(booking.payment.amount);
+          // Mengelompokkan pendapatan berdasarkan jam
+          if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
+            incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(booking.payment.amount);
+          }
+        }
+      } else if (interval === 'year') {
+        // Format tahun: "YYYY"
+        dateKey = bookingDate.getFullYear().toString();
+        // Mengelompokkan booking berdasarkan tahun
+        bookingsPerDay[dateKey] = (bookingsPerDay[dateKey] || 0) + 1;
+
+        // Mengelompokkan pendapatan berdasarkan tahun
+        if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
+          incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(booking.payment.amount);
+        }
+      } else {
+        // Format bulan: bulan 0-11 dari tahun ini
+        const currentYear = new Date().getFullYear();
+        if (bookingDate.getFullYear() === currentYear) {
+          dateKey = bookingDate.getMonth().toString();
+          // Mengelompokkan booking berdasarkan bulan di tahun ini
+          bookingsPerDay[dateKey] = (bookingsPerDay[dateKey] || 0) + 1;
+
+          // Mengelompokkan pendapatan berdasarkan bulan di tahun ini
+          if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
+            incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(booking.payment.amount);
+          }
+        }
       }
 
       // Mengelompokkan booking berdasarkan customer untuk top customers
@@ -471,39 +734,67 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
     series: [] as number[],
   };
 
-  const incomeData = {
+  const revenueData = {
     categories: [] as string[],
     series: [] as number[],
   };
 
-  // Kategori grafik (tanggal/hari/bulan)
+  // Kategori grafik berdasarkan interval
   if (interval === 'hour') {
-    // Untuk periode harian (jam)
-    const hours = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
+    // Kategori per jam (06:00 - 23:00)
+    const hours = Array.from({ length: 18 }, (_, i) => `${(i + 6).toString().padStart(2, '0')}:00`);
     bookingData.categories = hours;
-    bookingData.series = [4, 6, 8, 5, 7, 9, 4];
+    revenueData.categories = hours;
     
-    incomeData.categories = hours;
-    incomeData.series = [200000, 300000, 400000, 250000, 350000, 450000, 200000];
+    // Mengisi data berdasarkan data real
+    bookingData.series = hours.map(hour => bookingsPerDay[hour] || 0);
+    revenueData.series = hours.map(hour => incomePerDay[hour] || 0);
   } else if (interval === 'year') {
-    // Untuk periode tahunan
+    // Kategori per tahun
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: pastPeriods }, (_, i) => (currentYear - pastPeriods + i + 1).toString());
     
-    bookingData.categories = years;
-    bookingData.series = [420, 380, 450, 520, 480, 350];
+    // Tambahkan tahun dari data booking yang ada
+    const allYears = new Set<string>(years);
+    for (const dateKey in bookingsPerDay) {
+      allYears.add(dateKey);
+    }
     
-    incomeData.categories = years;
-    incomeData.series = [15000000, 12000000, 16000000, 18000000, 17000000, 14000000];
+    // Konversi ke array dan urutkan
+    const sortedYears = Array.from(allYears).sort();
+    bookingData.categories = sortedYears;
+    revenueData.categories = sortedYears;
+    
+    // Mengisi data berdasarkan data real
+    bookingData.series = sortedYears.map(year => bookingsPerDay[year] || 0);
+    revenueData.series = sortedYears.map(year => incomePerDay[year] || 0);
   } else {
-    // Default: periode bulanan
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    
+    // Default: periode bulanan (berdasarkan bulan 0-11)
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
     bookingData.categories = months;
-    bookingData.series = [28, 35, 30, 25, 32, 38, 30, 26, 34, 40, 29, 36];
+    revenueData.categories = months;
     
-    incomeData.categories = months;
-    incomeData.series = [800000, 950000, 900000, 750000, 850000, 1000000, 850000, 780000, 880000, 1100000, 820000, 950000];
+    // Array untuk menyimpan data per bulan pada tahun ini
+    const bookingsByMonth: number[] = Array(12).fill(0);
+    const incomeByMonth: number[] = Array(12).fill(0);
+    
+    // Mengelompokkan data berdasarkan bulan (hanya untuk tahun ini)
+    for (const monthKey in bookingsPerDay) {
+      const monthIndex = parseInt(monthKey);
+      if (monthIndex >= 0 && monthIndex < 12) {
+        bookingsByMonth[monthIndex] += bookingsPerDay[monthKey];
+      }
+    }
+    
+    for (const monthKey in incomePerDay) {
+      const monthIndex = parseInt(monthKey);
+      if (monthIndex >= 0 && monthIndex < 12) {
+        incomeByMonth[monthIndex] += incomePerDay[monthKey];
+      }
+    }
+    
+    bookingData.series = bookingsByMonth;
+    revenueData.series = incomeByMonth;
   }
 
   // Top customers sorted by booking count
@@ -524,7 +815,7 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
     totalIncome: Number(totalIncome),
     availableFields,
     bookingData,
-    incomeData,
+    revenueData,
     topCustomers,
   };
 };
@@ -533,45 +824,56 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
  * Mendapatkan statistik untuk User
  */
 export const getUserStats = async (userId: number, timeRange: any): Promise<DashboardStats> => {
-  const { start, end } = timeRange;
+  const { start: _start, end: _end } = timeRange;
 
-  // Mendapatkan semua booking user
-  const bookings = await prisma.booking.findMany({
+  // Mendapatkan data user, booking dan notifikasi
+  const user = await prisma.user.findUnique({
     where: {
-      userId,
-      bookingDate: {
-        gte: start,
-        lte: end,
-      },
+      id: userId,
     },
     include: {
-      field: {
+      Bookings: {
+        where: {
+          // Hapus filter waktu untuk mendapatkan semua booking
+          // bookingDate: {
+          //   gte: start,
+          //   lte: end,
+          // },
+        },
         include: {
-          branch: true,
-          type: true,
+          field: {
+            include: {
+              branch: true,
+            },
+          },
+          payment: true,
+        },
+        orderBy: {
+          bookingDate: 'desc',
         },
       },
-      payment: true,
-    },
-    orderBy: {
-      bookingDate: 'desc',
+      notifications: {
+        where: {
+          isRead: false,
+        },
+      },
     },
   });
 
   // Menghitung jumlah booking aktif (yang belum lewat tanggalnya)
   const today = new Date();
-  const activeBookings = bookings.filter(
+  const activeBookings = user?.Bookings.filter(
     (booking) => new Date(booking.bookingDate) >= today
-  ).length;
+  ).length || 0;
 
   // Menghitung jumlah booking selesai
-  const completedBookings = bookings.filter(
+  const completedBookings = user?.Bookings.filter(
     (booking) => new Date(booking.bookingDate) < today
-  ).length;
+  ).length || 0;
 
   // Mendapatkan lapangan favorit
   const fieldCounts: Record<string, { count: number; name: string }> = {};
-  bookings.forEach((booking) => {
+  user?.Bookings.forEach((booking) => {
     const fieldId = booking.field.id.toString();
     if (!fieldCounts[fieldId]) {
       fieldCounts[fieldId] = { count: 0, name: booking.field.name };
@@ -590,23 +892,27 @@ export const getUserStats = async (userId: number, timeRange: any): Promise<Dash
   });
 
   // Mendapatkan jumlah notifikasi belum dibaca
-  const unreadNotifications = await prisma.notification.count({
-    where: {
-      userId,
-      isRead: false,
-    },
-  });
+  const unreadNotifications = user?.notifications.length || 0;
 
-  // Data untuk grafik aktivitas
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  // Data untuk grafik aktivitas berdasarkan booking per bulan
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+  
+  // Array untuk menyimpan jumlah aktivitas booking per bulan
+  const activityByMonth: number[] = Array(12).fill(0);
+  
+  // Mengelompokkan booking berdasarkan bulan
+  user?.Bookings.forEach((booking) => {
+    const bookingMonth = new Date(booking.bookingDate).getMonth();
+    activityByMonth[bookingMonth]++;
+  });
   
   const activityData = {
     categories: monthNames,
-    series: [4, 6, 8, 10, 7, 9, 5, 8, 10, 12, 8, 6],
+    series: activityByMonth,
   };
 
   // Mendapatkan booking terbaru untuk ditampilkan
-  const recentBookings = bookings.slice(0, 5).map((booking) => ({
+  const recentBookings = user?.Bookings.slice(0, 5).map((booking) => ({
     id: booking.id.toString(),
     fieldName: booking.field.name,
     branchName: booking.field.branch.name,

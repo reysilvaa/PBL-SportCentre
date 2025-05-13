@@ -1,5 +1,5 @@
 import express from 'express';
-import { getBranches, createBranch, updateBranch, deleteBranch } from '../../controllers/branch.controller';
+import { getBranches, createBranch, updateBranch, deleteBranch, getUserBranches } from '../../controllers/branch.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { auth, superAdminAuth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
@@ -9,6 +9,15 @@ const router = express.Router();
 
 // Endpoint publik untuk mendapatkan semua cabang - dengan TTL sangat rendah
 router.get('/', cacheMiddleware('branches', 10), getBranches);
+
+// Endpoint untuk mendapatkan cabang yang dimiliki/dikelola oleh user yang login
+router.get(
+  '/owner-branches',
+  auth({
+    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'],
+  }),
+  getUserBranches
+);
 
 // Mendapatkan detail cabang berdasarkan ID - dengan TTL sangat rendah
 router.get(

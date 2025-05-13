@@ -585,3 +585,103 @@ export const deleteUser = async (req: AuthUser, res: Response): Promise<void> =>
     });
   }
 };
+
+/**
+ * Mendapatkan daftar admin dari cabang-cabang yang dimiliki/dikelola oleh user yang login
+ */
+export const getUserBranchAdmins = async (req: AuthUser, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+    const { q } = req.query;
+
+    let branchIds: number[] = [];
+
+    // Dapatkan cabang berdasarkan peran
+    if (userRole === Role.SUPER_ADMIN) {
+      // Super admin bisa melihat semua admin cabang
+      const allBranches = await prisma.branch.findMany({
+        select: { id: true }
+      });
+      branchIds = allBranches.map(branch => branch.id);
+    } else if (userRole === Role.OWNER_CABANG) {
+      // Owner mendapatkan cabang yang dimiliki
+      const ownedBranches = await prisma.branch.findMany({
+        where: { ownerId: userId },
+        select: { id: true }
+      });
+      branchIds = ownedBranches.map(branch => branch.id);
+    } else if (userRole === Role.ADMIN_CABANG) {
+      // Admin mendapatkan cabang yang dikelola
+      const managedBranches = await prisma.branchAdmin.findMany({
+        where: { userId: userId },
+        select: { branchId: true }
+      });
+      branchIds = managedBranches.map(admin => admin.branchId);
+    } else {
+      // User biasa tidak memiliki cabang
+      res.status(200).json({
+        status: true,
+        message: 'Berhasil mendapatkan daftar admin cabang',
+        data: []
+      });
+      return;
+    }
+
+    if (branchIds.length === 0) {
+      res.status(200).json({
+        status: true,
+        message: 'Berhasil mendapatkan daftar admin cabang',
+        data: []
+      });
+      return;
+    }
+
+    // Dapatkan semua admin cabang
+    let branchAdmins = await prisma.branchAdmin.findMany({
+      where: {
+        branchId: { in: branchIds }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            phone: true
+          }
+        },
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            location: true
+          }
+        }
+      }
+    });
+
+    // Filter berdasarkan query pencarian jika ada
+    if (q) {
+      const searchQuery = q as string;
+      branchAdmins = branchAdmins.filter(admin => 
+        admin.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        admin.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        admin.branch.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    res.status(200).json({
+      status: true,
+      message: 'Berhasil mendapatkan daftar admin cabang',
+      data: branchAdmins
+    });
+  } catch (error) {
+    console.error('Error getting branch admins:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Terjadi kesalahan server internal'
+    });
+  }
+};
