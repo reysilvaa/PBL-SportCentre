@@ -22,7 +22,7 @@ router.get(
 
 // Detail booking berdasarkan ID
 router.get(
-  '/bookings/:id/user',
+  '/:id/user',
   userAuth({
     ownerOnly: true,
     resourceName: 'booking',
