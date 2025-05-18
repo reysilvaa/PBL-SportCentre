@@ -16,7 +16,13 @@ import { Role } from '../types';
 // Public endpoint - Dapatkan semua lapangan
 export const getAllFields = async (req: Request, res: Response) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 1000;  
+    const totalItems = await prisma.field.count();
+
     const fields = await prisma.field.findMany({
+      skip: (page - 1) * limit,
+      take: limit,
       include: {
         branch: {
           select: {
@@ -27,8 +33,20 @@ export const getAllFields = async (req: Request, res: Response) => {
         type: true,
       },
     });
-    res.json(fields);
-  } catch {
+
+    res.json({
+      data: fields,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        hasNextPage: page * limit < totalItems,
+        hasPrevPage: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
