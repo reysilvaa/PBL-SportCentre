@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { config } from '../config/app/env';
-import redisClient from '../config/services/redis';
+import { ensureConnection, KEYS } from '../config/services/redis';
 
 // ==================== COOKIE MANAGEMENT ====================
 
@@ -205,8 +205,7 @@ export const hasAuthCookie = (): boolean => {
 
 // ==================== TOKEN BLACKLIST ====================
 
-// Prefix untuk kunci blacklist token di Redis
-const BLACKLIST_PREFIX = 'token_blacklist:';
+// Default TTL untuk blacklist token
 const DEFAULT_TTL = 24 * 60 * 60; // Default TTL: 24 jam
 
 /**
@@ -218,7 +217,10 @@ export const blacklistToken = async (token: string, expiryInSeconds?: number): P
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || DEFAULT_TTL;
   try {
-    await redisClient.setEx(`${BLACKLIST_PREFIX}${token}`, ttl, '1');
+    // Gunakan ensureConnection yang menangani koneksi secara otomatis
+    // Dan gunakan key prefix dari KEYS untuk konsistensi
+    await ensureConnection.setEx(`${KEYS.TOKEN_BLACKLIST}${token}`, ttl, '1');
+    console.log(`Token dimasukkan ke dalam blacklist dengan TTL ${ttl} detik`);
   } catch (error) {
     console.error('Error blacklisting token:', error);
   }
@@ -231,7 +233,8 @@ export const blacklistToken = async (token: string, expiryInSeconds?: number): P
  */
 export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
   try {
-    const exists = await redisClient.exists(`${BLACKLIST_PREFIX}${token}`);
+    // Gunakan key prefix dari KEYS untuk konsistensi
+    const exists = await ensureConnection.exists(`${KEYS.TOKEN_BLACKLIST}${token}`);
     return exists === 1;
   } catch (error) {
     console.error('Error checking blacklisted token:', error);
@@ -246,7 +249,8 @@ export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
  */
 export const removeFromBlacklist = async (token: string): Promise<boolean> => {
   try {
-    const result = await redisClient.del(`${BLACKLIST_PREFIX}${token}`);
+    // Gunakan key prefix dari KEYS untuk konsistensi
+    const result = await ensureConnection.del(`${KEYS.TOKEN_BLACKLIST}${token}`);
     return result > 0;
   } catch (error) {
     console.error('Error removing token from blacklist:', error);

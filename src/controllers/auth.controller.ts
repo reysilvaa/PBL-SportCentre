@@ -10,6 +10,7 @@ import {
   clearAuthCookie,
   clearRefreshTokenCookie,
   getAuthToken,
+  isTokenBlacklisted,
 } from '../utils/auth.utils';
 import { hashPassword, verifyPassword } from '../utils/password.utils';
 import { verifyToken } from '../utils/jwt.utils';
@@ -141,6 +142,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     // Dapatkan token dari header atau cookie
     const headerToken = req.header('Authorization')?.split(' ')[1];
     const cookieToken = req.signedCookies['auth_token'];
+    const refreshToken = req.signedCookies['refresh_token'];
 
     // Gunakan token yang tersedia
     const token = cookieToken || headerToken;
@@ -165,6 +167,25 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       }
     }
 
+    // Tambahkan refresh token ke blacklist jika ada
+    if (refreshToken) {
+      try {
+        // Decode refresh token untuk mendapatkan waktu expired
+        const decoded = verifyToken(refreshToken) as { exp: number };
+
+        if (decoded) {
+          // Hitung sisa waktu token (dalam detik)
+          const now = Math.floor(Date.now() / 1000);
+          const expiryInSeconds = decoded.exp - now;
+
+          // Tambahkan refresh token ke blacklist dengan waktu expired yang sama
+          await blacklistToken(refreshToken, expiryInSeconds > 0 ? expiryInSeconds : undefined);
+        }
+      } catch (error) {
+        console.error('Error adding refresh token to blacklist:', error);
+      }
+    }
+
     // Hapus cookies authentication
     clearAuthCookie(res);
     clearRefreshTokenCookie(res);
@@ -184,6 +205,15 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 
     if (!refreshToken) {
       res.status(401).json({ error: 'Refresh token tidak ditemukan' });
+      return;
+    }
+
+    // Periksa jika token ada di blacklist
+    const isBlacklisted = await isTokenBlacklisted(refreshToken);
+    if (isBlacklisted) {
+      clearAuthCookie(res);
+      clearRefreshTokenCookie(res);
+      res.status(401).json({ error: 'Refresh token telah dicabut atau tidak valid' });
       return;
     }
 
@@ -216,6 +246,9 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         email: user.email,
         role: user.role,
       });
+
+      // Blacklist token lama sebelum memberikan token baru
+      await blacklistToken(refreshToken);
 
       // Set cookies baru
       setAuthCookie(res, accessToken);
@@ -251,6 +284,19 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
       res.status(401).json({
         status: false,
         message: 'Tidak terautentikasi',
+        authenticated: false,
+      });
+      return;
+    }
+
+    // Periksa jika token ada di blacklist
+    const isBlacklisted = await isTokenBlacklisted(token);
+    if (isBlacklisted) {
+      clearAuthCookie(res);
+      clearRefreshTokenCookie(res);
+      res.status(401).json({
+        status: false,
+        message: 'Token telah dicabut',
         authenticated: false,
       });
       return;

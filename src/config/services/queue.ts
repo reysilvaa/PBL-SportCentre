@@ -1,29 +1,43 @@
 import Queue from 'bull';
 import { config } from '../index';
+import { KEYS, NAMESPACE } from './redis';
 
-// Prefix untuk semua queue
-const QUEUE_PREFIX = 'sportcenter';
-
-// Queue untuk membersihkan booking yang kedaluwarsa
-export const bookingCleanupQueue = new Queue('cleanup-expired-bookings', {
-  redis: config.redis.url,
-  prefix: QUEUE_PREFIX,
+const redisConfig = {
+  redis: {
+    url: config.redis.url,
+    password: config.redis.password || undefined,
+    retryStrategy: (times: number) => {
+      if (times > 20) {
+        console.error('Bull: Terlalu banyak percobaan koneksi Redis. Tidak akan mencoba lagi.');
+        return null;
+      }
+      
+      const delay = Math.min(Math.pow(2, times) * 50, 10000);
+      console.log(`Bull: Mencoba koneksi Redis ulang dalam ${delay}ms... (percobaan ke-${times + 1})`);
+      return delay;
+    },
+    maxRetriesPerRequest: 5
+  },
+  prefix: NAMESPACE.PREFIX,
   defaultJobOptions: {
     attempts: 3,
     removeOnComplete: true,
     removeOnFail: false,
-  },
+  }
+};
+
+// Queue untuk membersihkan booking yang kedaluwarsa
+export const bookingCleanupQueue = new Queue(NAMESPACE.CLEANUP, {
+  ...redisConfig,
+  // Gunakan key yang lengkap dengan namespace dan prefix
+  prefix: KEYS.QUEUE.CLEANUP.replace(`:${NAMESPACE.CLEANUP}`, '')
 });
 
 // Queue untuk memperbarui ketersediaan lapangan secara real-time
-export const fieldAvailabilityQueue = new Queue('field-availability-updates', {
-  redis: config.redis.url,
-  prefix: QUEUE_PREFIX,
-  defaultJobOptions: {
-    attempts: 3,
-    removeOnComplete: true,
-    removeOnFail: false,
-  },
+export const fieldAvailabilityQueue = new Queue(NAMESPACE.AVAILABILITY, {
+  ...redisConfig,
+  // Gunakan key yang lengkap dengan namespace dan prefix
+  prefix: KEYS.QUEUE.AVAILABILITY.replace(`:${NAMESPACE.AVAILABILITY}`, '')
 });
 
 // Log event untuk memantau queue
@@ -45,4 +59,4 @@ const setupQueueMonitoring = (queue: Queue.Queue) => {
 setupQueueMonitoring(bookingCleanupQueue);
 setupQueueMonitoring(fieldAvailabilityQueue);
 
-console.info('🚀 Bull Queue siap digunakan dengan Redis');
+console.info(`🚀 Bull Queue siap digunakan dengan Redis - Namespace: ${NAMESPACE.PREFIX}`);

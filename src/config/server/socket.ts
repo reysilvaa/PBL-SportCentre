@@ -3,6 +3,7 @@ import { Server as HttpServer } from 'http';
 import { Namespace } from 'socket.io';
 import { auth } from '../../middlewares/auth.middleware';
 import { corsConfig } from './cors';
+import { KEYS } from '../services/redis';
 
 // Definisikan konfigurasi Socket yang standar
 export const SOCKET_CONFIG = {
@@ -31,9 +32,13 @@ export function initializeSocketIO(server: HttpServer): SocketServer {
 
     console.log('Socket.IO server initialized');
     
-    // Buat namespace untuk ketersediaan lapangan
-    const fieldsNamespace = global.io.of('/fields');
+    // Buat namespace untuk ketersediaan lapangan - menggunakan namespace dari redis.ts
+    const fieldsNamespace = global.io.of(`/${KEYS.SOCKET.FIELDS}`);
     setupFieldsNamespace(fieldsNamespace);
+    
+    // Buat namespace untuk notifikasi - menggunakan namespace dari redis.ts
+    const notificationNamespace = global.io.of(`/${KEYS.SOCKET.NOTIFICATION}`);
+    setupNotificationNamespace(notificationNamespace);
   }
 
   return global.io;
@@ -45,7 +50,7 @@ export function initializeSocketIO(server: HttpServer): SocketServer {
  */
 export function setupFieldsNamespace(namespace: Namespace): void {
   namespace.on('connection', (socket) => {
-    console.log(`Client connected to fields namespace - ID: ${socket.id}`);
+    console.log(`Client connected to ${KEYS.SOCKET.FIELDS} namespace - ID: ${socket.id}`);
 
     // Event untuk bergabung ke room
     socket.on('join_room', ({ room, branchId }) => {
@@ -102,7 +107,53 @@ export function setupFieldsNamespace(namespace: Namespace): void {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log(`Client disconnected from fields namespace - ID: ${socket.id} - Reason: ${reason}`);
+      console.log(`Client disconnected from ${KEYS.SOCKET.FIELDS} namespace - ID: ${socket.id} - Reason: ${reason}`);
+    });
+  });
+}
+
+/**
+ * Setup namespace khusus untuk notifikasi
+ * @param namespace Socket.IO namespace
+ */
+export function setupNotificationNamespace(namespace: Namespace): void {
+  // Terapkan auth middleware ke namespace notifikasi
+  applyAuthMiddleware(namespace, false); // Parameter false: koneksi tanpa auth masih diizinkan
+  
+  namespace.on('connection', (socket) => {
+    console.log(`Client connected to ${KEYS.SOCKET.NOTIFICATION} namespace - ID: ${socket.id}`);
+    
+    // Mengambil user dari socket data jika ada
+    const userId = socket.data.user?.id;
+    if (userId) {
+      // Join ke room khusus user
+      const userRoom = `user:${userId}`;
+      socket.join(userRoom);
+      console.log(`User ${userId} joined their notification room: ${userRoom}`);
+    }
+
+    // Event untuk bergabung ke room notifikasi
+    socket.on('join_notification_room', ({ roomId, userId }) => {
+      if (roomId) {
+        socket.join(roomId);
+        console.log(`Client ${socket.id} joined notification room: ${roomId}, userId: ${userId || 'anonymous'}`);
+        
+        socket.emit('joined_notification_room', { room: roomId, success: true });
+      }
+    });
+
+    // Event untuk meninggalkan room notifikasi
+    socket.on('leave_notification_room', ({ roomId }) => {
+      if (roomId) {
+        socket.leave(roomId);
+        console.log(`Client ${socket.id} left notification room: ${roomId}`);
+        
+        socket.emit('left_notification_room', { room: roomId, success: true });
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log(`Client disconnected from ${KEYS.SOCKET.NOTIFICATION} namespace - ID: ${socket.id} - Reason: ${reason}`);
     });
   });
 }
@@ -115,7 +166,7 @@ export function setupFieldsNamespace(namespace: Namespace): void {
 export function emitFieldAvailabilityUpdate(data: any, date?: string): void {
   try {
     const io = getIO();
-    const fieldsNamespace = io.of('/fields');
+    const fieldsNamespace = io.of(`/${KEYS.SOCKET.FIELDS}`);
     
     // Emit ke room spesifik berdasarkan tanggal
     if (date) {
@@ -125,11 +176,46 @@ export function emitFieldAvailabilityUpdate(data: any, date?: string): void {
     } 
     // Emit ke semua client di namespace fields
     else {
-      console.log(`Emitting field availability update to all clients in fields namespace`);
+      console.log(`Emitting field availability update to all clients in ${KEYS.SOCKET.FIELDS} namespace`);
       fieldsNamespace.emit('fieldsAvailabilityUpdate', data);
     }
   } catch (error) {
     console.error('Failed to emit field availability update:', error);
+  }
+}
+
+/**
+ * Emit notifikasi ke user tertentu
+ * @param userId ID user yang akan menerima notifikasi
+ * @param notification Data notifikasi
+ */
+export function emitNotificationToUser(userId: string, notification: any): void {
+  try {
+    const io = getIO();
+    const notificationNamespace = io.of(`/${KEYS.SOCKET.NOTIFICATION}`);
+    
+    const roomId = `user:${userId}`;
+    console.log(`Emitting notification to user ${userId} in room: ${roomId}`);
+    notificationNamespace.to(roomId).emit('notification', notification);
+  } catch (error) {
+    console.error(`Failed to emit notification to user ${userId}:`, error);
+  }
+}
+
+/**
+ * Emit notifikasi ke room tertentu
+ * @param roomId ID room yang akan menerima notifikasi
+ * @param notification Data notifikasi
+ */
+export function emitNotificationToRoom(roomId: string, notification: any): void {
+  try {
+    const io = getIO();
+    const notificationNamespace = io.of(`/${KEYS.SOCKET.NOTIFICATION}`);
+    
+    console.log(`Emitting notification to room: ${roomId}, clients: ${getClientsInRoom(notificationNamespace, roomId)}`);
+    notificationNamespace.to(roomId).emit('notification', notification);
+  } catch (error) {
+    console.error(`Failed to emit notification to room ${roomId}:`, error);
   }
 }
 

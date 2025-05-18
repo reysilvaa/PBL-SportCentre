@@ -16,6 +16,10 @@ import { corsConfig } from './cors';
 export const setupMiddlewares = (app: Application): void => {
   // Middleware dasar
   app.use(cors(corsConfig()));
+  
+  // Tambahkan handler untuk preflight OPTIONS requests
+  app.options('*', cors(corsConfig()));
+  
   app.use(express.json({ limit: '10kb' }));
   app.use(express.urlencoded({ extended: true, limit: '10kb' }));
   app.use(cookieParser(config.cookieSecret));

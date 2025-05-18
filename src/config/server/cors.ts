@@ -9,6 +9,7 @@ export const corsConfig = (): CorsOptions => {
   // Tentukan origins yang diizinkan
   const allowedOrigins = [
     config.urls.frontend,
+    '*',
     'http://localhost:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3000',
@@ -45,6 +46,8 @@ export const corsConfig = (): CorsOptions => {
       'Accept',
       'Origin',
       'If-None-Match',
+      'Cache-Control',
+      'Pragma',
     ],
     exposedHeaders: ['Content-Length', 'Content-Type', 'ETag', 'Cache-Control'],
     maxAge: 86400,
@@ -62,7 +65,15 @@ export const getSimpleCorsOptions = (): CorsOptions => {
     origin: config.urls.frontend,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Cache-Control',
+      'Pragma'
+    ],
     maxAge: 86400,
   };
 };
