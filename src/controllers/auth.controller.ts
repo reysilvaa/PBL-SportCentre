@@ -98,19 +98,26 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { email, password } = result.data;
-
-    const user = await prisma.user.findUnique({
+    
+    let user = await prisma.user.findUnique({
       where: { email },
     });
+    
+    // Jika tidak ditemukan dengan email, coba cari berdasarkan nomor telepon
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: { phone: email }, // Gunakan field email untuk mencoba nomor telepon
+      });
+    }
 
     if (!user) {
-      res.status(401).json({ error: 'Email atau password salah' });
+      res.status(401).json({ error: 'Kredensial tidak valid' });
       return;
     }
 
     const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ error: 'Email atau password salah' });
+      res.status(401).json({ error: 'Kredensial tidak valid' });
       return;
     }
 

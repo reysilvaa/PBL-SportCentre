@@ -36,18 +36,20 @@ export const registerSchema = z.object({
     })
     .regex(/^(\+62|62|0)8[1-9][0-9]{6,9}$/, {
       message: 'Format nomor telepon tidak valid',
-    }),
+    })
+    .optional(),
   role: RoleEnum.optional().default(Role.USER),
 });
 
 // Skema validasi Zod untuk login
 export const loginSchema = z.object({
+  // Field ini bisa berisi email atau nomor telepon
   email: z
     .string({
-      message: 'Email wajib diisi',
+      message: 'Email atau nomor telepon wajib diisi',
     })
-    .email({
-      message: 'Format email tidak valid',
+    .min(1, {
+      message: 'Email atau nomor telepon tidak boleh kosong',
     }),
   password: z
     .string({

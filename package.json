@@ -18,12 +18,11 @@
     "check:unused-exports": "ts-unused-exports ./scripts/ts-unused-exports.config.js",
     "check:structure": "madge --circular --orphans --extensions ts src",
     "check:deps": "depcheck --config ./scripts/depcheck.config.js",
-    "clean:code": "npm run check:unused-exports && npm run lint && npm run check:structure && npm run check:deps",
-    "seed:faker": "ts-node prisma/factories/index.ts"
+    "clean:code": "npm run check:unused-exports && npm run lint && npm run check:structure && npm run check:deps"
   },
   "postinstall": "prisma generate",
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/factories/index.ts"
   },
   "keywords": [
     "PBL",
