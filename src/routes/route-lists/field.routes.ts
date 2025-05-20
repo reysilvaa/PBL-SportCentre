@@ -22,12 +22,10 @@ router.get('/:id', cacheMiddleware('field_detail', 300), getFieldById);
 
 // Admin routes - memerlukan autentikasi dan permission
 router.get(
-  '/admin',
+  '/branch/:id/fields',  // Perubahan endpoint menjadi lebih RESTful
   auth({
     allowedRoles: ['admin_cabang', 'owner_cabang', 'super_admin'],
-    attachBranch: true,
   }),
-  cacheMiddleware('admin_fields', 300),
   getBranchFields
 );
 

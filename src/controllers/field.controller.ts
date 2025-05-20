@@ -56,6 +56,8 @@ export const getBranchFields = async (req: Request, res: Response): Promise<void
   try {
     const { id } = req.params;
     const branchId = parseInt(id);
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
 
     if (isNaN(branchId)) {
       res.status(400).json({
@@ -76,6 +78,33 @@ export const getBranchFields = async (req: Request, res: Response): Promise<void
         message: 'Cabang tidak ditemukan',
       });
       return;
+    }
+
+    // Periksa hak akses berdasarkan peran
+    if (userRole !== Role.SUPER_ADMIN) {
+      let hasAccess = false;
+      
+      if (userRole === Role.OWNER_CABANG) {
+        // Owner cabang hanya bisa melihat cabang miliknya
+        hasAccess = branch.ownerId === userId;
+      } else if (userRole === Role.ADMIN_CABANG) {
+        // Admin cabang hanya bisa melihat cabang yang dia kelola
+        const branchAdmin = await prisma.branchAdmin.findFirst({
+          where: {
+            branchId,
+            userId
+          }
+        });
+        hasAccess = !!branchAdmin;
+      }
+      
+      if (!hasAccess) {
+        res.status(403).json({
+          status: false,
+          message: 'Anda tidak memiliki akses ke cabang ini'
+        });
+        return;
+      }
     }
 
     // Dapatkan semua lapangan untuk cabang ini
@@ -228,15 +257,8 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     const fieldId = parseInt(id);
 
     if (isNaN(fieldId)) {
-      // Clean up uploaded file if exists
-      if (req.file?.path) {
-        await cleanupUploadedFile(req.file.path);
-      }
-
-      res.status(400).json({
-        status: false,
-        message: 'Invalid field ID',
-      });
+      if (req.file?.path) await cleanupUploadedFile(req.file.path);
+      res.status(400).json({ status: false, message: 'Invalid field ID' });
       return;
     }
 
@@ -244,111 +266,85 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     const branchId = req.userBranch?.id;
 
     if (!branchId) {
-      // Clean up uploaded file if exists
-      if (req.file?.path) {
-        await cleanupUploadedFile(req.file.path);
-      }
-
-      res.status(400).json({
-        status: false,
-        message: 'Branch ID is required',
-      });
+      if (req.file?.path) await cleanupUploadedFile(req.file.path);
+      res.status(400).json({ status: false, message: 'Branch ID is required' });
       return;
     }
 
     // Super admin bisa mengakses dan mengubah lapangan manapun
-    const whereCondition = req.user?.role === 'super_admin' ? { id: fieldId } : { id: fieldId, branchId };
+    const whereCondition = req.user?.role === 'super_admin' 
+      ? { id: fieldId } 
+      : { id: fieldId, branchId };
 
-    // Check if field exists and belongs to the user's branch
+    // Check existing field
     const existingField = await prisma.field.findFirst({
       where: whereCondition,
-      include: {
-        branch: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      include: { branch: { select: { id: true, name: true } } },
     });
 
     if (!existingField) {
-      // Clean up uploaded file if exists
-      if (req.file?.path) {
-        await cleanupUploadedFile(req.file.path);
-      }
-
-      res.status(404).json({
-        status: false,
-        message: 'Lapangan tidak ditemukan atau tidak berada dalam cabang Anda',
+      if (req.file?.path) await cleanupUploadedFile(req.file.path);
+      res.status(404).json({ 
+        status: false, 
+        message: 'Lapangan tidak ditemukan atau tidak berada dalam cabang Anda' 
       });
       return;
     }
 
     // Persiapkan data untuk update
-    const updateData = { ...req.body };
+    const updateData = { 
+      ...req.body,
+      // Tambahkan imageUrl jika ada file baru
+      ...(req.file?.path && { imageUrl: req.file.path })
+    };
 
-    // Parse typeId if it exists
-    if (updateData.typeId) {
-      updateData.typeId = parseInt(updateData.typeId);
-    }
+    // Parse numeric fields
+    if (updateData.typeId) updateData.typeId = parseInt(updateData.typeId);
+    if (updateData.priceDay) updateData.priceDay = parseFloat(updateData.priceDay);
+    if (updateData.priceNight) updateData.priceNight = parseFloat(updateData.priceNight);
 
-    // Reguler user tidak bisa mengubah branchId
+    // Handle branchId for non-super_admin
     if (req.user?.role !== 'super_admin') {
-      // Ensure branchId is not changed to another branch
       if (updateData.branchId && parseInt(updateData.branchId) !== branchId) {
-        // Clean up uploaded file if exists
-        if (req.file?.path) {
-          await cleanupUploadedFile(req.file.path);
-        }
-
-        res.status(403).json({
-          status: false,
-          message: 'Forbidden: Tidak dapat memindahkan lapangan ke cabang lain',
+        if (req.file?.path) await cleanupUploadedFile(req.file.path);
+        res.status(403).json({ 
+          status: false, 
+          message: 'Forbidden: Tidak dapat memindahkan lapangan ke cabang lain' 
         });
         return;
       }
-
-      // Force branchId to be user's branch from middleware
       updateData.branchId = branchId;
-    }
-
-    // Jika ada file baru yang diupload
-    if (req.file?.path) {
-      updateData.imageUrl = req.file.path;
-
-      // Hapus gambar lama jika ada
-      if (existingField.imageUrl) {
-        await cleanupUploadedFile(existingField.imageUrl);
-      }
     }
 
     // Validasi data dengan Zod
     const result = updateFieldSchema.safeParse(updateData);
 
     if (!result.success) {
-      // Clean up uploaded file if exists
-      if (req.file?.path) {
-        await cleanupUploadedFile(req.file.path);
-      }
-
-      res.status(400).json({
-        status: false,
+      if (req.file?.path) await cleanupUploadedFile(req.file.path);
+      res.status(400).json({ 
+        status: false, 
         message: 'Validasi gagal',
-        errors: result.error.format(),
+        errors: result.error.format() 
       });
       return;
     }
 
+    // Hapus gambar lama jika ada gambar baru
+    if (req.file?.path && existingField.imageUrl) {
+      await cleanupUploadedFile(existingField.imageUrl);
+    }
+
     const updatedField = await prisma.field.update({
       where: { id: fieldId },
-      data: result.data,
+      data: {
+        ...result.data,
+        // Pertahankan gambar lama jika tidak ada gambar baru
+        imageUrl: req.file?.path || existingField.imageUrl
+      },
     });
 
-    // Hapus cache yang relevan
+    // Hapus cache dan log activity
     await invalidateFieldCache();
-
-    // Log activity
     await prisma.activityLog.create({
       data: {
         userId: req.user!.id,
@@ -365,15 +361,10 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     });
   } catch (error) {
     console.error('Error updating field:', error);
-
-    // Clean up uploaded file if exists
-    if (req.file?.path) {
-      await cleanupUploadedFile(req.file.path);
-    }
-
-    res.status(500).json({
-      status: false,
-      message: 'Gagal memperbarui lapangan',
+    if (req.file?.path) await cleanupUploadedFile(req.file.path);
+    res.status(500).json({ 
+      status: false, 
+      message: 'Gagal memperbarui lapangan' 
     });
   }
 };

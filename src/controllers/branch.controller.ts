@@ -447,7 +447,9 @@ export const getUserBranches = async (req: User, res: Response): Promise<void> =
     const skip = (pageNumber - 1) * limitNumber;
 
     // Buat kondisi pencarian
-    let whereCondition: any = {};
+    let whereCondition: any = {
+      status: 'active' // Hanya ambil cabang yang aktif
+    };
     
     // Filter berdasarkan peran pengguna
     if (userRole === Role.OWNER_CABANG) {
