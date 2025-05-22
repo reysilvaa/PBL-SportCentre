@@ -22,6 +22,14 @@ router.get(
   userController.getUserBranchAdmins
 );
 
+// Mendapatkan cabang untuk admin berdasarkan ID
+router.get(
+  '/:id/branches',
+  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  cacheMiddleware('user_branches', 60),
+  userController.getUserBranches
+);
+
 // Mendapatkan profil pengguna (semua role, tapi hanya milik sendiri kecuali super admin)
 router.get('/profile/:id?', auth(), cacheMiddleware('user_profile', 300), userController.getUserProfile);
 

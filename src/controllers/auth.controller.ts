@@ -326,7 +326,7 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
 
       // Ambil data user
       const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
+        where: { id: decoded.id }
       });
 
       if (!user) {
@@ -334,14 +334,34 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
         return;
       }
 
-      const { password: _, ...userWithoutPassword } = user;
+      // Transformasi data untuk response
+      const userWithoutPassword: any = { ...user };
+      delete userWithoutPassword.password;
+
+      // Jika admin cabang, ambil branches dengan query terpisah
+      if (decoded.role === 'admin_cabang') {
+        const branchAdmins = await prisma.branchAdmin.findMany({
+          where: { userId: decoded.id },
+          include: {
+            branch: true
+          }
+        });
+
+        // Tambahkan data branches ke user
+        userWithoutPassword.branches = branchAdmins.map(admin => ({
+          userId: user.id,
+          branchId: admin.branchId,
+          branch: admin.branch
+        }));
+      }
 
       res.json({
         user: userWithoutPassword,
         token, // Mengembalikan token untuk kompatibilitas dengan client lama
       });
-    } catch {
+    } catch (error) {
       // Token tidak valid
+      console.error('Token verification error:', error);
       clearAuthCookie(res);
       clearRefreshTokenCookie(res);
       res.status(401).json({ error: 'Token tidak valid atau sudah expired' });

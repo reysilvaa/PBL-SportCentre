@@ -685,3 +685,62 @@ export const getUserBranchAdmins = async (req: AuthUser, res: Response): Promise
     });
   }
 };
+
+/**
+ * Mendapatkan cabang untuk admin berdasarkan ID user
+ */
+export const getUserBranches = async (req: AuthUser, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id);
+
+    if (isNaN(userId)) {
+      res.status(400).json({
+        status: false,
+        message: 'ID user tidak valid',
+      });
+      return;
+    }
+
+    // Cek apakah user ada dan role-nya admin_cabang
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        status: false,
+        message: 'User tidak ditemukan',
+      });
+      return;
+    }
+
+    if (user.role !== 'admin_cabang') {
+      res.status(400).json({
+        status: false,
+        message: 'User bukan admin cabang',
+      });
+      return;
+    }
+
+    // Ambil data branch admin
+    const branchAdmins = await prisma.branchAdmin.findMany({
+      where: { userId },
+      include: {
+        branch: true,
+      },
+    });
+
+    res.status(200).json({
+      status: true,
+      message: 'Data cabang berhasil diambil',
+      data: branchAdmins,
+    });
+  } catch (error) {
+    console.error('Error getting user branches:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Terjadi kesalahan server internal',
+    });
+  }
+};
