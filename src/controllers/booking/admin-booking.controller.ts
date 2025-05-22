@@ -148,7 +148,9 @@ export const updateBranchBookingStatus = async (req: User, res: Response): Promi
 export const createManualBooking = async (req: User, res: Response): Promise<void> => {
   try {
     const branchId = req.userBranch?.id;
-    const { fieldId, userId, bookingDate, startTime, endTime, paymentStatus } = req.body;
+    const { fieldId, userId, bookingDate, startTime, endTime } = req.body;
+    const paymentStatus = PaymentStatus.PAID;
+    const paymentMethod = PaymentMethod.CASH;
 
     if (!branchId) {
       return sendErrorResponse(res, 400, 'Branch ID is required');
@@ -185,15 +187,22 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       Number(field.priceNight)
     );
 
-    // Create booking and payment records
+  
+    const bookingUserId = userId ? parseInt(userId) : req.user?.id;
+
+    if (!bookingUserId) {
+      return sendErrorResponse(res, 400, 'User ID is required');
+    }
+
+    // Create booking and payment records - selalu set PAID untuk admin cabang
     const { booking, payment } = await createBookingWithPayment(
-      parseInt(userId),
+      bookingUserId,
       parseInt(fieldId),
       bookingDateTime,
       startDateTime,
       endDateTime,
-      paymentStatus ? (paymentStatus as PaymentStatus) : PaymentStatus.PAID,
-      PaymentMethod.CASH,
+      paymentStatus,
+      paymentMethod,
       totalPrice
     );
 
@@ -201,11 +210,11 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
     emitBookingEvents('booking:created', { booking, payment });
 
     // Invalidate cache
-    await invalidateBookingCache(booking.id, parseInt(fieldId), whereBranchCondition, parseInt(userId));
+    await invalidateBookingCache(booking.id, parseInt(fieldId), whereBranchCondition, bookingUserId);
 
     res.status(201).json({
       status: true,
-      message: 'Booking manual berhasil dibuat',
+      message: 'Booking manual berhasil dibuat dengan pembayaran cash',
       data: {
         booking,
         payment,
