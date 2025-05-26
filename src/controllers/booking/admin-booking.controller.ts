@@ -21,30 +21,127 @@ import { PaymentMethod, PaymentStatus } from '../../types';
 export const getBranchBookings = async (req: User, res: Response): Promise<void> => {
   try {
     // Dari middleware auth kita sudah punya branchId di req.userBranch
-    const branchId = req.userBranch?.id;
+    const branchIdFromAuth = req.userBranch?.id;
+    const { status, startDate, endDate, search } = req.query;
 
-    if (!branchId) {
+    // Ambil branchId dari parameter URL jika ada
+    const branchIdFromParams = req.params.branchId ? parseInt(req.params.branchId) : null;
+    
+    console.log('Auth branch ID:', branchIdFromAuth);
+    console.log('Params branch ID:', branchIdFromParams);
+
+    if (!branchIdFromAuth) {
       return sendErrorResponse(res, 400, 'Branch ID is required');
     }
 
-    // Super admin dapat melihat booking dari branch tertentu
-    const whereCondition =
-      branchId === 0 && req.query.branchId
-        ? { field: { branchId: parseInt(req.query.branchId as string) } }
-        : { field: { branchId } };
+    // Super admin dapat mengakses semua cabang
+    // Admin cabang hanya dapat mengakses cabang yang ditugaskan
+    let branchId = branchIdFromAuth;
+    
+    // Jika super admin (branchId = 0) dan ada parameter branchId, gunakan parameter
+    if (branchIdFromAuth === 0 && branchIdFromParams) {
+      branchId = branchIdFromParams;
+    } 
+    // Jika admin cabang, periksa apakah dia memiliki akses ke cabang yang diminta
+    else if (branchIdFromParams && branchIdFromParams !== branchIdFromAuth) {
+      // Periksa apakah admin cabang ini juga memiliki akses ke cabang yang diminta
+      const hasAccess = await prisma.branchAdmin.findFirst({
+        where: {
+          userId: req.user?.id,
+          branchId: branchIdFromParams
+        }
+      });
+      
+      if (hasAccess) {
+        branchId = branchIdFromParams;
+      } else {
+        console.log(`Admin cabang ${req.user?.id} tidak memiliki akses ke cabang ${branchIdFromParams}`);
+        // Tetap gunakan cabang dari auth jika tidak memiliki akses
+      }
+    }
+
+    console.log('Fetching bookings with filters:', {
+      branchId,
+      status,
+      startDate,
+      endDate,
+      search
+    });
+
+    // Build base where condition dengan branch
+    let whereCondition: any = { field: { branchId } };
+
+    console.log('Where condition after branch filter:', JSON.stringify(whereCondition));
+
+    // Tambahkan filter status jika ada
+    if (status) {
+      whereCondition = {
+        ...whereCondition,
+        payment: {
+          status: status as string
+        }
+      };
+    }
+
+    // Tambahkan filter tanggal jika ada
+    if (startDate && endDate) {
+      whereCondition = {
+        ...whereCondition,
+        bookingDate: {
+          gte: new Date(startDate as string),
+          lte: new Date(endDate as string)
+        }
+      };
+    } else if (startDate) {
+      whereCondition = {
+        ...whereCondition,
+        bookingDate: {
+          gte: new Date(startDate as string)
+        }
+      };
+    } else if (endDate) {
+      whereCondition = {
+        ...whereCondition,
+        bookingDate: {
+          lte: new Date(endDate as string)
+        }
+      };
+    }
 
     // Get all bookings for fields in this branch
     const bookings = await prisma.booking.findMany({
       where: whereCondition,
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
-        field: true,
+        field: { 
+          include: { 
+            branch: {
+              select: { id: true, name: true, location: true, imageUrl: true }
+            }
+          } 
+        },
         payment: true,
       },
       orderBy: { bookingDate: 'desc' },
     });
 
-    res.status(200).json(bookings);
+    console.log(`Found ${bookings.length} bookings for branch ${branchId}`);
+    if (bookings.length > 0) {
+      console.log('Sample booking field data:', JSON.stringify(bookings[0].field));
+    }
+
+    // Filter by search term jika diperlukan (karena Prisma tidak mendukung OR untuk relasi)
+    let filteredBookings = bookings;
+    if (search) {
+      const searchTerm = (search as string).toLowerCase();
+      filteredBookings = bookings.filter(booking => 
+        booking.user?.name?.toLowerCase().includes(searchTerm) ||
+        booking.field?.name?.toLowerCase().includes(searchTerm) ||
+        booking.id.toString().includes(searchTerm)
+      );
+    }
+
+    res.status(200).json(filteredBookings);
   } catch (error) {
     console.error('Error getting branch bookings:', error);
     sendErrorResponse(res, 500, 'Internal Server Error');
@@ -68,7 +165,7 @@ export const getBranchBookingById = async (req: User, res: Response): Promise<vo
       where: whereCondition,
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
-        field: true,
+        field: { include: { branch: true } },
         payment: true,
       },
     });
@@ -104,7 +201,7 @@ export const updateBranchBookingStatus = async (req: User, res: Response): Promi
       include: {
         payment: true,
         user: { select: { id: true } },
-        field: true,
+        field: { include: { branch: true } },
       },
     });
 

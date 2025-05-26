@@ -29,6 +29,7 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
       where.field = {
         branchId: parseInt(branchId as string),
       };
+      console.log('Adding branch filter:', where.field);
     }
 
     if (status) {
