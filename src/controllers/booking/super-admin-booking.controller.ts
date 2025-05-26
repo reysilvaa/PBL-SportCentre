@@ -42,7 +42,7 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
       where,
       include: {
         user: { select: { id: true, name: true, email: true } },
-        field: { include: { branch: true } },
+        field: { include: { branch: true, type: true } },
         payment: true,
       },
       orderBy: { bookingDate: 'desc' },

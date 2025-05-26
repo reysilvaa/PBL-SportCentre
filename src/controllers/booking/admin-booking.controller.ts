@@ -165,7 +165,7 @@ export const getBranchBookingById = async (req: User, res: Response): Promise<vo
       where: whereCondition,
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
-        field: { include: { branch: true } },
+        field: { include: { branch: true, type: true } },
         payment: true,
       },
     });
