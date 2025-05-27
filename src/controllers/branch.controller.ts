@@ -16,7 +16,7 @@ import { BranchStatus, Role } from '../types';
 export const getBranches = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { q, page = '1', limit = '10' } = req.query;
+    const { q, page = '1', limit = '100' } = req.query;
 
     if (id) {
       // Jika ID disediakan, ambil cabang spesifik
@@ -598,3 +598,240 @@ export const getBranchAdmins = async (req: Request, res: Response): Promise<void
     });
   }
 };
+
+/**
+ * Mendapatkan admin cabang berdasarkan ID pengguna
+ */
+export const getBranchAdminById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const adminId = parseInt(id);
+
+    if (isNaN(adminId)) {
+      res.status(400).json({
+        status: false,
+        message: 'Invalid request data',
+      });
+      return;
+    }
+
+    // Periksa apakah cabang ada
+    const admin = await prisma.branch.findUnique({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      res.status(404).json({
+        status: false,
+        message: 'Data admin tidak ditemukan',
+      });
+      return;
+    }
+
+    // Dapatkan admin cabang berdasarkan branchId dan userId
+    const branchAdmin = await prisma.branchAdmin.findFirst({
+      where: {
+        userId: adminId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!branchAdmin) {
+      res.status(404).json({
+        status: false,
+        message: 'Admin cabang tidak ditemukan',
+      });
+      return;
+    }
+
+    res.status(200).json(branchAdmin);
+  } catch (error) {
+    console.error('Error getting branch admin by ID:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
+}
+
+/**
+ * Menambahkan Cabang Untuk Admin
+ */
+export const addBranchAdmin = async (req: User, res: Response): Promise<void> => {
+  try {
+    const { id, userId } = req.params;
+    const branchId = parseInt(id);
+    const parsedUserId = parseInt(userId);
+
+    if (isNaN(branchId) || isNaN(parsedUserId)) {
+      res.status(400).json({
+        status: false,
+        message: 'Invalid request data',
+      });
+      return;
+    }
+
+    // Periksa apakah cabang ada
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        status: false,
+        message: 'Cabang tidak ditemukan',
+      });
+      return;
+    }
+
+    // Periksa apakah pengguna yang dimaksud ada
+    const user = await prisma.user.findUnique({
+      where: { id: parsedUserId },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        status: false,
+        message: 'Pengguna tidak ditemukan',
+      });
+      return;
+    }
+
+    // Cek apakah pengguna sudah menjadi admin cabang
+    const existingAdmin = await prisma.branchAdmin.findFirst({
+      where: {
+        branchId,
+        userId: parsedUserId,
+      },
+    });
+
+    if (existingAdmin) {
+      res.status(400).json({
+        status: false,
+        message: `Pengguna sudah menjadi admin cabang ${branchId}`,
+      });
+      return;
+    }
+
+    // Tambahkan admin cabang baru
+    await prisma.branchAdmin.upsert({
+      where: {
+        branchId_userId: {
+          branchId,
+          userId: parsedUserId,
+        },
+      },
+      create: {
+        branchId,
+        userId: parsedUserId,
+      },
+      update: {},
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'ADD_BRANCH_ADMIN',
+        details: `Menambahkan ${user.name} sebagai admin cabang "${branch.name}"`,
+        ipAddress: req.ip || undefined,
+      },
+    });
+
+    res.status(200).json({
+      status: true,
+      message: `Berhasil menambahkan ${user.name} sebagai admin cabang "${branch.name}"`,
+    });
+  } catch (error) {
+    console.error('Error updating branch admin:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
+}
+
+/**
+ * Hapus admin cabang
+ */
+export const deleteBranchAdmin = async (req: User, res: Response): Promise<void> => {
+  try {
+    const { id, userId } = req.params;
+    const branchId = parseInt(id);
+    const parsedUserId = parseInt(userId);
+
+    if (isNaN(branchId) || isNaN(parsedUserId)) {
+      res.status(400).json({
+        status: false,
+        message: 'Invalid request data',
+      });
+      return;
+    }
+
+    // Periksa apakah cabang ada
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        status: false,
+        message: 'Cabang tidak ditemukan',
+      });
+      return;
+    }
+
+    // Periksa apakah pengguna yang dimaksud ada
+    const user = await prisma.user.findUnique({
+      where: { id: parsedUserId },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        status: false,
+        message: 'Pengguna tidak ditemukan',
+      });
+      return;
+    }
+
+    // Hapus admin cabang
+    await prisma.branchAdmin.delete({
+      where: {
+        branchId_userId: {
+          branchId,
+          userId: parsedUserId,
+        },
+      },
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'REMOVE_BRANCH_ADMIN',
+        details: `Menghapus ${user.name} sebagai admin cabang "${branch.name}"`,
+        ipAddress: req.ip || undefined,
+      },
+    });
+
+    res.status(200).json({
+      status: true,
+      message: `Berhasil menghapus ${user.name} sebagai admin cabang "${branch.name}"`,
+    });
+  } catch (error) {
+    console.error('Error deleting branch admin:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
+}
