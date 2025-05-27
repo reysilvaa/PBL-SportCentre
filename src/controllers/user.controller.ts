@@ -243,7 +243,7 @@ export const getUsers = async (req: AuthUser, res: Response): Promise<void> => {
 
 export const createUser = async (req: AuthUser, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role, phone } = req.body;
+    const { name, email, password, role, phone, branchId } = req.body;
 
     // Validasi data input
     if (!name || !email || !password) {
@@ -300,13 +300,11 @@ export const createUser = async (req: AuthUser, res: Response): Promise<void> =>
 
     // Jika admin cabang membuat user dan role adalah admin_cabang, buat relasi dengan cabang
     if (
-      (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') &&
-      role === 'admin_cabang' &&
-      req.userBranch?.id
+      (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') && role === 'admin_cabang' && branchId
     ) {
       await prisma.branchAdmin.create({
         data: {
-          branchId: req.userBranch.id,
+          branchId: branchId,
           userId: newUser.id,
         },
       });
@@ -744,3 +742,54 @@ export const getUserBranches = async (req: AuthUser, res: Response): Promise<voi
     });
   }
 };
+
+/**
+ * Mendapatkan profil admin berdasarkan ID
+ */
+export const getAdminProfile = async (req: AuthUser, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id);
+
+    if (isNaN(userId)) {
+      res.status(400).json({
+        status: false,
+        message: 'ID user tidak valid',
+      });
+      return;
+    }
+
+    // Cek apakah user ada
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        status: false,
+        message: 'User tidak ditemukan',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: true,
+      message: 'Profil user berhasil didapatkan',
+      data: user,
+    });
+  } catch (error) {
+    console.error('Error fetching user profile by ID:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Terjadi kesalahan server internal',
+    });
+  }
+}
