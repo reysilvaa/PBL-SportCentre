@@ -3,7 +3,7 @@ import { jest } from '@jest/globals';
 // Mock untuk middleware autentikasi
 export const mockAuthMiddleware = () => {
   jest.mock('../../src/middlewares/auth.middleware', () => ({
-    authMiddleware: jest.fn().mockImplementation((token: any) => {
+    authMiddleware: jest.fn().mockImplementation((token: any): any => {
       if (token === 'valid_user_token') {
         return { userId: 1, role: 'user' };
       } else if (token === 'valid_admin_token') {
@@ -11,8 +11,24 @@ export const mockAuthMiddleware = () => {
       }
       return null;
     }),
-    authMiddlewareExpress: jest.fn().mockImplementation((req: any, res: any, next: any) => {
+    authMiddlewareExpress: jest.fn().mockImplementation((req: any, res: any, next: any): void => {
       req.user = { id: 1, role: 'user' };
+      next();
+    }),
+    userAuth: () => jest.fn().mockImplementation((req: any, res: any, next: any): void => {
+      req.user = { id: 1, role: 'user' };
+      next();
+    }),
+    branchAdminAuth: () => jest.fn().mockImplementation((req: any, res: any, next: any): void => {
+      req.user = { id: 2, role: 'branch_admin' };
+      next();
+    }),
+    superAdminAuth: () => jest.fn().mockImplementation((req: any, res: any, next: any): void => {
+      req.user = { id: 3, role: 'super_admin' };
+      next();
+    }),
+    ownerAuth: () => jest.fn().mockImplementation((req: any, res: any, next: any): void => {
+      req.user = { id: 4, role: 'owner' };
       next();
     }),
   }));
@@ -25,11 +41,17 @@ export const mockAuthUtils = () => {
     setCookieToken: jest.fn(),
     clearCookieToken: jest.fn(),
     generateToken: jest.fn().mockReturnValue('valid_user_token'),
-    verifyToken: jest.fn().mockImplementation((token: any) => {
+    verifyToken: jest.fn().mockImplementation((token: any): any => {
       if (token === 'valid_user_token') {
         return { userId: 1, role: 'user' };
       } else if (token === 'valid_admin_token') {
         return { userId: 2, role: 'admin' };
+      }
+      return null;
+    }),
+    getCookie: jest.fn().mockImplementation((cookies: any, name: string) => {
+      if (name === 'auth_token') {
+        return 'valid_user_token';
       }
       return null;
     }),
@@ -40,7 +62,7 @@ export const mockAuthUtils = () => {
 export const mockCookieParser = () => {
   jest.mock('cookie-parser', () => {
     return jest.fn().mockImplementation(() => {
-      return (req: any, res: any, next: any) => {
+      return (req: any, res: any, next: any): void => {
         req.cookies = { auth_token: 'valid_user_token' };
         next();
       };
