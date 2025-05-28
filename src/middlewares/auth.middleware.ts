@@ -126,16 +126,6 @@ export const auth = (options: AuthOptions = {}) => {
       // BAGIAN 3: SUPER ADMIN BYPASS - Dari permission.middleware.ts
       // Super admin mendapatkan akses istimewa jika diperlukan
       if (req.user.role === Role.SUPER_ADMIN && options.attachBranch) {
-        // Berikan branch dummy untuk super admin
-        req.userBranch = {
-          id: 0, // Id 0 untuk menandakan akses super admin
-          name: 'All Branches',
-          location: 'Global',
-          ownerId: 0,
-          status: BranchStatus.ACTIVE,
-          createdAt: new Date(),
-        } as BranchType;
-
         // Jika super admin, skip pemeriksaan cabang dan lanjut
         if (!options.ownerOnly && !options.customCheck) {
           next();

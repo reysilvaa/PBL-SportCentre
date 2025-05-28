@@ -6,7 +6,6 @@
  */
 
 import { deleteCachedDataByPattern } from '../cache.utils';
-import redisClient from '../../config/services/redis';
 
 /**
  * Fungsi pembantu untuk menampilkan log invalidasi
@@ -329,8 +328,8 @@ export const invalidateAllCache = async (): Promise<boolean> => {
   try {
     console.log('[CACHE] Invalidating all system cache');
 
-    // Lebih efisien menggunakan flushAll Redis daripada menghapus pattern
-    await redisClient.flushAll();
+    // Menggunakan pattern wildcard untuk menghapus semua cache
+    await deleteCachedDataByPattern('*');
 
     console.log('[CACHE] Successfully invalidated all system cache');
     return true;

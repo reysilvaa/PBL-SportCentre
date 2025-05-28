@@ -4,7 +4,7 @@ import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field } from '../
 import { isFieldAvailable } from './checkAvailability.utils';
 import { bookingCleanupQueue } from '../../config/services/queue';
 import { formatDateToWIB } from '../variables/timezone.utils';
-import midtrans from '../../config/services/midtrans';
+import { midtrans } from '../../config/services/midtrans';
 import { emitBookingEvents } from '../../socket-handlers/booking.socket';
 
 /**
@@ -50,7 +50,7 @@ export const validateBookingTime = async (
   if (startTime >= endTime) {
     return {
       valid: false,
-      message: 'End time must be after start time',
+      message: 'Waktu selesai harus setelah waktu mulai',
       details: {
         startTime: formatDateToWIB(startTime),
         endTime: formatDateToWIB(endTime),
@@ -70,7 +70,7 @@ export const validateBookingTime = async (
   if (!isAvailable) {
     return {
       valid: false,
-      message: 'Field is already booked for the selected time slot',
+      message: 'Lapangan sudah dibooking untuk waktu yang dipilih',
       details: {
         fieldId,
         date: formatDateToWIB(bookingDate),
@@ -153,7 +153,8 @@ export const processMidtransPayment = async (
   const expiryMinutes = 5;
 
   // Create Midtrans transaction with expiry
-  const transaction = await midtrans().createTransaction({
+  const midtransClient = midtrans();
+  const transaction = await midtransClient.createTransaction({
     transaction_details: {
       order_id: `PAY-${payment.id}-${Date.now()}`,
       gross_amount: totalPrice,

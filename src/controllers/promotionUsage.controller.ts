@@ -169,7 +169,7 @@ export const createPromotionUsage = async (req: User, res: Response): Promise<vo
     });
   } catch (error) {
     console.error('Error creating promotion usage:', error);
-    res.status(400).json({
+    res.status(500).json({
       status: false,
       message: 'Gagal menggunakan promo',
     });
@@ -235,7 +235,7 @@ export const deletePromotionUsage = async (req: User, res: Response) => {
     });
   } catch (error) {
     console.error('Error deleting promotion usage:', error);
-    res.status(400).json({
+    res.status(500).json({
       status: false,
       message: 'Gagal menghapus penggunaan promo',
     });

@@ -18,7 +18,7 @@ const redisConfig = {
     },
     maxRetriesPerRequest: 5
   },
-  prefix: NAMESPACE.PREFIX,
+  prefix: NAMESPACE.PREFIX || 'sportcenter',
   defaultJobOptions: {
     attempts: 3,
     removeOnComplete: true,
@@ -27,17 +27,17 @@ const redisConfig = {
 };
 
 // Queue untuk membersihkan booking yang kedaluwarsa
-export const bookingCleanupQueue = new Queue(NAMESPACE.CLEANUP, {
+export const bookingCleanupQueue = new Queue(NAMESPACE.CLEANUP || 'cleanup-expired-bookings', {
   ...redisConfig,
   // Gunakan key yang lengkap dengan namespace dan prefix
-  prefix: KEYS.QUEUE.CLEANUP.replace(`:${NAMESPACE.CLEANUP}`, '')
+  prefix: KEYS?.QUEUE?.CLEANUP?.replace(`:${NAMESPACE.CLEANUP || 'cleanup-expired-bookings'}`, '') || 'sportcenter'
 });
 
 // Queue untuk memperbarui ketersediaan lapangan secara real-time
-export const fieldAvailabilityQueue = new Queue(NAMESPACE.AVAILABILITY, {
+export const fieldAvailabilityQueue = new Queue(NAMESPACE.AVAILABILITY || 'field-availability-updates', {
   ...redisConfig,
   // Gunakan key yang lengkap dengan namespace dan prefix
-  prefix: KEYS.QUEUE.AVAILABILITY.replace(`:${NAMESPACE.AVAILABILITY}`, '')
+  prefix: KEYS?.QUEUE?.AVAILABILITY?.replace(`:${NAMESPACE.AVAILABILITY || 'field-availability-updates'}`, '') || 'sportcenter'
 });
 
 // Log event untuk memantau queue
@@ -59,4 +59,4 @@ const setupQueueMonitoring = (queue: Queue.Queue) => {
 setupQueueMonitoring(bookingCleanupQueue);
 setupQueueMonitoring(fieldAvailabilityQueue);
 
-console.info(`🚀 Bull Queue siap digunakan dengan Redis - Namespace: ${NAMESPACE.PREFIX}`);
+console.info(`🚀 Bull Queue siap digunakan dengan Redis - Namespace: ${NAMESPACE.PREFIX || 'sportcenter'}`);

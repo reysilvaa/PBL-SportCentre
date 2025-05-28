@@ -212,7 +212,7 @@ export const getBookingById = async (req: User, res: Response): Promise<void> =>
     const bookingId = parseInt(id);
 
     if (isNaN(bookingId)) {
-      return sendErrorResponse(res, 400, 'Invalid booking ID');
+      return sendErrorResponse(res, 400, 'ID booking tidak valid');
     }
 
     const booking = await prisma.booking.findUnique({
@@ -232,13 +232,13 @@ export const getBookingById = async (req: User, res: Response): Promise<void> =>
     });
 
     if (!booking) {
-      return sendErrorResponse(res, 404, 'Booking not found');
+      return sendErrorResponse(res, 404, 'Booking tidak ditemukan');
     }
 
     res.status(200).json(booking);
   } catch (error) {
     console.error('Error getting booking by ID:', error);
-    sendErrorResponse(res, 500, 'Internal Server Error');
+    sendErrorResponse(res, 500, 'Kesalahan Server Internal');
   }
 };
 
