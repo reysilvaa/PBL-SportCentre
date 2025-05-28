@@ -3,8 +3,7 @@ import type { Config } from '@jest/types';
 const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
-  testMatch: ['**/*.test.ts', '**/*.spec.ts'],
+  roots: ['<rootDir>'],
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
@@ -12,10 +11,11 @@ const config: Config.InitialOptions = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  collectCoverage: true,
-  coverageDirectory: 'coverage',
-  coveragePathIgnorePatterns: ['/node_modules/', '/dist/'],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
+  coverageDirectory: './coverage',
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  verbose: true,
+  testTimeout: 30000,
 };
 
 export default config; 
