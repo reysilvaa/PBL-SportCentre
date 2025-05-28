@@ -38,6 +38,17 @@ export const redisClient = {
   exists: jest.fn().mockResolvedValue(0),
   flushall: jest.fn().mockResolvedValue('OK'),
   keys: jest.fn().mockResolvedValue([]),
+  quit: jest.fn().mockResolvedValue('OK'),
+  disconnect: jest.fn().mockResolvedValue(undefined),
+  connect: jest.fn().mockResolvedValue(undefined),
+  isOpen: true,
+  on: jest.fn().mockImplementation((event, callback) => {
+    // Simulasi event handler terdaftar
+    if (event === 'ready') {
+      // callback(); // Uncomment jika perlu menjalankan callback saat pengujian
+    }
+    return redisClient;
+  }),
 };
 
 // Mock Redis connection
@@ -55,5 +66,6 @@ jest.mock('../../src/config/services/redis', () => ({
   redisClient,
   ensureConnection,
   NAMESPACE,
-  KEYS
+  KEYS,
+  default: redisClient,
 })); 
