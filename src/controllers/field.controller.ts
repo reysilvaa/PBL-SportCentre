@@ -18,9 +18,33 @@ export const getAllFields = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 1000;  
-    const totalItems = await prisma.field.count();
+    const query = req.query.q as string || '';
+    const branchId = parseInt(req.query.branchId as string) || 0;
+
+    let whereCondition: any  = {};
+    if (query) {
+      whereCondition = {
+        OR: [
+          { name: { contains: query as string } }, 
+          { type: {name: { contains: query as string }} },
+          { branch: {name: { contains: query as string }} },
+        ],
+      };
+    }
+
+    if (branchId !== 0) {
+      whereCondition.AND = [
+        ...(whereCondition.OR ? [{ OR: whereCondition.OR }] : []),
+        { branchId: branchId },
+      ];
+    }
+
+    const totalItems = await prisma.field.count({
+      where: whereCondition,
+    });
 
     const fields = await prisma.field.findMany({
+      where: whereCondition,
       skip: (page - 1) * limit,
       take: limit,
       include: {
