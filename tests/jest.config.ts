@@ -1,4 +1,7 @@
 import type { Config } from '@jest/types';
+import { resolve } from 'path';
+
+const rootDir = resolve(__dirname, '..');
 
 const config: Config.InitialOptions = {
   preset: 'ts-jest',
@@ -11,8 +14,17 @@ const config: Config.InitialOptions = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
-  coverageDirectory: './coverage',
+  rootDir,
+  collectCoverageFrom: [
+    '<rootDir>/src/**/*.ts',
+    '!<rootDir>/src/**/*.d.ts',
+    '!<rootDir>/src/types/**',
+    '!<rootDir>/src/**/*.interface.ts',
+    '!<rootDir>/src/config/swagger/**',
+    '!<rootDir>/src/config/server/server.ts',
+    '!<rootDir>/src/index.ts',
+  ],
+  coverageDirectory: '<rootDir>/coverage',
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   verbose: true,
   testTimeout: 30000,
