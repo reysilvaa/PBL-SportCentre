@@ -9,7 +9,7 @@ const isFixAll = process.env.ESLINT_FIX_ALL === 'true';
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', 'tests/'],
+    ignores: ['node_modules/', 'dist/' ],
   },
   js.configs.recommended,
   {

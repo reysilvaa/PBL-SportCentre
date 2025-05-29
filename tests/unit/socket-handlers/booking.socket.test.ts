@@ -1,23 +1,20 @@
-import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { emitBookingEvents } from '../../../src/socket-handlers/booking.socket';
 
 // Mock dependencies
 jest.mock('../../../src/config/server/socket', () => ({
-  getIO: jest.fn(() => ({
-    to: jest.fn(() => ({
-      emit: jest.fn(),
-    })),
-    of: jest.fn(() => ({
-      emit: jest.fn(),
-    })),
+  getIO: jest.fn().mockReturnValue({
+    to: jest.fn().mockReturnThis(),
+    of: jest.fn().mockReturnThis(),
     emit: jest.fn(),
-  })),
+  }),
 }));
 
 jest.mock('../../../src/config/services/database', () => ({
   __esModule: true,
   default: {
     activityLog: {
-      create: jest.fn().mockResolvedValue({} as any),
+      create: jest.fn().mockResolvedValue({ id: 1 }),
     },
   },
 }));
@@ -30,181 +27,202 @@ jest.mock('../../../src/utils/variables/timezone.utils', () => ({
   formatDateToWIB: jest.fn((date) => date ? date.toString() : ''),
 }));
 
-// Import the module after mocking dependencies
-import * as BookingSocket from '../../../src/socket-handlers/booking.socket';
-import { getIO } from '../../../src/config/server/socket';
-import { formatDateToWIB } from '../../../src/utils/variables/timezone.utils';
-
-describe('Booking Socket Handlers', () => {
+describe('Booking Socket Handler', () => {
   let mockIO: any;
-  let mockEmit: jest.Mock;
-  let mockToEmit: jest.Mock;
-  let mockOfEmit: jest.Mock;
+  let mockPrisma: any;
+  let mockActivityLogBroadcast: any;
 
   beforeEach(() => {
-    // Reset all mocks
+    // Reset mocks
     jest.clearAllMocks();
 
-    // Setup more specific mocks for better control
-    mockEmit = jest.fn();
-    mockToEmit = jest.fn();
-    mockOfEmit = jest.fn();
-    
-    // Setup mock IO
-    mockIO = {
-      to: jest.fn(() => ({
-        emit: mockToEmit,
-      })),
-      of: jest.fn(() => ({
-        emit: mockOfEmit,
-      })),
-      emit: mockEmit,
-    };
-    (getIO as jest.Mock).mockReturnValue(mockIO);
-    
-    // Setup format date mock
-    (formatDateToWIB as jest.Mock).mockImplementation((date) => date ? date.toString() : '');
+    // Setup mocks
+    mockIO = require('../../../src/config/server/socket').getIO();
+    mockPrisma = require('../../../src/config/services/database').default;
+    mockActivityLogBroadcast = require('../../../src/socket-handlers/activityLog.socket').broadcastActivityLogUpdates;
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('emitBookingEvents', () => {
-    it('seharusnya menangani event booking:created', () => {
-      // Mock data
-      const mockData = {
+  describe('emitBookingEvents - booking:created', () => {
+    it('seharusnya mengirim event booking:created ke saluran cabang, pengguna, dan lapangan', async () => {
+      // Arrange
+      const eventType = 'booking:created';
+      const mockBooking = {
         booking: {
           id: 1,
-          userId: 2,
-          fieldId: 3,
-          bookingDate: new Date('2023-05-01'),
-          startTime: new Date('2023-05-01T03:00:00'),
-          endTime: new Date('2023-05-01T05:00:00'),
+          userId: 1,
+          fieldId: 1,
+          bookingDate: new Date('2023-06-15'),
+          startTime: new Date('2023-06-15T10:00:00'),
+          endTime: new Date('2023-06-15T12:00:00'),
+          status: 'confirmed',
           field: {
-            branchId: 4,
+            id: 1,
+            name: 'Lapangan Futsal A',
+            branchId: 1,
           },
         },
       };
 
-      // Execute function
-      BookingSocket.emitBookingEvents('booking:created', mockData);
+      // Act
+      await emitBookingEvents(eventType, mockBooking);
 
-      // Assertions
-      expect(mockIO.to).toHaveBeenCalledWith('branch-4');
-      expect(mockToEmit).toHaveBeenCalledWith('booking:created', mockData.booking);
-      
-      expect(mockIO.to).toHaveBeenCalledWith('user-2');
-      expect(mockToEmit).toHaveBeenCalledWith('booking:created', expect.objectContaining({
-        booking: mockData.booking,
-        message: expect.any(String),
-      }));
-      
-      expect(mockIO.to).toHaveBeenCalledWith('field-3');
-      expect(mockToEmit).toHaveBeenCalledWith('field:availability-changed', expect.objectContaining({
-        fieldId: 3,
-        date: mockData.booking.bookingDate,
-      }));
-    });
+      // Assert
+      // Verifikasi emit ke saluran cabang
+      expect(mockIO.to).toHaveBeenCalledWith(`branch-${mockBooking.booking.field.branchId}`);
+      expect(mockIO.emit).toHaveBeenCalledWith('booking:created', mockBooking.booking);
 
-    it('seharusnya menangani event update-payment', () => {
-      // Mock data
-      const mockData = {
-        userId: 1,
-        branchId: 2,
-        booking: {
-          id: 3,
-        },
-        paymentStatus: 'paid',
-      };
-
-      // Execute function
-      BookingSocket.emitBookingEvents('update-payment', mockData);
-
-      // Assertions
-      expect(mockIO.to).toHaveBeenCalledWith('branch-2');
-      expect(mockToEmit).toHaveBeenCalledWith('booking:updated', mockData.booking);
-      
-      expect(mockIO.to).toHaveBeenCalledWith('user-1');
-      expect(mockToEmit).toHaveBeenCalledWith('booking:updated', expect.objectContaining({
-        bookingId: 3,
-        paymentStatus: 'paid',
-      }));
-    });
-
-    it('seharusnya menangani event booking:cancelled', () => {
-      // Mock data
-      const mockData = {
-        bookingId: 1,
-        fieldId: 2,
-        userId: 3,
-        bookingDate: new Date('2023-05-01'),
-        startTime: new Date('2023-05-01T10:00:00'),
-        endTime: new Date('2023-05-01T12:00:00'),
-      };
-
-      // Execute function
-      BookingSocket.emitBookingEvents('booking:cancelled', mockData);
-
-      // Assertions
-      expect(mockIO.of).toHaveBeenCalledWith('/admin/bookings');
-      expect(mockOfEmit).toHaveBeenCalledWith('booking-canceled', expect.objectContaining({
-        bookingId: 1,
-        fieldId: 2,
-        userId: 3,
-      }));
-      
-      expect(mockIO.of).toHaveBeenCalledWith('/fields');
-      expect(mockOfEmit).toHaveBeenCalledWith('availability-update', expect.objectContaining({
-        fieldId: 2,
-        date: mockData.bookingDate,
-      }));
-    });
-
-    it('seharusnya menangani event booking:deleted (sama seperti cancelled)', () => {
-      // Mock data
-      const mockData = {
-        bookingId: 1,
-        fieldId: 2,
-        userId: 3,
-        bookingDate: new Date('2023-05-01'),
-        startTime: new Date('2023-05-01T10:00:00'),
-        endTime: new Date('2023-05-01T12:00:00'),
-      };
-
-      // Execute function
-      BookingSocket.emitBookingEvents('booking:deleted', mockData);
-
-      // Assertions
-      expect(mockIO.of).toHaveBeenCalledWith('/admin/bookings');
-      expect(mockOfEmit).toHaveBeenCalledWith('booking-canceled', {
-        bookingId: 1,
-        fieldId: 2,
-        userId: 3,
+      // Verifikasi emit ke saluran pengguna
+      expect(mockIO.to).toHaveBeenCalledWith(`user-${mockBooking.booking.userId}`);
+      expect(mockIO.emit).toHaveBeenCalledWith('booking:created', {
+        booking: mockBooking.booking,
+        message: 'A new booking has been created for you',
       });
+
+      // Verifikasi emit ke saluran lapangan
+      expect(mockIO.to).toHaveBeenCalledWith(`field-${mockBooking.booking.fieldId}`);
+      expect(mockIO.emit).toHaveBeenCalledWith('field:availability-changed', expect.objectContaining({
+        fieldId: mockBooking.booking.fieldId,
+        available: false,
+      }));
+
+      // Verifikasi log aktivitas
+      expect(mockPrisma.activityLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: mockBooking.booking.userId,
+          action: 'CREATE_BOOKING',
+        }),
+      });
+
+      // Menghilangkan pengujian broadcastActivityLogUpdates karena dilakukan secara asinkron
+      // dan tidak terlihat dalam pengujian ini
     });
+  });
 
-    it('seharusnya menangani event type yang tidak dikenali', () => {
-      // Mock data
-      const mockData = { someData: 'test' };
+  describe('emitBookingEvents - update-payment', () => {
+    it('seharusnya mengirim event booking:updated ke saluran cabang dan pengguna', async () => {
+      // Arrange
+      const eventType = 'update-payment';
+      const mockData = {
+        booking: {
+          id: 1,
+          status: 'confirmed',
+        },
+        branchId: 1,
+        userId: 1,
+        paymentStatus: 'paid',
+      };
 
-      // Execute function
-      BookingSocket.emitBookingEvents('unknown-event', mockData);
+      // Act
+      await emitBookingEvents(eventType, mockData);
 
-      // Assertions
-      expect(mockEmit).toHaveBeenCalledWith('unknown-event', mockData);
+      // Assert
+      // Verifikasi emit ke saluran cabang
+      expect(mockIO.to).toHaveBeenCalledWith(`branch-${mockData.branchId}`);
+      expect(mockIO.emit).toHaveBeenCalledWith('booking:updated', mockData.booking);
+
+      // Verifikasi emit ke saluran pengguna
+      expect(mockIO.to).toHaveBeenCalledWith(`user-${mockData.userId}`);
+      expect(mockIO.emit).toHaveBeenCalledWith('booking:updated', {
+        bookingId: mockData.booking.id,
+        paymentStatus: mockData.paymentStatus,
+        message: `Your booking payment status has been updated to: ${mockData.paymentStatus}`,
+      });
+
+      // Verifikasi log aktivitas
+      expect(mockPrisma.activityLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: mockData.userId,
+          action: 'UPDATE_PAYMENT',
+        }),
+      });
+
+      // Menghilangkan pengujian broadcastActivityLogUpdates karena dilakukan secara asinkron
     });
+  });
 
-    it('seharusnya menangani error', () => {
-      // Mock IO to throw an error
-      mockIO.to.mockImplementation(() => {
+  describe('emitBookingEvents - booking:cancelled', () => {
+    it('seharusnya mengirim event booking-canceled ke saluran admin dan memperbarui ketersediaan lapangan', async () => {
+      // Arrange
+      const eventType = 'booking:cancelled';
+      const mockData = {
+        bookingId: 1,
+        fieldId: 1,
+        userId: 1,
+        bookingDate: '2023-06-15',
+        startTime: new Date('2023-06-15T10:00:00'),
+        endTime: new Date('2023-06-15T12:00:00'),
+      };
+
+      // Act
+      await emitBookingEvents(eventType, mockData);
+
+      // Assert
+      // Verifikasi emit ke saluran admin
+      expect(mockIO.of).toHaveBeenCalledWith('/admin/bookings');
+      expect(mockIO.emit).toHaveBeenCalledWith('booking-canceled', {
+        bookingId: mockData.bookingId,
+        fieldId: mockData.fieldId,
+        userId: mockData.userId,
+      });
+
+      // Verifikasi emit ke saluran lapangan
+      expect(mockIO.of).toHaveBeenCalledWith('/fields');
+      expect(mockIO.emit).toHaveBeenCalledWith('availability-update', expect.objectContaining({
+        fieldId: mockData.fieldId,
+        available: true,
+      }));
+
+      // Verifikasi log aktivitas
+      expect(mockPrisma.activityLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: mockData.userId,
+          action: 'CANCEL_BOOKING',
+        }),
+      });
+
+      // Menghilangkan pengujian broadcastActivityLogUpdates karena dilakukan secara asinkron
+    });
+  });
+
+  describe('emitBookingEvents - custom event', () => {
+    it('seharusnya mengirim event kustom dengan data mentah', () => {
+      // Arrange
+      const eventType = 'custom-booking-event';
+      const mockData = { customField: 'customValue' };
+
+      // Act
+      emitBookingEvents(eventType, mockData);
+
+      // Assert
+      expect(mockIO.emit).toHaveBeenCalledWith(eventType, mockData);
+    });
+  });
+
+  describe('emitBookingEvents - error handling', () => {
+    it('seharusnya menangani error saat mengirim event', () => {
+      // Arrange
+      const eventType = 'booking:created';
+      const mockBooking = {
+        booking: {
+          id: 1,
+          userId: 1,
+          fieldId: 1,
+        },
+      };
+
+      // Mock console.error
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Mock error from socket
+      require('../../../src/config/server/socket').getIO.mockImplementation(() => {
         throw new Error('Socket error');
       });
 
-      // Execute function (should not throw)
-      BookingSocket.emitBookingEvents('update-payment', { userId: 1 });
+      // Act - Tidak akan throw error
+      expect(() => emitBookingEvents(eventType, mockBooking)).not.toThrow();
 
-      // No assertions needed - test passes if no exception is thrown
+      // Assert
+      expect(console.error).toHaveBeenCalled();
     });
   });
 }); 

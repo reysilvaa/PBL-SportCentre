@@ -18,6 +18,7 @@ export enum FieldStatus {
   CLOSED = 'closed',
 }
 
+
 export enum PaymentStatus {
   PENDING = 'pending',
   PAID = 'paid',

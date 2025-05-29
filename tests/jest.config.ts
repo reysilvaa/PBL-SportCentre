@@ -28,6 +28,7 @@ const config: Config.InitialOptions = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   verbose: true,
   testTimeout: 30000,
+  setupFilesAfterEnv: ['<rootDir>/tests/mocks/setupTests.ts'],
 };
 
 export default config; 

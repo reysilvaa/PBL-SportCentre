@@ -1,4 +1,4 @@
-import { PrismaClient, FieldType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 // Data field types yang relevan dalam konteks Indonesia
 const fieldTypes = [

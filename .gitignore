@@ -6,3 +6,4 @@
 /logs/access.log
 /dist
 /tests/coverage/
+/coverage/
