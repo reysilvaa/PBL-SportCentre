@@ -37,7 +37,7 @@ export const validateDateRange = (
     }
 
     const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays > 366) {
+    if (diffDays > 365) {
       res.status(400).json({
         status: false,
         message: 'Rentang waktu maksimal adalah 1 tahun',
@@ -47,6 +47,7 @@ export const validateDateRange = (
 
     return true;
   } catch (error) {
+    console.error('Error validating date range:', error);
     res.status(400).json({
       status: false,
       message: 'Format tanggal tidak valid',

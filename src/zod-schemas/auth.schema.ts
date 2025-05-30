@@ -34,7 +34,7 @@ export const registerSchema = z.object({
     .min(1, {
       message: 'Nomor telepon tidak boleh kosong',
     })
-    .regex(/^(\+62|62|0)8[1-9][0-9]{6,9}$/, {
+    .regex(/^(\+62|62|0)8[1-9][0-9]{6,13}$/, {
       message: 'Format nomor telepon tidak valid',
     })
     .optional(),

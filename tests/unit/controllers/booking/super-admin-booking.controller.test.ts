@@ -3,7 +3,6 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import * as SuperAdminBookingController from '../../../../src/controllers/booking/super-admin-booking.controller';
 import prisma from '../../../../src/config/services/database';
 import * as CacheUtils from '../../../../src/utils/cache/cacheInvalidation.utils';
-import { PaymentStatus } from '@prisma/client';
 import * as BookingUtils from '../../../../src/utils/booking/booking.utils';
 
 // Mock the dependencies

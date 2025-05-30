@@ -4,7 +4,6 @@ import * as AdminBookingController from '../../../../src/controllers/booking/adm
 import prisma from '../../../../src/config/services/database';
 import * as BookingUtils from '../../../../src/utils/booking/booking.utils';
 import { PaymentStatus } from '../../../../src/types/enums';
-import { User } from '../../../../src/middlewares/auth.middleware';
 
 // Mock dependencies
 jest.mock('../../../../src/config/services/database', () => ({

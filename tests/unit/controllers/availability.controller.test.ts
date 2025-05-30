@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { jest } from '@jest/globals';
+import { jest, describe, it, beforeEach, expect } from '@jest/globals';
 import * as AvailabilityController from '../../../src/controllers/availability.controller';
 import * as AvailabilityUtils from '../../../src/utils/booking/checkAvailability.utils';
 import * as SocketConfig from '../../../src/config/server/socket';
@@ -14,13 +14,27 @@ jest.mock('../../../src/config/server/socket', () => ({
   emitFieldAvailabilityUpdate: jest.fn(),
 }));
 
-jest.mock('../../../src/config/services/queue', () => ({
-  fieldAvailabilityQueue: {
-    process: jest.fn(),
-    add: jest.fn(),
-    close: jest.fn(),
-  },
-}), { virtual: true });
+// Improved Bull queue mock
+jest.mock('../../../src/config/services/queue', () => {
+  // Create a proper mock for the process method that captures the callback
+  const processMock = jest.fn();
+  let storedProcessCallback: Function | null = null;
+  
+  processMock.mockImplementation((callback) => {
+    storedProcessCallback = callback;
+    return { name: 'fieldAvailabilityQueue' }; // Return something for chaining
+  });
+  
+  return {
+    fieldAvailabilityQueue: {
+      process: processMock,
+      add: jest.fn(),
+      close: jest.fn().mockResolvedValue(undefined),
+      // Expose the stored callback for testing
+      _getProcessCallback: () => storedProcessCallback,
+    },
+  };
+}, { virtual: true });
 
 describe('Availability Controller', () => {
   let mockReq: Partial<Request>;
@@ -148,40 +162,43 @@ describe('Availability Controller', () => {
 
     it('should successfully process queue job', async () => {
       // Arrange
-      let processCallback: Function = () => {};
-      (fieldAvailabilityQueue.process as jest.Mock).mockImplementation((callback) => {
-        processCallback = callback;
-      });
-
-      (AvailabilityUtils.getAllFieldsAvailability as jest.Mock).mockResolvedValue(
-        [{ fieldId: 1, fieldName: 'Test Field', branch: 'Test Branch', isAvailable: true, availableTimeSlots: [] }]
-      );
+      const mockResults = [
+        { fieldId: 1, fieldName: 'Test Field', branch: 'Test Branch', isAvailable: true, availableTimeSlots: [] }
+      ];
+      (AvailabilityUtils.getAllFieldsAvailability as jest.Mock).mockResolvedValue(mockResults);
 
       // Act
       AvailabilityController.setupFieldAvailabilityProcessor();
+      
+      // Get the callback that was registered with process
+      const processCallback = (fieldAvailabilityQueue as any)._getProcessCallback();
+      expect(processCallback).toBeTruthy();
+      
+      // Execute the callback directly
       const result = await processCallback();
 
       // Assert
       expect(AvailabilityUtils.getAllFieldsAvailability).toHaveBeenCalled();
-      expect(SocketConfig.emitFieldAvailabilityUpdate).toHaveBeenCalled();
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('timestamp');
+      expect(SocketConfig.emitFieldAvailabilityUpdate).toHaveBeenCalledWith(mockResults);
+      expect(result).toEqual({
+        success: true,
+        timestamp: expect.any(Date)
+      });
     });
 
     it('should handle errors in processor', async () => {
       // Arrange
-      let processCallback: Function = () => {};
-      (fieldAvailabilityQueue.process as jest.Mock).mockImplementation((callback) => {
-        processCallback = callback;
-      });
-
       const testError = new Error('Service error');
       (AvailabilityUtils.getAllFieldsAvailability as jest.Mock).mockRejectedValue(testError);
 
       // Act
       AvailabilityController.setupFieldAvailabilityProcessor();
       
-      // Assert
+      // Get the callback that was registered with process
+      const processCallback = (fieldAvailabilityQueue as any)._getProcessCallback();
+      expect(processCallback).toBeTruthy();
+      
+      // Assert - ensure the callback rejects with the expected error
       await expect(processCallback()).rejects.toThrow('Service error');
     });
   });

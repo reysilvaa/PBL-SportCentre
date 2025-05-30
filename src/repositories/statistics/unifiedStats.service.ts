@@ -545,7 +545,9 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
       phone: admin.user.phone || 'N/A', // phone bisa null dalam schema
       branch: admin.branch.name,
       // Status sesuai dengan cabang
-      status: admin.branch.status.toLowerCase() === 'active' ? 'active' : 'inactive',
+      status: admin.branch.status && typeof admin.branch.status === 'string' 
+        ? admin.branch.status.toLowerCase() === 'active' ? 'active' : 'inactive'
+        : 'inactive',
       // Role dari user (ubah format sesuai yang diinginkan frontend)
       role: formatRole(admin.user.role),
       // Format tanggal

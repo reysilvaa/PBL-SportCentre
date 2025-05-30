@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { jest } from '@jest/globals';
+import { jest, describe, it, beforeEach, expect } from '@jest/globals';
 import * as AuthController from '../../../src/controllers/auth.controller';
 import prisma from '../../../src/config/services/database';
 import * as AuthUtils from '../../../src/utils/auth.utils';

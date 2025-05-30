@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { jest } from '@jest/globals';
+import { jest, describe, it, beforeEach, expect } from '@jest/globals';
 import * as PromotionUsageController from '../../../src/controllers/promotionUsage.controller';
 import prisma from '../../../src/config/services/database';
 import { Role } from '../../../src/types';
