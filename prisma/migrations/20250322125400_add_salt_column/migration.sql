@@ -5,6 +5,6 @@
 
 */
 -- AlterTable
-ALTER TABLE `user` ADD COLUMN `salt` VARCHAR(255) NOT NULL DEFAULT 'temp_salt';
+ALTER TABLE `User` ADD COLUMN `salt` VARCHAR(255) NOT NULL DEFAULT 'temp_salt';
 
 -- After the migration, you should update all existing users with proper salt values

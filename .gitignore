@@ -7,3 +7,4 @@
 /dist
 /tests/coverage/
 /coverage/
+certs/ca.pem

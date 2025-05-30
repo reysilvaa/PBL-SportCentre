@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `activitylog` ADD COLUMN `ipAddress` VARCHAR(45) NULL;
+ALTER TABLE `ActivityLog` ADD COLUMN `ipAddress` VARCHAR(45) NULL;

@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `activitylog` ADD COLUMN `details` TEXT NULL;
+ALTER TABLE `ActivityLog` ADD COLUMN `details` TEXT NULL;

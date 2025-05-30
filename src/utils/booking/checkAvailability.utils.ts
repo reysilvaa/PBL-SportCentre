@@ -332,3 +332,8 @@ export const getAvailableTimeSlots = async (fieldId: number, date: Date): Promis
   // Hitung slot yang tersedia
   return calculateAvailableTimeSlots(openingTime, closingTime, bookedSlots);
 };
+
+// Expose private functions for testing
+export const __test__ = {
+  isOverlapping,
+};

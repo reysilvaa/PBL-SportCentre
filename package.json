@@ -28,7 +28,7 @@
     "test:quiet": "cross-env NODE_ENV=development jest --silent",
     "prepare": "husky install",
     "prisma": "prisma",
-    "prisma:seed": "cross-env NODE_ENV=development ts-node prisma/seed.ts",
+    "prisma:seed": "cross-env NODE_ENV=development ts-node prisma/factories/index.ts",
     "prisma:migration": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "postinstall": "prisma generate"
