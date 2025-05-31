@@ -1,4 +1,3 @@
-
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { Socket } from 'socket.io';
 import { 
@@ -44,7 +43,7 @@ describe('ActivityLog Socket Handlers', () => {
       // Arrange
       const options = { userId: '1' };
       
-      prismaMock.activityLog.findMany.mockResolvedValueOnce([
+      const mockActivityLogs = [
         {
           id: 1,
           userId: 1,
@@ -58,7 +57,9 @@ describe('ActivityLog Socket Handlers', () => {
             email: 'test@example.com',
           },
         },
-      ]);
+      ];
+      
+      prismaMock.activityLog.findMany.mockResolvedValue(mockActivityLogs);
 
       // Act
       await handleSubscribeActivityLogs(mockSocket as Socket, options);
@@ -86,7 +87,7 @@ describe('ActivityLog Socket Handlers', () => {
       // Arrange
       const userId = 1;
 
-      prismaMock.activityLog.findMany.mockResolvedValueOnce([
+      const mockUserLogs = [
         {
           id: 1,
           userId: 1,
@@ -100,9 +101,9 @@ describe('ActivityLog Socket Handlers', () => {
             email: 'test@example.com',
           },
         },
-      ]);
+      ];
 
-      prismaMock.activityLog.findMany.mockResolvedValueOnce([
+      const mockAllLogs = [
         {
           id: 1,
           userId: 1,
@@ -116,7 +117,14 @@ describe('ActivityLog Socket Handlers', () => {
             email: 'test@example.com',
           },
         },
-      ]);
+      ];
+
+      prismaMock.activityLog.findMany.mockImplementation((params) => {
+        if (params?.where?.userId === 1) {
+          return Promise.resolve(mockUserLogs);
+        }
+        return Promise.resolve(mockAllLogs);
+      });
 
       // Act
       await broadcastActivityLogUpdates(userId);

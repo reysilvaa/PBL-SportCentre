@@ -17,18 +17,18 @@ export const NAMESPACE = {
 
 export const KEYS = {
   TOKEN_BLACKLIST: `${NAMESPACE.PREFIX}:${NAMESPACE.AUTH}:token_blacklist:`,
-  
+
   SOCKET: {
     ROOT: NAMESPACE.PREFIX,
     FIELDS: `${NAMESPACE.PREFIX}/${NAMESPACE.FIELDS}`,
     NOTIFICATION: `${NAMESPACE.PREFIX}/${NAMESPACE.NOTIFICATION}`
   },
-  
+
   QUEUE: {
     CLEANUP: `${NAMESPACE.PREFIX}:${NAMESPACE.CLEANUP}`,
     AVAILABILITY: `${NAMESPACE.PREFIX}:${NAMESPACE.AVAILABILITY}`
   },
-  
+
   CACHE: {
     FIELD: `${NAMESPACE.PREFIX}:${NAMESPACE.FIELDS}:`,
     BRANCH: `${NAMESPACE.PREFIX}:${NAMESPACE.BRANCHES}:`,
@@ -46,13 +46,10 @@ const redisClient = createClient({
   password: config.redis.password || undefined,
   socket: {
     reconnectStrategy: (retries) => {
-      // Exponential backoff with max retry limit
       if (retries > 20) {
         console.error('Redis: Terlalu banyak percobaan koneksi. Tidak akan mencoba lagi.');
         return new Error('Terlalu banyak percobaan koneksi Redis');
       }
-      
-      // Exponential backoff: 50ms, 100ms, 200ms, ..., dengan maksimum 10 detik
       const delay = Math.min(Math.pow(2, retries) * 50, 10000);
       console.log(`Redis: Mencoba koneksi ulang dalam ${delay}ms... (percobaan ke-${retries + 1})`);
       return delay;
@@ -60,12 +57,14 @@ const redisClient = createClient({
   }
 });
 
-// Connect to Redis
-redisClient.connect().catch((err) => {
-  console.error('Redis connection error:', err);
-  console.error('⚠️ Pastikan server Redis berjalan di ', config.redis.url);
-  console.error('⚠️ Nilai ini dibaca dari file .env atau menggunakan default jika tidak ada');
-});
+// Connect to Redis (pastikan tidak connect dua kali)
+if (!redisClient.isOpen) {
+  redisClient.connect().catch((err) => {
+    console.error('Redis connection error:', err);
+    console.error('⚠️ Pastikan server Redis berjalan di ', config.redis.url);
+    console.error('⚠️ Nilai ini dibaca dari file .env atau menggunakan default jika tidak ada');
+  });
+}
 
 // Event handlers
 redisClient.on('connect', () => {
@@ -90,69 +89,57 @@ redisClient.on('ready', () => {
 const ensureConnection = {
   exists: async (...args: Parameters<typeof redisClient.exists>) => {
     try {
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
+      if (!redisClient.isOpen) await redisClient.connect();
       return await redisClient.exists(...args);
     } catch (error) {
       console.error('Redis exists error:', error);
       return 0;
     }
   },
-  
+
   setEx: async (...args: Parameters<typeof redisClient.setEx>) => {
     try {
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
+      if (!redisClient.isOpen) await redisClient.connect();
       return await redisClient.setEx(...args);
     } catch (error) {
       console.error('Redis setEx error:', error);
       return null;
     }
   },
-  
+
   del: async (...args: Parameters<typeof redisClient.del>) => {
     try {
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
+      if (!redisClient.isOpen) await redisClient.connect();
       return await redisClient.del(...args);
     } catch (error) {
       console.error('Redis del error:', error);
       return 0;
     }
   },
-  
+
   get: async (...args: Parameters<typeof redisClient.get>) => {
     try {
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
+      if (!redisClient.isOpen) await redisClient.connect();
       return await redisClient.get(...args);
     } catch (error) {
       console.error('Redis get error:', error);
       return null;
     }
   },
-  
+
   set: async (...args: Parameters<typeof redisClient.set>) => {
     try {
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
+      if (!redisClient.isOpen) await redisClient.connect();
       return await redisClient.set(...args);
     } catch (error) {
       console.error('Redis set error:', error);
       return null;
     }
   },
-  
+
   keys: async (...args: Parameters<typeof redisClient.keys>) => {
     try {
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
+      if (!redisClient.isOpen) await redisClient.connect();
       return await redisClient.keys(...args);
     } catch (error) {
       console.error('Redis keys error:', error);
@@ -161,6 +148,6 @@ const ensureConnection = {
   }
 };
 
-// Export Redis client wrapper
+// Export Redis client dan wrapper
 export { ensureConnection };
 export default redisClient;
