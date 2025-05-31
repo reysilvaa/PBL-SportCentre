@@ -591,8 +591,10 @@ export const getUserBranchAdmins = async (req: AuthUser, res: Response): Promise
   try {
     const userId = req.user!.id;
     const userRole = req.user!.role;
-    const { q } = req.query;
-
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 1000;  
+    const query = req.query.q as string || '';
+    const branchId = parseInt(req.query.branchId as string) || 0;
     let branchIds: number[] = [];
 
     // Dapatkan cabang berdasarkan peran
@@ -626,20 +628,44 @@ export const getUserBranchAdmins = async (req: AuthUser, res: Response): Promise
       return;
     }
 
-    if (branchIds.length === 0) {
-      res.status(200).json({
-        status: true,
-        message: 'Berhasil mendapatkan daftar admin cabang',
-        data: []
-      });
-      return;
+    let whereCondition: any  = {};
+
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+
+    const orConditions = query ? [
+      { user: { name: { contains: query } } },
+      { user: { email: { contains: query } } },
+      { branch: { name: { contains: query } } },
+    ] : [];
+
+    const andConditions = [];
+
+    if (branchIds.length > 0) {
+      andConditions.push({ branchId: { in: branchIds } });
     }
 
-    // Dapatkan semua admin cabang
-    let branchAdmins = await prisma.branchAdmin.findMany({
-      where: {
-        branchId: { in: branchIds }
-      },
+    if (branchId !== 0) {
+      andConditions.push({ branchId: branchId });
+    }
+
+    if (orConditions.length > 0) {
+      andConditions.push({ OR: orConditions });
+    }
+
+    if (andConditions.length > 0) {
+      whereCondition = { AND: andConditions };
+    }
+
+    const totalItems = await prisma.branchAdmin.count({
+      where: whereCondition,
+    });
+
+    const branchAdmins = await prisma.branchAdmin.findMany({
+      where: whereCondition,
+      skip: (page - 1) * limit,
+      take: limit,
       include: {
         user: {
           select: {
@@ -660,20 +686,18 @@ export const getUserBranchAdmins = async (req: AuthUser, res: Response): Promise
       }
     });
 
-    // Filter berdasarkan query pencarian jika ada
-    if (q) {
-      const searchQuery = q as string;
-      branchAdmins = branchAdmins.filter(admin => 
-        admin.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        admin.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        admin.branch.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
     res.status(200).json({
       status: true,
       message: 'Berhasil mendapatkan daftar admin cabang',
-      data: branchAdmins
+      data: branchAdmins,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        hasNextPage: page * limit < totalItems,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     console.error('Error getting branch admins:', error);

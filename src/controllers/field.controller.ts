@@ -17,7 +17,7 @@ import { Role } from '../types';
 export const getAllFields = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 1000;  
+    const limit = parseInt(req.query.limit as string) || 15;  
     const query = req.query.q as string || '';
     const branchId = parseInt(req.query.branchId as string) || 0;
 
@@ -80,6 +80,15 @@ export const getBranchFields = async (req: Request, res: Response): Promise<void
   try {
     const { id } = req.params;
     const branchId = parseInt(id);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;  
+    const query = req.query.q as string || '';
+    console.log('Getting branch fields with query:', req.query);
+    console.log('Getting branch fields with limit:', req.query.limit);
+    console.log('Branch ID:', branchId);
+    console.log('Query:', query);
+    console.log('Page:', page);
+    console.log('Limit:', limit);
 
     if (isNaN(branchId)) {
       res.status(400).json({
@@ -102,9 +111,31 @@ export const getBranchFields = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Dapatkan semua lapangan untuk cabang ini
+    let whereCondition: any  = {};
+    if (query) {
+      whereCondition = {
+        OR: [
+          { name: { contains: query as string } }, 
+          { type: {name: { contains: query as string }} },
+        ],
+      };
+    }
+
+    if (branchId !== 0) {
+      whereCondition.AND = [
+        ...(whereCondition.OR ? [{ OR: whereCondition.OR }] : []),
+        { branchId: branchId },
+      ];
+    }
+
+    const totalItems = await prisma.field.count({
+      where: whereCondition,
+    });
+
     const fields = await prisma.field.findMany({
-      where: { branchId },
+      where: whereCondition,
+      skip: (page - 1) * limit,
+      take: limit,
       include: {
         branch: {
           select: {
@@ -116,7 +147,33 @@ export const getBranchFields = async (req: Request, res: Response): Promise<void
       },
     });
 
-    res.status(200).json(fields);
+    // Dapatkan semua lapangan untuk cabang ini
+    // const fields = await prisma.field.findMany({
+    //   where: { branchId },
+    //   include: {
+    //     branch: {
+    //       select: {
+    //         id: true,
+    //         name: true,
+    //       },
+    //     },
+    //     type: true,
+    //   },
+    // });
+
+    res.status(200).json({
+      status: true,
+      message: 'Berhasil mendapatkan daftar lapangan untuk cabang',
+      data: fields,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        hasNextPage: page * limit < totalItems,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error('Error getting branch fields:', error);
     res.status(500).json({
