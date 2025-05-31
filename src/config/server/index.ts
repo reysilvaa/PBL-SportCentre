@@ -21,6 +21,8 @@ import {
   setupBookingCleanupProcessor,
 } from '../../utils/booking/booking.utils';
 import { initializeCloudinary } from '../services/cloudinary';
+import { ensureConnection } from '../services/redis';
+import { config } from '../app/env';
 
 /**
  * Inisialisasi semua komponen sebelum server dimulai
@@ -53,39 +55,70 @@ export const initializeApplication = (app: Application): http.Server => {
   // Initialize all socket handlers
   initializeAllSocketHandlers();
 
-  // Setup Bull Queue processors
-  setupQueueProcessors();
-
-  // Mulai Bull Queue jobs
-  startBackgroundJobs();
+  // Cek koneksi Redis sebelum setup Bull Queue
+  checkRedisAndSetupQueues();
 
   return server;
+};
+
+/**
+ * Cek koneksi Redis sebelum setup Bull Queue
+ */
+export const checkRedisAndSetupQueues = async (): Promise<void> => {
+  try {
+    // Cek koneksi Redis dengan ping
+    const isConnected = await ensureConnection.isConnected();
+    
+    if (isConnected) {
+      console.log(`✅ Redis terhubung ke ${config.redis.url}`);
+      
+      // Setup Bull Queue processors
+      setupQueueProcessors();
+      
+      // Mulai Bull Queue jobs
+      startBackgroundJobs();
+    } else {
+      console.warn('⚠️ Redis tidak terhubung, menonaktifkan background jobs');
+      console.warn('⚠️ Beberapa fitur mungkin tidak berfungsi dengan baik tanpa background jobs');
+    }
+  } catch (error) {
+    console.error('❌ Error saat memeriksa koneksi Redis:', error);
+    console.warn('⚠️ Menonaktifkan background jobs karena Redis tidak tersedia');
+  }
 };
 
 /**
  * Setup Bull Queue processors
  */
 export const setupQueueProcessors = (): void => {
-  // Setup processor untuk Field Availability queue
-  setupFieldAvailabilityProcessor();
+  try {
+    // Setup processor untuk Field Availability queue
+    setupFieldAvailabilityProcessor();
 
-  // Setup processor untuk Booking Cleanup queue
-  setupBookingCleanupProcessor();
+    // Setup processor untuk Booking Cleanup queue
+    setupBookingCleanupProcessor();
 
-  console.log('✅ Bull Queue processors telah didaftarkan');
+    console.log('✅ Bull Queue processors telah didaftarkan');
+  } catch (error) {
+    console.error('❌ Error saat setup Bull Queue processors:', error);
+  }
 };
 
 /**
  * Memulai background jobs dengan Bull Queue
  */
 export const startBackgroundJobs = (): void => {
-  // Mulai job untuk memperbarui ketersediaan lapangan
-  startFieldAvailabilityUpdates();
+  try {
+    // Mulai job untuk memperbarui ketersediaan lapangan
+    startFieldAvailabilityUpdates();
 
-  // Mulai job untuk membersihkan booking yang kedaluwarsa
-  startBookingCleanupJob();
+    // Mulai job untuk membersihkan booking yang kedaluwarsa
+    startBookingCleanupJob();
 
-  console.log('🚀 Background jobs dimulai dengan Bull Queue');
+    console.log('🚀 Background jobs dimulai dengan Bull Queue');
+  } catch (error) {
+    console.error('❌ Error saat memulai background jobs:', error);
+  }
 };
 
 /**

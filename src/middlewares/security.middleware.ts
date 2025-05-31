@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import redisClient from '../config/services/redis';
+import { ensureConnection } from '../config/services/redis';
 import { User } from './auth.middleware';
 import prisma from '../config/services/database';
-import { ensureConnection } from '../config/services/redis';
 
 // Prefix untuk kunci Redis
 const FAILED_BOOKING_PREFIX = 'failed_booking:';
@@ -64,10 +63,10 @@ const _checkBlockedUser = async (req: User, res: Response, next: NextFunction) =
 
   try {
     // Periksa apakah pengguna diblokir
-    const userIsBlocked = await redisClient.exists(`${BLOCKED_USER_PREFIX}${userId}`);
+    const userIsBlocked = await ensureConnection.exists(`${BLOCKED_USER_PREFIX}${userId}`);
     if (userIsBlocked) {
       // Dapatkan sisa waktu blokir
-      const ttl = await redisClient.ttl(`${BLOCKED_USER_PREFIX}${userId}`);
+      const ttl = await ensureConnection.ttl(`${BLOCKED_USER_PREFIX}${userId}`);
       const minutesRemaining = Math.ceil(ttl / 60);
 
       return res.status(403).json({
@@ -78,10 +77,10 @@ const _checkBlockedUser = async (req: User, res: Response, next: NextFunction) =
 
     // Periksa apakah IP diblokir
     const clientIP = req.ip || req.socket.remoteAddress || '';
-    const ipIsBlocked = await redisClient.exists(`${BLOCKED_IP_PREFIX}${clientIP}`);
+    const ipIsBlocked = await ensureConnection.exists(`${BLOCKED_IP_PREFIX}${clientIP}`);
     if (ipIsBlocked) {
       // Dapatkan sisa waktu blokir
-      const ttl = await redisClient.ttl(`${BLOCKED_IP_PREFIX}${clientIP}`);
+      const ttl = await ensureConnection.ttl(`${BLOCKED_IP_PREFIX}${clientIP}`);
       const minutesRemaining = Math.ceil(ttl / 60);
 
       return res.status(403).json({
@@ -115,7 +114,7 @@ export const trackFailedBooking = async (userId: number, bookingId: number, clie
   try {
     // Tambah counter untuk user
     let userFailCount = 0;
-    const userFailStr = await redisClient.get(userKey);
+    const userFailStr = await ensureConnection.get(userKey);
     if (userFailStr) {
       userFailCount = parseInt(userFailStr);
     }
@@ -124,7 +123,7 @@ export const trackFailedBooking = async (userId: number, bookingId: number, clie
 
     // Tambah counter untuk IP
     let ipFailCount = 0;
-    const ipFailStr = await redisClient.get(ipKey);
+    const ipFailStr = await ensureConnection.get(ipKey);
     if (ipFailStr) {
       ipFailCount = parseInt(ipFailStr);
     }
@@ -203,7 +202,7 @@ export const trackFailedBooking = async (userId: number, bookingId: number, clie
 export const resetFailedBookingCounter = async (userId: number) => {
   try {
     const userKey = `${FAILED_BOOKING_PREFIX}user_${userId}`;
-    await redisClient.del(userKey);
+    await ensureConnection.del(userKey);
   } catch (error) {
     console.error('Error resetting failed booking counter:', error);
   }

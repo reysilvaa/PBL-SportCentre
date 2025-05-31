@@ -328,6 +328,20 @@ const redisWrapper = {
 
   isConnected: async (): Promise<boolean> => {
     return isConnected();
+  },
+
+  ttl: async (key: string): Promise<number> => {
+    try {
+      await ensureConnection();
+      if (isIoRedis) {
+        return await (redisClient as Redis).ttl(key);
+      } else {
+        return await (redisClient as RedisClientType).ttl(key);
+      }
+    } catch (error) {
+      console.error('Redis ttl error:', error);
+      return 0;
+    }
   }
 };
 

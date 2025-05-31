@@ -1,22 +1,34 @@
 import Queue from 'bull';
 import { config } from '../index';
 import { KEYS, NAMESPACE } from './redis';
+import Redis from 'ioredis';
 
+// Cek apakah menggunakan Redis TLS (rediss://)
+const isRedissTLS = config.redis.url.startsWith('rediss://');
+
+// Konfigurasi Redis untuk Bull Queue dengan IoRedis untuk TLS
 const redisConfig = {
-  redis: {
-    url: config.redis.url,
-    password: config.redis.password || undefined,
-    retryStrategy: (times: number) => {
-      if (times > 20) {
-        console.error('Bull: Terlalu banyak percobaan koneksi Redis. Tidak akan mencoba lagi.');
-        return null;
-      }
-      
-      const delay = Math.min(Math.pow(2, times) * 50, 10000);
-      console.log(`Bull: Mencoba koneksi Redis ulang dalam ${delay}ms... (percobaan ke-${times + 1})`);
-      return delay;
-    },
-    maxRetriesPerRequest: 5
+  createClient: (type: string) => {
+    console.info(`🔒 Bull Queue membuat klien Redis untuk: ${type}`);
+    
+    // Gunakan IoRedis untuk semua jenis koneksi (client, subscriber, bclient)
+    return new Redis(config.redis.url, {
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times: number) => {
+        if (times > 10) {
+          console.error('Bull: Terlalu banyak percobaan koneksi Redis. Tidak akan mencoba lagi.');
+          return null; // Stop retrying
+        }
+        
+        const delay = Math.min(Math.pow(2, times) * 50, 10000);
+        console.log(`Bull: Mencoba koneksi Redis ulang dalam ${delay}ms... (percobaan ke-${times + 1})`);
+        return delay;
+      },
+      connectTimeout: 10000,
+      enableOfflineQueue: false,
+      enableReadyCheck: true,
+      tls: isRedissTLS ? { rejectUnauthorized: false } : undefined
+    });
   },
   prefix: NAMESPACE.PREFIX || 'sportcenter',
   defaultJobOptions: {
@@ -40,23 +52,22 @@ export const fieldAvailabilityQueue = new Queue(NAMESPACE.AVAILABILITY || 'field
   prefix: KEYS?.QUEUE?.AVAILABILITY?.replace(`:${NAMESPACE.AVAILABILITY || 'field-availability-updates'}`, '') || 'sportcenter'
 });
 
-// Log event untuk memantau queue
-const setupQueueMonitoring = (queue: Queue.Queue) => {
-  queue.on('completed', (job) => {
-    console.info(`✅ Job ${job.id} dalam queue ${queue.name} berhasil diselesaikan`);
-  });
+// Event listeners untuk error handling
+bookingCleanupQueue.on('error', (error) => {
+  console.error(`🔥 Error dalam queue ${bookingCleanupQueue.name}:`, error);
+});
 
-  queue.on('failed', (job, err) => {
-    console.error(`❌ Job ${job?.id} dalam queue ${queue.name} gagal dengan error:`, err);
-  });
+fieldAvailabilityQueue.on('error', (error) => {
+  console.error(`🔥 Error dalam queue ${fieldAvailabilityQueue.name}:`, error);
+});
 
-  queue.on('error', (error) => {
-    console.error(`🔥 Error dalam queue ${queue.name}:`, error);
-  });
-};
+// Tambahkan event listener untuk failed jobs
+bookingCleanupQueue.on('failed', (job, err) => {
+  console.error(`❌ Job gagal di queue ${bookingCleanupQueue.name}:`, job.id, err);
+});
 
-// Setup monitoring untuk semua queue
-setupQueueMonitoring(bookingCleanupQueue);
-setupQueueMonitoring(fieldAvailabilityQueue);
+fieldAvailabilityQueue.on('failed', (job, err) => {
+  console.error(`❌ Job gagal di queue ${fieldAvailabilityQueue.name}:`, job.id, err);
+});
 
-console.info(`🚀 Bull Queue siap digunakan dengan Redis - Namespace: ${NAMESPACE.PREFIX || 'sportcenter'}`);
+console.info(`🚀 Bull Queue siap digunakan dengan Redis (${isRedissTLS ? 'TLS' : 'non-TLS'}) - Namespace: ${NAMESPACE.PREFIX || 'sportcenter'}`);
