@@ -14,6 +14,8 @@ import * as UnifiedStatsService from '../../repositories/statistics/unifiedStats
 export const getAllBookings = async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, branchId, status } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 15;
 
     // Build filter conditions
     const where: any = {};
@@ -38,8 +40,14 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
       };
     }
 
+    const totalItems = await prisma.booking.count({
+      where,
+    });
+
     const bookings = await prisma.booking.findMany({
       where,
+      skip: (page - 1) * limit,
+      take: limit,
       include: {
         user: { select: { id: true, name: true, email: true } },
         field: { include: { branch: true, type: true } },
@@ -52,6 +60,14 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
       status: true,
       message: 'Berhasil mendapatkan data semua booking',
       data: bookings,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+        itemsPerPage: limit,
+      },
     });
   } catch (error) {
     console.error('Error in getAllBookings:', error);

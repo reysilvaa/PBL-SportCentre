@@ -30,8 +30,10 @@ export const CACHE_KEYS = {
   // Untuk cache API yang spesifik
   getApiKey: (prefix: string, method: string, url: string, version: string) => {
 
-    const cleanUrl = url.split('?')[0];
-    return `${NAMESPACE.PREFIX}:api:${prefix}:${method}:${cleanUrl}:${version}`;
+    // const cleanUrl = url.split('?')[0];
+    // return `${NAMESPACE.PREFIX}:api:${prefix}:${method}:${cleanUrl}:${version}`;
+    const hash = crypto.createHash('md5').update(url).digest('hex');
+    return `${NAMESPACE.PREFIX}:api:${prefix}:${method}:${hash}:${version}`;
   }
 };
 

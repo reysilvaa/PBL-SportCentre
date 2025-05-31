@@ -23,6 +23,8 @@ export const getBranchBookings = async (req: User, res: Response): Promise<void>
     // Dari middleware auth kita sudah punya branchId di req.userBranch
     const branchIdFromAuth = req.userBranch?.id;
     const { status, startDate, endDate, search } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 15;
 
     // Ambil branchId dari parameter URL jika ada
     const branchIdFromParams = req.params.branchId ? parseInt(req.params.branchId) : null;
@@ -69,7 +71,13 @@ export const getBranchBookings = async (req: User, res: Response): Promise<void>
     });
 
     // Build base where condition dengan branch
-    let whereCondition: any = { field: { branchId } };
+    let whereCondition: any = {
+      field: {
+        is: {
+          branchId: branchId
+        }
+      }
+    };
 
     console.log('Where condition after branch filter:', JSON.stringify(whereCondition));
 
@@ -108,9 +116,15 @@ export const getBranchBookings = async (req: User, res: Response): Promise<void>
       };
     }
 
+    const totalItems = await prisma.booking.count({
+      where: whereCondition,
+    });
+
     // Get all bookings for fields in this branch
     const bookings = await prisma.booking.findMany({
       where: whereCondition,
+      skip: (page - 1) * limit,
+      take: limit,
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
         field: { 
@@ -141,7 +155,17 @@ export const getBranchBookings = async (req: User, res: Response): Promise<void>
       );
     }
 
-    res.status(200).json(filteredBookings);
+    res.status(200).json({
+      data: filteredBookings,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+        itemsPerPage: limit,
+      },
+    });
   } catch (error) {
     console.error('Error getting branch bookings:', error);
     sendErrorResponse(res, 500, 'Internal Server Error');

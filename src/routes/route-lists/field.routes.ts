@@ -16,9 +16,22 @@ import { checkAllFieldsAvailability } from '../../controllers/availability.contr
 const router = express.Router();
 
 // Public routes - tidak memerlukan autentikasi
-router.get('/', cacheMiddleware('fields', 0), getAllFields);
-router.get('/availability', checkAllFieldsAvailability);
-router.get('/:id', cacheMiddleware('field_detail', 300), getFieldById);
+router.get(
+  '/', 
+  cacheMiddleware('fields', 0), 
+  getAllFields
+);
+
+router.get(
+  '/availability', 
+  checkAllFieldsAvailability
+);
+
+router.get(
+  '/:id', 
+  cacheMiddleware('field_detail', 300), 
+  getFieldById
+);
 
 // Admin routes - memerlukan autentikasi dan permission
 router.get(
