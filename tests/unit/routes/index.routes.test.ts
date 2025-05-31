@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import request from 'supertest';
 
 // Mock all route files

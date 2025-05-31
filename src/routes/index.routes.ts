@@ -12,8 +12,9 @@ import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
 import notificationRoutes from './route-lists/notification.routes';
 import dashboardRoutes from './route-lists/dashboard.routes';
-import redisClient, { getCacheStats } from '../utils/cache.utils';
+import { getCacheStats } from '../utils/cache.utils';
 import { auth } from '../middlewares/auth.middleware';
+import { ensureConnection } from '../config/services/redis';
 
 const router = express.Router();
 
@@ -45,19 +46,8 @@ router.get('/cache-stats', auth({ allowedRoles: ['super_admin'] }), async (req, 
 
     const keys: string[] = [];
     if (pattern) {
-      // Cari keys dengan pattern
-      let cursor = 0;
-      do {
-        const result = await redisClient.scan(cursor, {
-          MATCH: `*${pattern}*`,
-          COUNT: 100,
-        });
-
-        cursor = result.cursor;
-        if (result.keys.length > 0) {
-          keys.push(...result.keys);
-        }
-      } while (cursor !== 0);
+      // Get keys with pattern using the wrapper
+      keys.push(...await ensureConnection.keys(`*${pattern}*`));
     }
 
     res.json({

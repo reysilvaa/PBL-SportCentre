@@ -630,7 +630,7 @@ export const getUserBranchAdmins = async (req: AuthUser, res: Response): Promise
 
     let whereCondition: any  = {};
 
-    const branch = await prisma.branch.findUnique({
+    const _branch = await prisma.branch.findUnique({
       where: { id: branchId },
     });
 

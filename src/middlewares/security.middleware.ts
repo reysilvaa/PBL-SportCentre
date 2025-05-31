@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import redisClient from '../config/services/redis';
 import { User } from './auth.middleware';
 import prisma from '../config/services/database';
+import { ensureConnection } from '../config/services/redis';
 
 // Prefix untuk kunci Redis
 const FAILED_BOOKING_PREFIX = 'failed_booking:';
@@ -119,7 +120,7 @@ export const trackFailedBooking = async (userId: number, bookingId: number, clie
       userFailCount = parseInt(userFailStr);
     }
     userFailCount++;
-    await redisClient.setEx(userKey, 60 * 60, userFailCount.toString()); // 1 jam TTL
+    await ensureConnection.setEx(userKey, 60 * 60, userFailCount.toString()); // 1 jam TTL
 
     // Tambah counter untuk IP
     let ipFailCount = 0;
@@ -128,7 +129,7 @@ export const trackFailedBooking = async (userId: number, bookingId: number, clie
       ipFailCount = parseInt(ipFailStr);
     }
     ipFailCount++;
-    await redisClient.setEx(ipKey, 60 * 60, ipFailCount.toString()); // 1 jam TTL
+    await ensureConnection.setEx(ipKey, 60 * 60, ipFailCount.toString()); // 1 jam TTL
 
     // Log ke database (opsional)
     try {
@@ -149,7 +150,7 @@ export const trackFailedBooking = async (userId: number, bookingId: number, clie
 
     // Jika melewati batas, blokir user dan IP
     if (userFailCount >= MAX_FAILED_BOOKINGS) {
-      await redisClient.setEx(`${BLOCKED_USER_PREFIX}${userId}`, BLOCK_USER_TIME, '1');
+      await ensureConnection.setEx(`${BLOCKED_USER_PREFIX}${userId}`, BLOCK_USER_TIME, '1');
 
       // Log pemblokiran ke database (opsional)
       try {
@@ -169,7 +170,7 @@ export const trackFailedBooking = async (userId: number, bookingId: number, clie
     }
 
     if (ipFailCount >= MAX_FAILED_BOOKINGS) {
-      await redisClient.setEx(`${BLOCKED_IP_PREFIX}${clientIP}`, BLOCK_IP_TIME, '1');
+      await ensureConnection.setEx(`${BLOCKED_IP_PREFIX}${clientIP}`, BLOCK_IP_TIME, '1');
 
       // Log pemblokiran IP ke database (opsional)
       try {

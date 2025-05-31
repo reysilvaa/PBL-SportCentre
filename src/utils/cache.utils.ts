@@ -118,27 +118,19 @@ export const deleteCachedDataByPattern = async (
   verbose: boolean = false
 ): Promise<number> => {
   try {
-    // Periksa koneksi Redis sebelum akses
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
-    }
-
-    // Jika tidak ada pattern, gunakan wildcard untuk mencocokkan semua key
+    // Use ensureConnection instead of direct redisClient access
     const actualPattern = pattern === '' ? '*' : `*${pattern}*`;
-
     let cursor = 0;
     const keysToDelete: string[] = [];
 
-    // Scan dengan satu pattern saja untuk mengurangi operasi
+    // Use the scan method through the wrapper
     do {
-      const result = await redisClient.scan(cursor, {
-        MATCH: actualPattern,
-        COUNT: 100,
-      });
-
-      cursor = result.cursor;
-      if (result.keys.length > 0) {
-        keysToDelete.push(...result.keys);
+      // Use a type-safe approach for scanning
+      const scanResult = await ensureConnection.scan(cursor, actualPattern, 100);
+      cursor = scanResult.cursor;
+      
+      if (scanResult.keys.length > 0) {
+        keysToDelete.push(...scanResult.keys);
       }
     } while (cursor !== 0);
 
@@ -147,7 +139,12 @@ export const deleteCachedDataByPattern = async (
     let deletedCount = 0;
 
     if (uniqueKeys.length > 0) {
-      deletedCount = await ensureConnection.del(uniqueKeys);
+      // Delete keys one by one to avoid type issues
+      for (const key of uniqueKeys) {
+        const result = await ensureConnection.del(key);
+        deletedCount += result;
+      }
+      
       if (verbose) {
         console.log(`[CACHE] Delete by pattern: ${pattern} - Deleted ${deletedCount} keys`);
         console.log('[CACHE] Deleted keys:', uniqueKeys);
@@ -170,12 +167,8 @@ export const deleteCachedDataByPattern = async (
  */
 export const clearCache = async (): Promise<void> => {
   try {
-    // Periksa koneksi Redis sebelum akses
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
-    }
-
-    await redisClient.flushAll();
+    // Use ensureConnection instead of direct redisClient access
+    await ensureConnection.flushAll();
     console.log('[CACHE] Clear all cache');
   } catch (error) {
     console.error('[CACHE ERROR] Error clearing Redis cache:', error);
@@ -303,41 +296,41 @@ export const getCacheStats = async (): Promise<{
   connected: boolean;
 }> => {
   try {
-    // Periksa koneksi Redis sebelum akses
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
+    // Use ensureConnection to check connection status
+    const isConnected = await ensureConnection.isConnected();
+    
+    if (!isConnected) {
+      return {
+        keys: 0,
+        hits: 0,
+        misses: 0,
+        memory: '0 bytes',
+        clients: 0,
+        connected: false,
+      };
     }
 
-    // Dapatkan informasi dari Redis INFO sections
-    const keyspace = await redisClient.info('keyspace');
-    const memory = await redisClient.info('memory');
-    const stats = await redisClient.info('stats');
-    const clients = await redisClient.info('clients');
-    
-    // Extract statistics
-    const keyCount = parseInt(keyspace.match(/keys=(\d+)/)?.[1] || '0');
-    const hitCount = parseInt(stats.match(/keyspace_hits:(\d+)/)?.[1] || '0');
-    const missCount = parseInt(stats.match(/keyspace_misses:(\d+)/)?.[1] || '0');
-    const memoryUsed = memory.match(/used_memory_human:([^\r\n]+)/)?.[1] || '0';
-    const clientCount = parseInt(clients.match(/connected_clients:(\d+)/)?.[1] || '0');
-    
+    // Get stats through the wrapper
+    const info = await ensureConnection.info();
+    const dbSize = await ensureConnection.dbSize();
+
     return {
-      keys: keyCount,
-      hits: hitCount,
-      misses: missCount,
-      memory: memoryUsed,
-      clients: clientCount,
-      connected: redisClient.isOpen,
+      keys: dbSize,
+      hits: parseInt(info.keyspace_hits || '0'),
+      misses: parseInt(info.keyspace_misses || '0'),
+      memory: info.used_memory_human || '0 bytes',
+      clients: parseInt(info.connected_clients || '0'),
+      connected: isConnected,
     };
   } catch (error) {
-    console.error('[CACHE ERROR] Failed to get Redis stats:', error);
+    console.error('[CACHE ERROR] Error getting Redis stats:', error);
     return {
       keys: 0,
       hits: 0,
       misses: 0,
-      memory: '0',
+      memory: '0 bytes',
       clients: 0,
-      connected: redisClient.isOpen,
+      connected: false,
     };
   }
 };
@@ -363,34 +356,27 @@ export const flushCacheByPattern = async (pattern: string): Promise<{
 };
 
 /**
- * Mencari keys yang tersedia di Redis berdasarkan pattern
- * @param pattern Pattern untuk pencarian, misalnya 'sportcenter:*'
- * @returns Array of keys
+ * Find cache keys by pattern
+ * @param pattern Pattern to search for
  */
 export const findCacheKeys = async (pattern: string = `${NAMESPACE.PREFIX}:*`): Promise<string[]> => {
   try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
-    }
-    
+    // Use ensureConnection instead of direct redisClient access
+    const keys: string[] = [];
     let cursor = 0;
-    const foundKeys: string[] = [];
-    
+
     do {
-      const result = await redisClient.scan(cursor, {
-        MATCH: pattern,
-        COUNT: 100,
-      });
+      const scanResult = await ensureConnection.scan(cursor, pattern, 100);
+      cursor = scanResult.cursor;
       
-      cursor = result.cursor;
-      if (result.keys.length > 0) {
-        foundKeys.push(...result.keys);
+      if (scanResult.keys.length > 0) {
+        keys.push(...scanResult.keys);
       }
     } while (cursor !== 0);
-    
-    return [...new Set(foundKeys)];
+
+    return keys;
   } catch (error) {
-    console.error(`[CACHE ERROR] Error finding cache keys with pattern ${pattern}:`, error);
+    console.error('[CACHE ERROR] Error finding cache keys:', error);
     return [];
   }
 };

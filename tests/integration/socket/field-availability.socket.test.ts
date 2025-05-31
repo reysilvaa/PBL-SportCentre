@@ -1,9 +1,6 @@
 import { describe, it, expect, jest, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { Server } from 'http';
-import { Server as SocketServer } from 'socket.io';
 import express from 'express';
-import { KEYS } from '../../../src/config/services/redis';
-import { setupFieldsNamespace } from '../../../src/config/server/socket';
 
 // Mock Redis and related dependencies
 jest.mock('../../../src/config/services/redis', () => ({

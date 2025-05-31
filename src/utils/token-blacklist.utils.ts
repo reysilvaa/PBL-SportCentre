@@ -1,4 +1,4 @@
-import redisClient from '../config/services/redis';
+import { ensureConnection } from '../config/services/redis';
 
 // Prefix untuk kunci blacklist token di Redis
 const BLACKLIST_PREFIX = 'token_blacklist:';
@@ -13,7 +13,7 @@ export const blacklistToken = async (token: string, expiryInSeconds?: number): P
   // Gunakan default TTL jika expiryInSeconds tidak diberikan
   const ttl = expiryInSeconds || DEFAULT_TTL;
   try {
-    await redisClient.setEx(`${BLACKLIST_PREFIX}${token}`, ttl, '1');
+    await ensureConnection.setEx(`${BLACKLIST_PREFIX}${token}`, ttl, '1');
   } catch (error) {
     console.error('Error blacklisting token:', error);
   }
@@ -26,7 +26,7 @@ export const blacklistToken = async (token: string, expiryInSeconds?: number): P
  */
 export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
   try {
-    const exists = await redisClient.exists(`${BLACKLIST_PREFIX}${token}`);
+    const exists = await ensureConnection.exists(`${BLACKLIST_PREFIX}${token}`);
     return exists === 1;
   } catch (error) {
     console.error('Error checking blacklisted token:', error);
@@ -41,7 +41,7 @@ export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
  */
 export const removeFromBlacklist = async (token: string): Promise<boolean> => {
   try {
-    const result = await redisClient.del(`${BLACKLIST_PREFIX}${token}`);
+    const result = await ensureConnection.del(`${BLACKLIST_PREFIX}${token}`);
     return result > 0;
   } catch (error) {
     console.error('Error removing token from blacklist:', error);
@@ -54,25 +54,12 @@ export const removeFromBlacklist = async (token: string): Promise<boolean> => {
  */
 export const clearBlacklist = async (): Promise<void> => {
   try {
-    // Gunakan SCAN untuk menghapus semua kunci dengan prefix
-    let cursor = 0;
-    const keysToDelete: string[] = [];
-
-    do {
-      const result = await redisClient.scan(cursor, {
-        MATCH: `${BLACKLIST_PREFIX}*`,
-        COUNT: 100,
-      });
-
-      cursor = result.cursor;
-      if (result.keys.length > 0) {
-        keysToDelete.push(...result.keys);
-      }
-    } while (cursor !== 0);
-
-    // Hapus keys yang ditemukan
-    if (keysToDelete.length > 0) {
-      await redisClient.del(keysToDelete);
+    // Use keys to get all blacklisted tokens
+    const keys = await ensureConnection.keys(`${BLACKLIST_PREFIX}*`);
+    
+    // Delete each key individually
+    for (const key of keys) {
+      await ensureConnection.del(key);
     }
   } catch (error) {
     console.error('Error clearing blacklist:', error);
@@ -85,21 +72,9 @@ export const clearBlacklist = async (): Promise<void> => {
  */
 export const getBlacklistSize = async (): Promise<number> => {
   try {
-    // Gunakan SCAN untuk menghitung kunci dengan prefix
-    let cursor = 0;
-    let totalKeys = 0;
-
-    do {
-      const result = await redisClient.scan(cursor, {
-        MATCH: `${BLACKLIST_PREFIX}*`,
-        COUNT: 100,
-      });
-
-      cursor = result.cursor;
-      totalKeys += result.keys.length;
-    } while (cursor !== 0);
-
-    return totalKeys;
+    // Use keys to get all blacklisted tokens and count them
+    const keys = await ensureConnection.keys(`${BLACKLIST_PREFIX}*`);
+    return keys.length;
   } catch (error) {
     console.error('Error getting blacklist size:', error);
     return 0;
@@ -119,13 +94,10 @@ export const blacklistTokens = async (
   const ttl = expiryInSeconds || DEFAULT_TTL;
 
   try {
-    const pipeline = redisClient.multi();
-
-    tokens.forEach((token) => {
-      pipeline.setEx(`${BLACKLIST_PREFIX}${token}`, ttl, '1');
-    });
-
-    await pipeline.exec();
+    // Process tokens one by one instead of using pipeline
+    for (const token of tokens) {
+      await ensureConnection.setEx(`${BLACKLIST_PREFIX}${token}`, ttl, '1');
+    }
   } catch (error) {
     console.error('Error blacklisting multiple tokens:', error);
   }

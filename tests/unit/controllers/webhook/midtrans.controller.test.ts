@@ -6,8 +6,6 @@ import * as BookingUtils from '../../../../src/utils/booking/booking.utils';
 import * as CacheUtils from '../../../../src/utils/cache/cacheInvalidation.utils';
 import * as SecurityMiddleware from '../../../../src/middlewares/security.middleware';
 import { createHmac } from 'crypto';
-import { config } from '../../../../src/config/app/env';
-import { getIO } from '../../../../src/config/server/socket';
 
 // Mock dependencies
 jest.mock('../../../../src/config/services/database', () => ({

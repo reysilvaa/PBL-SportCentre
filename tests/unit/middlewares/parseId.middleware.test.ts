@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { parseIds } from '../../../src/middlewares/parseId.middleware';
 

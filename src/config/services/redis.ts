@@ -242,6 +242,92 @@ const redisWrapper = {
       console.error('Redis keys error:', error);
       return [];
     }
+  },
+
+  // Additional methods needed by the application
+  scan: async (cursor: number, pattern: string, count: number): Promise<{ cursor: number; keys: string[] }> => {
+    try {
+      await ensureConnection();
+      if (isIoRedis) {
+        // IoRedis scan returns [cursor, keys]
+        const [newCursor, keys] = await (redisClient as Redis).scan(cursor.toString(), 'MATCH', pattern, 'COUNT', count);
+        return { cursor: parseInt(newCursor), keys };
+      } else {
+        // Standard Redis client scan
+        const result = await (redisClient as RedisClientType).scan(cursor, {
+          MATCH: pattern,
+          COUNT: count
+        });
+        return { cursor: parseInt(result.cursor.toString()), keys: result.keys };
+      }
+    } catch (error) {
+      console.error('Redis scan error:', error);
+      return { cursor: 0, keys: [] };
+    }
+  },
+
+  flushAll: async (): Promise<string> => {
+    try {
+      await ensureConnection();
+      if (isIoRedis) {
+        return await (redisClient as Redis).flushall();
+      } else {
+        return await (redisClient as RedisClientType).flushAll();
+      }
+    } catch (error) {
+      console.error('Redis flushAll error:', error);
+      return 'error';
+    }
+  },
+
+  info: async (section?: string): Promise<Record<string, string>> => {
+    try {
+      await ensureConnection();
+      if (isIoRedis) {
+        const info = await (redisClient as Redis).info(section || '');
+        // Parse info string into object
+        const infoObj: Record<string, string> = {};
+        info.split('\r\n').forEach(line => {
+          const parts = line.split(':');
+          if (parts.length === 2) {
+            infoObj[parts[0]] = parts[1];
+          }
+        });
+        return infoObj;
+      } else {
+        // For standard Redis client, convert string response to object
+        const infoStr = await (redisClient as RedisClientType).info(section);
+        const infoObj: Record<string, string> = {};
+        infoStr.split('\r\n').forEach(line => {
+          const parts = line.split(':');
+          if (parts.length === 2) {
+            infoObj[parts[0]] = parts[1];
+          }
+        });
+        return infoObj;
+      }
+    } catch (error) {
+      console.error('Redis info error:', error);
+      return {};
+    }
+  },
+
+  dbSize: async (): Promise<number> => {
+    try {
+      await ensureConnection();
+      if (isIoRedis) {
+        return await (redisClient as Redis).dbsize();
+      } else {
+        return await (redisClient as RedisClientType).dbSize();
+      }
+    } catch (error) {
+      console.error('Redis dbSize error:', error);
+      return 0;
+    }
+  },
+
+  isConnected: async (): Promise<boolean> => {
+    return isConnected();
   }
 };
 
