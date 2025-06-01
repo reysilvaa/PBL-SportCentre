@@ -3,25 +3,22 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 // Mock Redis client
 jest.mock('../../../src/config/services/redis', () => {
-  const mockClient = {
-    setEx: jest.fn().mockResolvedValue('OK'),
-    exists: jest.fn().mockResolvedValue(1),
-    del: jest.fn().mockResolvedValue(1),
-    scan: jest.fn(),
-    multi: jest.fn().mockReturnValue({
-      setEx: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue([]),
-    }),
-  };
-
   return {
-    __esModule: true,
-    default: mockClient,
+    ensureConnection: {
+      setEx: jest.fn().mockResolvedValue('OK'),
+      exists: jest.fn().mockResolvedValue(1),
+      del: jest.fn().mockResolvedValue(1),
+      scan: jest.fn().mockResolvedValue([0, []]),
+      keys: jest.fn().mockResolvedValue([]),
+    },
+    NAMESPACE: {
+      AUTH: 'auth'
+    }
   };
 });
 
 // Import after mocking
-import redisClient from '../../../src/config/services/redis';
+import { ensureConnection } from '../../../src/config/services/redis';
 import {
   blacklistToken,
   isTokenBlacklisted,
@@ -44,7 +41,7 @@ describe('Token Blacklist Utils', () => {
     it('should add a token to the blacklist with default expiry', async () => {
       await blacklistToken(testToken);
       
-      expect(redisClient.setEx).toHaveBeenCalledWith(
+      expect(ensureConnection.setEx).toHaveBeenCalledWith(
         `${blacklistPrefix}${testToken}`,
         24 * 60 * 60, // Default TTL: 24 hours
         '1'
@@ -55,7 +52,7 @@ describe('Token Blacklist Utils', () => {
       const customTTL = 3600; // 1 hour
       await blacklistToken(testToken, customTTL);
       
-      expect(redisClient.setEx).toHaveBeenCalledWith(
+      expect(ensureConnection.setEx).toHaveBeenCalledWith(
         `${blacklistPrefix}${testToken}`,
         customTTL,
         '1'
@@ -64,7 +61,7 @@ describe('Token Blacklist Utils', () => {
     
     it('should handle errors when adding to blacklist', async () => {
       const error = new Error('Redis error');
-      redisClient.setEx.mockRejectedValueOnce(error);
+      ensureConnection.setEx.mockRejectedValueOnce(error);
       
       await blacklistToken(testToken);
       
@@ -74,26 +71,26 @@ describe('Token Blacklist Utils', () => {
 
   describe('isTokenBlacklisted', () => {
     it('should return true when token is in blacklist', async () => {
-      redisClient.exists.mockResolvedValueOnce(1);
+      ensureConnection.exists.mockResolvedValueOnce(1);
       
       const result = await isTokenBlacklisted(testToken);
       
-      expect(redisClient.exists).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
+      expect(ensureConnection.exists).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
       expect(result).toBe(true);
     });
     
     it('should return false when token is not in blacklist', async () => {
-      redisClient.exists.mockResolvedValueOnce(0);
+      ensureConnection.exists.mockResolvedValueOnce(0);
       
       const result = await isTokenBlacklisted(testToken);
       
-      expect(redisClient.exists).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
+      expect(ensureConnection.exists).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
       expect(result).toBe(false);
     });
     
     it('should handle errors when checking blacklist', async () => {
       const error = new Error('Redis error');
-      redisClient.exists.mockRejectedValueOnce(error);
+      ensureConnection.exists.mockRejectedValueOnce(error);
       
       const result = await isTokenBlacklisted(testToken);
       
@@ -104,26 +101,26 @@ describe('Token Blacklist Utils', () => {
 
   describe('removeFromBlacklist', () => {
     it('should remove a token from the blacklist successfully', async () => {
-      redisClient.del.mockResolvedValueOnce(1);
+      ensureConnection.del.mockResolvedValueOnce(1);
       
       const result = await removeFromBlacklist(testToken);
       
-      expect(redisClient.del).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
+      expect(ensureConnection.del).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
       expect(result).toBe(true);
     });
     
     it('should return false when token is not found in blacklist', async () => {
-      redisClient.del.mockResolvedValueOnce(0);
+      ensureConnection.del.mockResolvedValueOnce(0);
       
       const result = await removeFromBlacklist(testToken);
       
-      expect(redisClient.del).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
+      expect(ensureConnection.del).toHaveBeenCalledWith(`${blacklistPrefix}${testToken}`);
       expect(result).toBe(false);
     });
     
     it('should handle errors when removing from blacklist', async () => {
       const error = new Error('Redis error');
-      redisClient.del.mockRejectedValueOnce(error);
+      ensureConnection.del.mockRejectedValueOnce(error);
       
       const result = await removeFromBlacklist(testToken);
       
@@ -134,50 +131,39 @@ describe('Token Blacklist Utils', () => {
 
   describe('clearBlacklist', () => {
     it('should clear all tokens from the blacklist', async () => {
-      // Mock the scan to return some keys on the first call, then finish
-      redisClient.scan
-        .mockResolvedValueOnce({ cursor: 0, keys: ['token_blacklist:token1', 'token_blacklist:token2'] });
+      // Mock the keys to return some tokens
+      ensureConnection.keys
+        .mockResolvedValueOnce(['token_blacklist:token1', 'token_blacklist:token2']);
       
       await clearBlacklist();
       
-      expect(redisClient.scan).toHaveBeenCalledWith(0, {
-        MATCH: `${blacklistPrefix}*`,
-        COUNT: 100,
-      });
-      
-      expect(redisClient.del).toHaveBeenCalledWith([
-        'token_blacklist:token1',
-        'token_blacklist:token2',
-      ]);
+      expect(ensureConnection.keys).toHaveBeenCalledWith(`${blacklistPrefix}*`);
+      expect(ensureConnection.del).toHaveBeenCalledTimes(2);
     });
     
-    it('should handle multiple batches when clearing blacklist', async () => {
-      // Mock scan to return keys in batches
-      redisClient.scan
-        .mockResolvedValueOnce({ cursor: 1, keys: ['token_blacklist:token1'] })
-        .mockResolvedValueOnce({ cursor: 0, keys: ['token_blacklist:token2'] });
+    it('should handle multiple tokens when clearing blacklist', async () => {
+      // Mock keys to return multiple tokens
+      ensureConnection.keys
+        .mockResolvedValueOnce(['token_blacklist:token1', 'token_blacklist:token2', 'token_blacklist:token3']);
       
       await clearBlacklist();
       
-      expect(redisClient.scan).toHaveBeenCalledTimes(2);
-      expect(redisClient.del).toHaveBeenCalledWith([
-        'token_blacklist:token1',
-        'token_blacklist:token2',
-      ]);
+      expect(ensureConnection.keys).toHaveBeenCalledWith(`${blacklistPrefix}*`);
+      expect(ensureConnection.del).toHaveBeenCalledTimes(3);
     });
     
     it('should do nothing when no keys are found', async () => {
-      redisClient.scan.mockResolvedValueOnce({ cursor: 0, keys: [] });
+      ensureConnection.keys.mockResolvedValueOnce([]);
       
       await clearBlacklist();
       
-      expect(redisClient.scan).toHaveBeenCalledTimes(1);
-      expect(redisClient.del).not.toHaveBeenCalled();
+      expect(ensureConnection.keys).toHaveBeenCalledWith(`${blacklistPrefix}*`);
+      expect(ensureConnection.del).not.toHaveBeenCalled();
     });
     
     it('should handle errors when clearing blacklist', async () => {
       const error = new Error('Redis error');
-      redisClient.scan.mockRejectedValueOnce(error);
+      ensureConnection.keys.mockRejectedValueOnce(error);
       
       await clearBlacklist();
       
@@ -187,31 +173,25 @@ describe('Token Blacklist Utils', () => {
 
   describe('getBlacklistSize', () => {
     it('should return the number of tokens in the blacklist', async () => {
-      redisClient.scan
-        .mockResolvedValueOnce({ cursor: 0, keys: ['token_blacklist:token1', 'token_blacklist:token2'] });
+      ensureConnection.keys.mockResolvedValueOnce(['token_blacklist:token1', 'token_blacklist:token2']);
       
       const result = await getBlacklistSize();
       
-      expect(redisClient.scan).toHaveBeenCalledWith(0, {
-        MATCH: `${blacklistPrefix}*`,
-        COUNT: 100,
-      });
+      expect(ensureConnection.keys).toHaveBeenCalledWith(`${blacklistPrefix}*`);
       expect(result).toBe(2);
     });
     
     it('should handle multiple batches when counting tokens', async () => {
-      redisClient.scan
-        .mockResolvedValueOnce({ cursor: 1, keys: ['token_blacklist:token1'] })
-        .mockResolvedValueOnce({ cursor: 0, keys: ['token_blacklist:token2', 'token_blacklist:token3'] });
+      ensureConnection.keys.mockResolvedValueOnce(['token_blacklist:token1', 'token_blacklist:token2', 'token_blacklist:token3']);
       
       const result = await getBlacklistSize();
       
-      expect(redisClient.scan).toHaveBeenCalledTimes(2);
+      expect(ensureConnection.keys).toHaveBeenCalledWith(`${blacklistPrefix}*`);
       expect(result).toBe(3);
     });
     
     it('should return 0 when no tokens are found', async () => {
-      redisClient.scan.mockResolvedValueOnce({ cursor: 0, keys: [] });
+      ensureConnection.keys.mockResolvedValueOnce([]);
       
       const result = await getBlacklistSize();
       
@@ -220,7 +200,7 @@ describe('Token Blacklist Utils', () => {
     
     it('should handle errors when getting blacklist size', async () => {
       const error = new Error('Redis error');
-      redisClient.scan.mockRejectedValueOnce(error);
+      ensureConnection.keys.mockRejectedValueOnce(error);
       
       const result = await getBlacklistSize();
       
@@ -235,10 +215,7 @@ describe('Token Blacklist Utils', () => {
       
       await blacklistTokens(tokens);
       
-      expect(redisClient.multi).toHaveBeenCalled();
-      const mockPipeline = redisClient.multi();
-      expect(mockPipeline.setEx).toHaveBeenCalledTimes(3);
-      expect(mockPipeline.exec).toHaveBeenCalled();
+      expect(ensureConnection.setEx).toHaveBeenCalledTimes(3);
     });
     
     it('should use custom expiry when provided', async () => {
@@ -247,18 +224,19 @@ describe('Token Blacklist Utils', () => {
       
       await blacklistTokens(tokens, customTTL);
       
-      expect(redisClient.multi).toHaveBeenCalled();
+      expect(ensureConnection.setEx).toHaveBeenCalledTimes(2);
+      expect(ensureConnection.setEx).toHaveBeenCalledWith(
+        expect.stringContaining('token1'),
+        customTTL,
+        '1'
+      );
     });
     
     it('should handle errors when batch blacklisting tokens', async () => {
       const tokens = ['token1', 'token2'];
       const error = new Error('Redis error');
       
-      const mockPipeline = {
-        setEx: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockRejectedValueOnce(error),
-      };
-      redisClient.multi.mockReturnValueOnce(mockPipeline);
+      ensureConnection.setEx.mockRejectedValueOnce(error);
       
       await blacklistTokens(tokens);
       

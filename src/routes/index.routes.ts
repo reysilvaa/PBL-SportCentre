@@ -12,9 +12,8 @@ import authRoutes from './route-lists/auth.routes';
 import webhookRoutes from './route-lists/webhook.routes';
 import notificationRoutes from './route-lists/notification.routes';
 import dashboardRoutes from './route-lists/dashboard.routes';
-import { getCacheStats } from '../utils/cache.utils';
+import { getCacheStats, findCacheKeys } from '../utils/cache.utils';
 import { auth } from '../middlewares/auth.middleware';
-import { ensureConnection } from '../config/services/redis';
 
 const router = express.Router();
 
@@ -44,10 +43,10 @@ router.get('/cache-stats', auth({ allowedRoles: ['super_admin'] }), async (req, 
     const stats = await getCacheStats();
     const pattern = req.query.pattern as string;
 
-    const keys: string[] = [];
+    let keys: string[] = [];
     if (pattern) {
-      // Get keys with pattern using the wrapper
-      keys.push(...await ensureConnection.keys(`*${pattern}*`));
+      // Get keys with pattern using findCacheKeys
+      keys = await findCacheKeys(pattern);
     }
 
     res.json({

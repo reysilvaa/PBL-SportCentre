@@ -782,3 +782,63 @@ export const deleteBranchAdmin = async (req: User, res: Response): Promise<void>
     });
   }
 }
+
+/**
+ * Mendapatkan daftar admin cabang berdasarkan ID cabang
+ */
+export const getBranchAdmins = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const branchId = parseInt(id);
+
+    if (isNaN(branchId)) {
+      res.status(400).json({
+        status: false,
+        message: 'ID cabang tidak valid',
+      });
+      return;
+    }
+
+    // Periksa apakah cabang ada
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        status: false,
+        message: 'Cabang tidak ditemukan',
+      });
+      return;
+    }
+
+    // Dapatkan semua admin untuk cabang ini
+    const branchAdmins = await prisma.branchAdmin.findMany({
+      where: {
+        branchId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      status: true,
+      message: 'Berhasil mendapatkan daftar admin cabang',
+      data: branchAdmins,
+    });
+  } catch (error) {
+    console.error('Error getting branch admins:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
+};

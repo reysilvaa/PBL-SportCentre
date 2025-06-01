@@ -11,6 +11,7 @@ jest.mock('../../../../src/config/services/database', () => ({
     findMany: jest.fn(),
     findFirst: jest.fn(),
     findUnique: jest.fn(),
+    count: jest.fn(),
   },
   field: {
     findUnique: jest.fn(),
@@ -63,7 +64,9 @@ describe('Admin Booking Controller', () => {
     };
     
     mockRes = {
+      // @ts-ignore
       status: jest.fn().mockReturnThis(),
+      // @ts-ignore
       json: jest.fn(),
     };
     
@@ -102,7 +105,7 @@ describe('Admin Booking Controller', () => {
         payment: {
           id: 1,
           amount: 200000,
-          status: PaymentStatus.paid,
+          status: PaymentStatus.PAID,
         },
       },
     ];
@@ -112,15 +115,33 @@ describe('Admin Booking Controller', () => {
       mockReq.userBranch = {
         id: 1,
       };
+      mockReq.query = { page: '1', limit: '15' };
       
+      // @ts-ignore
+      (prisma.booking.count as jest.Mock).mockResolvedValueOnce(1);
+      // @ts-ignore
       (prisma.booking.findMany as jest.Mock).mockResolvedValueOnce(mockBookings);
 
       // Act
       await AdminBookingController.getBranchBookings(mockReq as any, mockRes as Response);
 
       // Assert
+      const expectedWhereCondition = {
+        field: {
+          is: {
+            branchId: 1
+          }
+        }
+      };
+      
+      expect(prisma.booking.count).toHaveBeenCalledWith({
+        where: expectedWhereCondition,
+      });
+      
       expect(prisma.booking.findMany).toHaveBeenCalledWith({
-        where: { field: { branchId: 1 } },
+        where: expectedWhereCondition,
+        skip: 0,
+        take: 15,
         include: {
           user: { select: { id: true, name: true, email: true, phone: true } },
           field: { 
@@ -136,7 +157,17 @@ describe('Admin Booking Controller', () => {
       });
       
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(mockBookings);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        data: mockBookings,
+        meta: {
+          page: 1,
+          limit: 15,
+          totalItems: 1,
+          totalPages: 1,
+          currentPage: 1,
+          itemsPerPage: 15,
+        },
+      });
     });
 
     it('should return error if branch ID is not available', async () => {

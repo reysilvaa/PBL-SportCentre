@@ -14,10 +14,18 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
       },
     });
 
-    res.json(notifications);
+    res.json({
+      status: true,
+      message: 'Berhasil mendapatkan notifikasi',
+      data: notifications
+    });
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ 
+      status: false,
+      message: 'Gagal mendapatkan notifikasi',
+      error: 'Internal Server Error' 
+    });
   }
 };
 
@@ -29,9 +37,17 @@ export const readNotification = async (req: Request, res: Response): Promise<voi
       data: { isRead: true },
     });
 
-    res.json(notification);
+    res.json({
+      status: true,
+      message: 'Notifikasi ditandai sebagai telah dibaca',
+      data: notification
+    });
   } catch (error) {
     console.error('Error marking notification as read:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ 
+      status: false,
+      message: 'Gagal menandai notifikasi sebagai dibaca',
+      error: 'Internal Server Error' 
+    });
   }
 };

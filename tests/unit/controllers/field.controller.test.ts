@@ -23,6 +23,9 @@ jest.mock('../../../src/config/services/database', () => ({
   activityLog: {
     create: jest.fn(),
   },
+  fieldType: {
+    findUnique: jest.fn(),
+  },
 }));
 
 jest.mock('../../../src/utils/cache/cacheInvalidation.utils', () => ({
@@ -208,8 +211,10 @@ describe('Field Controller', () => {
     it('should return fields by branch ID', async () => {
       // Arrange
       mockReq.params = { id: '1' };
+      mockReq.query = { page: '1', limit: '10' };
       
       (prisma.branch.findUnique as jest.Mock).mockResolvedValue({ id: 1, name: 'Cabang 1' });
+      (prisma.field.count as jest.Mock).mockResolvedValue(1);
       (prisma.field.findMany as jest.Mock).mockResolvedValue(mockFields);
 
       // Act
@@ -219,8 +224,16 @@ describe('Field Controller', () => {
       expect(prisma.branch.findUnique).toHaveBeenCalledWith({
         where: { id: 1 },
       });
+      
+      const whereCondition = { AND: [{ branchId: 1 }] };
+      expect(prisma.field.count).toHaveBeenCalledWith({
+        where: whereCondition,
+      });
+      
       expect(prisma.field.findMany).toHaveBeenCalledWith({
-        where: { branchId: 1 },
+        where: whereCondition,
+        skip: 0,
+        take: 10,
         include: {
           branch: {
             select: {
@@ -231,8 +244,21 @@ describe('Field Controller', () => {
           type: true,
         },
       });
+      
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(mockFields);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        status: true,
+        message: 'Berhasil mendapatkan daftar lapangan untuk cabang',
+        data: mockFields,
+        meta: {
+          page: 1,
+          limit: 10,
+          totalItems: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      });
     });
 
     it('should return 400 for invalid branch ID', async () => {

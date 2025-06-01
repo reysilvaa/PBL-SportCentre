@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import * as NotificationController from '../../../../src/controllers/webhook/notification.controller';
 import prisma from '../../../../src/config/services/database';
 
@@ -69,7 +69,11 @@ describe('Notification Controller', () => {
           createdAt: 'desc',
         },
       });
-      expect(mockRes.json).toHaveBeenCalledWith(mockNotifications);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        status: true,
+        message: 'Berhasil mendapatkan notifikasi',
+        data: mockNotifications
+      });
     });
 
     it('should handle database errors', async () => {
@@ -82,7 +86,11 @@ describe('Notification Controller', () => {
 
       // Assert
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+      expect(mockRes.json).toHaveBeenCalledWith({ 
+        status: false,
+        message: 'Gagal mendapatkan notifikasi',
+        error: 'Internal Server Error' 
+      });
     });
   });
 
@@ -111,7 +119,11 @@ describe('Notification Controller', () => {
         where: { id: 1 },
         data: { isRead: true },
       });
-      expect(mockRes.json).toHaveBeenCalledWith(mockNotification);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        status: true,
+        message: 'Notifikasi ditandai sebagai telah dibaca',
+        data: mockNotification
+      });
     });
 
     it('should handle database errors', async () => {
@@ -124,7 +136,11 @@ describe('Notification Controller', () => {
 
       // Assert
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+      expect(mockRes.json).toHaveBeenCalledWith({ 
+        status: false,
+        message: 'Gagal menandai notifikasi sebagai dibaca',
+        error: 'Internal Server Error' 
+      });
     });
 
     it('should handle invalid notification ID', async () => {
@@ -137,7 +153,11 @@ describe('Notification Controller', () => {
 
       // Assert
       expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+      expect(mockRes.json).toHaveBeenCalledWith({ 
+        status: false,
+        message: 'Gagal menandai notifikasi sebagai dibaca',
+        error: 'Internal Server Error' 
+      });
     });
   });
 }); 

@@ -93,26 +93,17 @@ jest.mock('../../../src/middlewares/auth.middleware', () => ({
 
 // Mock cache utils
 jest.mock('../../../src/utils/cache.utils', () => {
-  const mockClient = {
-    scan: jest.fn().mockImplementation((cursor, options) => {
-      if (cursor === 0) {
-        return Promise.resolve({
-          cursor: 0,
-          keys: ['key1', 'key2', 'key3'],
-        });
-      }
-      return Promise.resolve({ cursor: 0, keys: [] });
-    }),
-  };
-
   return {
-    __esModule: true,
-    default: mockClient,
+    findCacheKeys: jest.fn().mockImplementation((_pattern) => {
+      return Promise.resolve(['key1', 'key2', 'key3']);
+    }),
     getCacheStats: jest.fn().mockResolvedValue({
-      memory: { used: '10MB', total: '100MB', percentage: '10%' },
+      memory: '1.5M',
       keys: 100,
       clients: 5,
-      uptime: 3600,
+      connected: true,
+      hits: 50,
+      misses: 20
     }),
   };
 });
@@ -127,6 +118,17 @@ describe('API Routes', () => {
     app = express();
     app.use(express.json());
     app.use('/api', router);
+    
+    // Reset mocks
+    const cacheUtils = require('../../../src/utils/cache.utils');
+    cacheUtils.getCacheStats.mockResolvedValue({
+      memory: '1.5M',
+      keys: 100,
+      clients: 5,
+      connected: true,
+      hits: 50,
+      misses: 20
+    });
   });
 
   it('should setup all route endpoints correctly', async () => {
@@ -174,10 +176,12 @@ describe('API Routes', () => {
       expect(response.body).toHaveProperty('stats');
       expect(response.body.stats).toHaveProperty('memory');
       expect(response.body.stats).toHaveProperty('keys');
-      expect(response.body.stats).toHaveProperty('uptime');
     });
 
     it('should return matching keys when pattern is provided', async () => {
+      const cacheUtils = require('../../../src/utils/cache.utils');
+      cacheUtils.findCacheKeys.mockResolvedValueOnce(['key1', 'key2', 'key3']);
+      
       const response = await request(app).get('/api/cache-stats?pattern=test');
 
       expect(response.status).toBe(200);
@@ -188,8 +192,8 @@ describe('API Routes', () => {
 
     it('should handle errors gracefully', async () => {
       // Mock getCacheStats to throw an error
-      const { getCacheStats } = require('../../../src/utils/cache.utils');
-      getCacheStats.mockRejectedValueOnce(new Error('Redis connection error'));
+      const cacheUtils = require('../../../src/utils/cache.utils');
+      cacheUtils.getCacheStats.mockRejectedValueOnce(new Error('Redis connection error'));
 
       const response = await request(app).get('/api/cache-stats');
 

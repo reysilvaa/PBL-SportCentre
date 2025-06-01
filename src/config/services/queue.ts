@@ -1,34 +1,16 @@
 import Queue from 'bull';
 import { config } from '../index';
-import { KEYS, NAMESPACE } from './redis';
-import Redis from 'ioredis';
+import redisClient, { KEYS, NAMESPACE } from './redis';
 
 // Cek apakah menggunakan Redis TLS (rediss://)
 const isRedissTLS = config.redis.url.startsWith('rediss://');
 
-// Konfigurasi Redis untuk Bull Queue dengan IoRedis untuk TLS
+// Konfigurasi Redis untuk Bull Queue menggunakan instance Redis yang sudah ada
 const redisConfig = {
   createClient: (type: string) => {
-    console.info(`🔒 Bull Queue membuat klien Redis untuk: ${type}`);
-    
-    // Gunakan IoRedis untuk semua jenis koneksi (client, subscriber, bclient)
-    return new Redis(config.redis.url, {
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times: number) => {
-        if (times > 10) {
-          console.error('Bull: Terlalu banyak percobaan koneksi Redis. Tidak akan mencoba lagi.');
-          return null; // Stop retrying
-        }
-        
-        const delay = Math.min(Math.pow(2, times) * 50, 10000);
-        console.log(`Bull: Mencoba koneksi Redis ulang dalam ${delay}ms... (percobaan ke-${times + 1})`);
-        return delay;
-      },
-      connectTimeout: 10000,
-      enableOfflineQueue: false,
-      enableReadyCheck: true,
-      tls: isRedissTLS ? { rejectUnauthorized: false } : undefined
-    });
+    console.info(`🔒 Bull Queue menggunakan klien Redis untuk: ${type}`);
+    // Gunakan instance Redis yang sudah dibuat di redis.ts
+    return redisClient;
   },
   prefix: NAMESPACE.PREFIX || 'sportcenter',
   defaultJobOptions: {

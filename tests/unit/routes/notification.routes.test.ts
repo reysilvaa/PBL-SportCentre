@@ -6,8 +6,16 @@ import * as NotificationController from '../../../src/controllers/webhook/notifi
 
 // Mock the controllers
 jest.mock('../../../src/controllers/webhook/notification.controller', () => ({
-  getNotifications: jest.fn((req: Request, res: Response) => res.json({ status: true, notifications: [] })),
-  readNotification: jest.fn((req: Request, res: Response) => res.json({ status: true, message: 'Notification marked as read' })),
+  getNotifications: jest.fn((req: Request, res: Response) => res.json({ 
+    status: true, 
+    message: 'Berhasil mendapatkan notifikasi',
+    data: [] 
+  })),
+  readNotification: jest.fn((req: Request, res: Response) => res.json({ 
+    status: true, 
+    message: 'Notifikasi ditandai sebagai telah dibaca',
+    data: {}
+  })),
 }));
 
 // Mock the middlewares
@@ -38,7 +46,11 @@ describe('Notification Routes', () => {
       
       // Assert
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ status: true, notifications: [] });
+      expect(response.body).toEqual({ 
+        status: true, 
+        message: 'Berhasil mendapatkan notifikasi',
+        data: [] 
+      });
       expect(NotificationController.getNotifications).toHaveBeenCalled();
     });
   });
@@ -50,7 +62,11 @@ describe('Notification Routes', () => {
       
       // Assert
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ status: true, message: 'Notification marked as read' });
+      expect(response.body).toEqual({ 
+        status: true, 
+        message: 'Notifikasi ditandai sebagai telah dibaca',
+        data: {}
+      });
       expect(NotificationController.readNotification).toHaveBeenCalled();
     });
   });

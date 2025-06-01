@@ -1,4 +1,3 @@
-import { createClient, RedisClientType } from 'redis';
 import Redis from 'ioredis';
 import { config } from '../index';
 
@@ -41,119 +40,65 @@ export const KEYS = {
 
 console.info(`🔄 Mencoba koneksi Redis ke ${config.redis.url}`);
 
-// Determine if we're using Redis or IoRedis based on URL
-const isRedissUrl = config.redis.url.startsWith('rediss://');
+// Determine if we're using TLS based on URL
+const isRedissTLS = config.redis.url.startsWith('rediss://');
 
-// Define types for our Redis clients
-type RedisClient = RedisClientType | Redis;
+// Define types for our Redis client
+type RedisClient = Redis;
 let redisClient: RedisClient;
-let isIoRedis = false;
 
-// Use IoRedis for Valkey/Aiven or other TLS Redis services
-if (isRedissUrl) {
-  console.info('🔒 Menggunakan IoRedis untuk koneksi TLS (rediss://)');
-  redisClient = new Redis(config.redis.url, {
-    maxRetriesPerRequest: 3,
-    retryStrategy: (times) => {
-      if (times > 10) {
-        console.error('Redis: Terlalu banyak percobaan koneksi. Tidak akan mencoba lagi.');
-        return null; // Stop retrying
-      }
-      const delay = Math.min(Math.pow(2, times) * 50, 10000);
-      console.log(`Redis: Mencoba koneksi ulang dalam ${delay}ms... (percobaan ke-${times + 1})`);
-      return delay;
-    },
-    connectTimeout: 10000,
-    enableOfflineQueue: false,
-    enableReadyCheck: true,
-    tls: { rejectUnauthorized: false }
-  });
-  isIoRedis = true;
-} else {
-  // Use standard Redis client for non-TLS connections
-  console.info('🔌 Menggunakan Redis standard untuk koneksi non-TLS (redis://)');
-  redisClient = createClient({
-    url: config.redis.url,
-    password: config.redis.password || undefined,
-    socket: {
-      reconnectStrategy: (retries) => {
-        if (retries > 10) {
-          console.error('Redis: Terlalu banyak percobaan koneksi. Tidak akan mencoba lagi.');
-          return new Error('Terlalu banyak percobaan koneksi Redis');
-        }
-        
-        const delay = Math.min(Math.pow(2, retries) * 50, 10000);
-        console.log(`Redis: Mencoba koneksi ulang dalam ${delay}ms... (percobaan ke-${retries + 1})`);
-        return delay;
-      },
-      connectTimeout: 10000
+// Konfigurasi Redis dengan IoRedis untuk semua jenis koneksi
+console.info(`🔒 Menggunakan IoRedis untuk koneksi ${isRedissTLS ? 'TLS (rediss://)' : 'non-TLS (redis://)'}`);
+redisClient = new Redis(config.redis.url, {
+  maxRetriesPerRequest: null, // Penting untuk kompatibilitas dengan Bull
+  retryStrategy: (times) => {
+    if (times > 10) {
+      console.error('Redis: Terlalu banyak percobaan koneksi. Tidak akan mencoba lagi.');
+      return null; // Stop retrying
     }
-  });
+    const delay = Math.min(Math.pow(2, times) * 50, 10000);
+    console.log(`Redis: Mencoba koneksi ulang dalam ${delay}ms... (percobaan ke-${times + 1})`);
+    return delay;
+  },
+  connectTimeout: 10000,
+  enableOfflineQueue: false,
+  tls: isRedissTLS ? { rejectUnauthorized: false } : undefined
+});
 
-  // Connect to Redis (only needed for standard Redis client)
-  (redisClient as RedisClientType).connect().catch((err) => {
-    console.error('Redis connection error:', err);
-    console.error('⚠️ Pastikan server Redis berjalan di ', config.redis.url);
-    console.error('⚠️ Nilai ini dibaca dari file .env atau menggunakan default jika tidak ada');
-  });
-}
+// IoRedis event handlers
+redisClient.on('connect', () => {
+  console.info('🔌 Redis client connected');
+  console.info(`✅ Redis terhubung ke ${config.redis.url}`);
+});
 
-// Event handlers
-if (isIoRedis) {
-  // IoRedis event handlers
-  (redisClient as Redis).on('connect', () => {
-    console.info('🔌 Redis client connected');
-    console.info(`✅ Berhasil terhubung ke Redis di ${config.redis.url}`);
-  });
+redisClient.on('error', (err) => {
+  console.error('🔥 Redis error:', err);
+});
 
-  (redisClient as Redis).on('error', (err) => {
-    console.error('🔥 Redis error:', err);
-  });
-
-  (redisClient as Redis).on('ready', () => {
-    console.info('✅ Redis client ready');
-    console.info(`📦 Cache akan kedaluwarsa setelah ${config.redis.ttl} detik`);
-  });
-} else {
-  // Standard Redis client event handlers
-  (redisClient as RedisClientType).on('connect', () => {
-    console.info('🔌 Redis client connected');
-    console.info(`✅ Berhasil terhubung ke Redis di ${config.redis.url}`);
-  });
-
-  (redisClient as RedisClientType).on('error', (err) => {
-    console.error('🔥 Redis error:', err);
-  });
-
-  (redisClient as RedisClientType).on('reconnecting', () => {
-    console.warn('⚠️ Redis client reconnecting');
-  });
-
-  (redisClient as RedisClientType).on('ready', () => {
-    console.info('✅ Redis client ready');
-    console.info(`📦 Cache akan kedaluwarsa setelah ${config.redis.ttl} detik`);
-  });
-}
+redisClient.on('ready', () => {
+  console.info('✅ Redis client ready');
+  console.info(`📦 Cache akan kedaluwarsa setelah ${config.redis.ttl} detik`);
+});
 
 // Helper function to check if client is connected
 const isConnected = (): boolean => {
-  if (isIoRedis) {
-    return (redisClient as Redis).status === 'ready';
-  } else {
-    return (redisClient as RedisClientType).isOpen;
-  }
+  return redisClient.status === 'ready';
 };
 
 // Helper function to ensure connection
 const ensureConnection = async (): Promise<void> => {
+  // IoRedis automatically reconnects
   if (!isConnected()) {
-    if (isIoRedis) {
-      // IoRedis automatically reconnects
-      return;
-    } else {
-      // Standard Redis client needs explicit reconnect
-      await (redisClient as RedisClientType).connect();
-    }
+    // Tunggu hingga koneksi siap jika belum ready
+    return new Promise((resolve) => {
+      if (isConnected()) {
+        resolve();
+      } else {
+        redisClient.once('ready', () => {
+          resolve();
+        });
+      }
+    });
   }
 };
 
@@ -162,11 +107,7 @@ const redisWrapper = {
   exists: async (key: string): Promise<number> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).exists(key);
-      } else {
-        return await (redisClient as RedisClientType).exists(key);
-      }
+      return await redisClient.exists(key);
     } catch (error) {
       console.error('Redis exists error:', error);
       return 0;
@@ -176,12 +117,7 @@ const redisWrapper = {
   setEx: async (key: string, ttl: number, value: string): Promise<string | null> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        // IoRedis uses different method signature
-        return await (redisClient as Redis).setex(key, ttl, value);
-      } else {
-        return await (redisClient as RedisClientType).setEx(key, ttl, value);
-      }
+      return await redisClient.setex(key, ttl, value);
     } catch (error) {
       console.error('Redis setEx error:', error);
       return null;
@@ -191,11 +127,7 @@ const redisWrapper = {
   del: async (key: string): Promise<number> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).del(key);
-      } else {
-        return await (redisClient as RedisClientType).del(key);
-      }
+      return await redisClient.del(key);
     } catch (error) {
       console.error('Redis del error:', error);
       return 0;
@@ -205,11 +137,7 @@ const redisWrapper = {
   get: async (key: string): Promise<string | null> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).get(key);
-      } else {
-        return await (redisClient as RedisClientType).get(key);
-      }
+      return await redisClient.get(key);
     } catch (error) {
       console.error('Redis get error:', error);
       return null;
@@ -219,11 +147,7 @@ const redisWrapper = {
   set: async (key: string, value: string): Promise<string | null> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).set(key, value);
-      } else {
-        return await (redisClient as RedisClientType).set(key, value);
-      }
+      return await redisClient.set(key, value);
     } catch (error) {
       console.error('Redis set error:', error);
       return null;
@@ -233,11 +157,7 @@ const redisWrapper = {
   keys: async (pattern: string): Promise<string[]> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).keys(pattern);
-      } else {
-        return await (redisClient as RedisClientType).keys(pattern);
-      }
+      return await redisClient.keys(pattern);
     } catch (error) {
       console.error('Redis keys error:', error);
       return [];
@@ -248,18 +168,9 @@ const redisWrapper = {
   scan: async (cursor: number, pattern: string, count: number): Promise<{ cursor: number; keys: string[] }> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        // IoRedis scan returns [cursor, keys]
-        const [newCursor, keys] = await (redisClient as Redis).scan(cursor.toString(), 'MATCH', pattern, 'COUNT', count);
-        return { cursor: parseInt(newCursor), keys };
-      } else {
-        // Standard Redis client scan
-        const result = await (redisClient as RedisClientType).scan(cursor, {
-          MATCH: pattern,
-          COUNT: count
-        });
-        return { cursor: parseInt(result.cursor.toString()), keys: result.keys };
-      }
+      // IoRedis scan returns [cursor, keys]
+      const [newCursor, keys] = await redisClient.scan(cursor.toString(), 'MATCH', pattern, 'COUNT', count);
+      return { cursor: parseInt(newCursor), keys };
     } catch (error) {
       console.error('Redis scan error:', error);
       return { cursor: 0, keys: [] };
@@ -269,11 +180,7 @@ const redisWrapper = {
   flushAll: async (): Promise<string> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).flushall();
-      } else {
-        return await (redisClient as RedisClientType).flushAll();
-      }
+      return await redisClient.flushall();
     } catch (error) {
       console.error('Redis flushAll error:', error);
       return 'error';
@@ -283,29 +190,16 @@ const redisWrapper = {
   info: async (section?: string): Promise<Record<string, string>> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        const info = await (redisClient as Redis).info(section || '');
-        // Parse info string into object
-        const infoObj: Record<string, string> = {};
-        info.split('\r\n').forEach(line => {
-          const parts = line.split(':');
-          if (parts.length === 2) {
-            infoObj[parts[0]] = parts[1];
-          }
-        });
-        return infoObj;
-      } else {
-        // For standard Redis client, convert string response to object
-        const infoStr = await (redisClient as RedisClientType).info(section);
-        const infoObj: Record<string, string> = {};
-        infoStr.split('\r\n').forEach(line => {
-          const parts = line.split(':');
-          if (parts.length === 2) {
-            infoObj[parts[0]] = parts[1];
-          }
-        });
-        return infoObj;
-      }
+      const info = await redisClient.info(section || '');
+      // Parse info string into object
+      const infoObj: Record<string, string> = {};
+      info.split('\r\n').forEach(line => {
+        const parts = line.split(':');
+        if (parts.length === 2) {
+          infoObj[parts[0]] = parts[1];
+        }
+      });
+      return infoObj;
     } catch (error) {
       console.error('Redis info error:', error);
       return {};
@@ -315,11 +209,7 @@ const redisWrapper = {
   dbSize: async (): Promise<number> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).dbsize();
-      } else {
-        return await (redisClient as RedisClientType).dbSize();
-      }
+      return await redisClient.dbsize();
     } catch (error) {
       console.error('Redis dbSize error:', error);
       return 0;
@@ -333,11 +223,7 @@ const redisWrapper = {
   ttl: async (key: string): Promise<number> => {
     try {
       await ensureConnection();
-      if (isIoRedis) {
-        return await (redisClient as Redis).ttl(key);
-      } else {
-        return await (redisClient as RedisClientType).ttl(key);
-      }
+      return await redisClient.ttl(key);
     } catch (error) {
       console.error('Redis ttl error:', error);
       return 0;

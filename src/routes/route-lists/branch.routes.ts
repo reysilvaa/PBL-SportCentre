@@ -1,5 +1,5 @@
 import express from 'express';
-import { getBranches, createBranch, updateBranch, deleteBranch, getUserBranches, addBranchAdmin, deleteBranchAdmin, getBranchAdminById } from '../../controllers/branch.controller';
+import { getBranches, createBranch, updateBranch, deleteBranch, getUserBranches, addBranchAdmin, deleteBranchAdmin, getBranchAdminById, getBranchAdmins } from '../../controllers/branch.controller';
 import { getBranchFields } from '../../controllers/field.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { auth, superAdminAuth } from '../../middlewares/auth.middleware';
@@ -44,6 +44,17 @@ router.get(
   getBranchFields
 );
 
+// Mendapatkan daftar admin cabang berdasarkan ID cabang
+router.get(
+  '/:id/admins',
+  auth({
+    allowedRoles: ['super_admin', 'owner_cabang'],
+    resourceName: 'branch',
+  }),
+  parseIds,
+  getBranchAdmins
+);
+
 // Pendekatan minimalis untuk operasi cabang
 router.post('/', superAdminAuth(), branchUpload.single('imageUrl'), parseIds, createBranch);
 
@@ -65,6 +76,17 @@ router.get(
   auth({
     allowedRoles: ['super_admin', 'owner_cabang'],
     // ownerOnly: true,
+    resourceName: 'branch',
+  }),
+  parseIds,
+  getBranchAdminById
+);
+
+// Mendapatkan data admin cabang berdasarkan ID cabang dan ID user
+router.get(
+  '/:id/admins/:userId',
+  auth({
+    allowedRoles: ['super_admin', 'owner_cabang'],
     resourceName: 'branch',
   }),
   parseIds,

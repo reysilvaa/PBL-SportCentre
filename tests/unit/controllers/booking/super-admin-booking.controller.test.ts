@@ -10,6 +10,7 @@ jest.mock('../../../../src/config/services/database', () => ({
   booking: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    count: jest.fn().mockResolvedValue(2),
   },
   payment: {
     update: jest.fn(),
@@ -122,6 +123,13 @@ describe('Super Admin Booking Controller', () => {
       },
     ];
 
+    beforeEach(() => {
+      // Reset mocks
+      jest.clearAllMocks();
+      // Set count mock for each test
+      (prisma.booking.count as jest.Mock).mockResolvedValue(mockBookings.length);
+    });
+
     it('should return all bookings without filters', async () => {
       // Arrange
       (prisma.booking.findMany as jest.Mock).mockResolvedValueOnce(mockBookings);
@@ -132,6 +140,8 @@ describe('Super Admin Booking Controller', () => {
       // Assert
       expect(prisma.booking.findMany).toHaveBeenCalledWith({
         where: {},
+        skip: 0,
+        take: 15,
         include: {
           user: { select: { id: true, name: true, email: true } },
           field: { include: { branch: true, type: true } },
@@ -145,6 +155,14 @@ describe('Super Admin Booking Controller', () => {
         status: true,
         message: 'Berhasil mendapatkan data semua booking',
         data: mockBookings,
+        meta: {
+          page: 1,
+          limit: 15,
+          totalItems: mockBookings.length,
+          totalPages: 1,
+          currentPage: 1,
+          itemsPerPage: 15,
+        },
       });
     });
 
@@ -168,6 +186,8 @@ describe('Super Admin Booking Controller', () => {
             lte: new Date('2025-06-30'),
           },
         },
+        skip: 0,
+        take: 15,
         include: {
           user: { select: { id: true, name: true, email: true } },
           field: { include: { branch: true, type: true } },
@@ -192,6 +212,8 @@ describe('Super Admin Booking Controller', () => {
             branchId: 1,
           },
         },
+        skip: 0,
+        take: 15,
         include: {
           user: { select: { id: true, name: true, email: true } },
           field: { include: { branch: true, type: true } },
@@ -216,6 +238,8 @@ describe('Super Admin Booking Controller', () => {
             status: 'paid',
           },
         },
+        skip: 0,
+        take: 15,
         include: {
           user: { select: { id: true, name: true, email: true } },
           field: { include: { branch: true, type: true } },
@@ -253,6 +277,8 @@ describe('Super Admin Booking Controller', () => {
             status: 'paid',
           },
         },
+        skip: 0,
+        take: 15,
         include: {
           user: { select: { id: true, name: true, email: true } },
           field: { include: { branch: true, type: true } },

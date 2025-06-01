@@ -7,19 +7,19 @@ import * as FieldController from '../../../src/controllers/field.controller';
 
 // Mock the controllers
 jest.mock('../../../src/controllers/branch.controller', () => ({
-  getBranches: jest.fn((req: Request, res: Response) => res.json({ status: true, branches: [] })),
-  createBranch: jest.fn((req: Request, res: Response) => res.json({ status: true, message: 'Branch created' })),
-  updateBranch: jest.fn((req: Request, res: Response) => res.json({ status: true, message: 'Branch updated' })),
-  deleteBranch: jest.fn((req: Request, res: Response) => res.json({ status: true, message: 'Branch deleted' })),
-  getUserBranches: jest.fn((req: Request, res: Response) => res.json({ status: true, branches: [] })),
-  getBranchAdmins: jest.fn((req: Request, res: Response) => res.json({ status: true, admins: [] })),
-  addBranchAdmin: jest.fn((req: Request, res: Response) => res.json({ status: true, message: 'Branch admin added' })),
-  deleteBranchAdmin: jest.fn((req: Request, res: Response) => res.json({ status: true, message: 'Branch admin deleted' })),
-  getBranchAdminById: jest.fn((req: Request, res: Response) => res.json({ status: true, admin: {} })),
+  getBranches: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, branches: [] })),
+  createBranch: jest.fn((req: Request, res: Response) => res.status(201).json({ status: true, message: 'Branch created' })),
+  updateBranch: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, message: 'Branch updated' })),
+  deleteBranch: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, message: 'Branch deleted' })),
+  getUserBranches: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, branches: [] })),
+  getBranchAdmins: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, admins: [] })),
+  addBranchAdmin: jest.fn((req: Request, res: Response) => res.status(201).json({ status: true, message: 'Branch admin added' })),
+  deleteBranchAdmin: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, message: 'Branch admin deleted' })),
+  getBranchAdminById: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, admin: {} })),
 }));
 
 jest.mock('../../../src/controllers/field.controller', () => ({
-  getBranchFields: jest.fn((req: Request, res: Response) => res.json({ status: true, fields: [] })),
+  getBranchFields: jest.fn((req: Request, res: Response) => res.status(200).json({ status: true, fields: [] })),
 }));
 
 // Mock the middlewares
@@ -142,7 +142,7 @@ describe('Branch Routes', () => {
         .send(branchData);
       
       // Assert
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toEqual({ status: true, message: 'Branch created' });
       expect(BranchController.createBranch).toHaveBeenCalled();
     });
@@ -186,7 +186,7 @@ describe('Branch Routes', () => {
       const response = await request(app).post('/branches/1/admins/2');
       
       // Assert
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toEqual({ status: true, message: 'Branch admin added' });
       expect(BranchController.addBranchAdmin).toHaveBeenCalled();
     });
@@ -201,6 +201,18 @@ describe('Branch Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ status: true, message: 'Branch admin deleted' });
       expect(BranchController.deleteBranchAdmin).toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /:id/admins/:userId', () => {
+    it('should call getBranchAdminById controller', async () => {
+      // Act
+      const response = await request(app).get('/branches/1/admins/2');
+      
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ status: true, admin: {} });
+      expect(BranchController.getBranchAdminById).toHaveBeenCalled();
     });
   });
 }); 

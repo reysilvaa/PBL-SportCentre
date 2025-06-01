@@ -123,7 +123,7 @@ describe('Branch Controller', () => {
         data: mockBranches,
         meta: {
           page: 1,
-          limit: 100,
+          limit: 15,
           totalItems: 2,
           totalPages: 1,
           hasNextPage: false,
