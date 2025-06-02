@@ -180,8 +180,14 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
     const { id } = req.params;
     const branchId = parseInt(id);
 
+    console.log('🔍 Update branch request:', {
+      branchId,
+      body: req.body,
+      hasFile: !!req.file,
+      fileName: req.file?.originalname
+    });
+
     if (isNaN(branchId)) {
-      // Clean up uploaded file if exists
       if (req.file?.path) {
         await cleanupUploadedFile(req.file.path);
       }
@@ -199,7 +205,6 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
     });
 
     if (!existingBranch) {
-      // Clean up uploaded file if exists
       if (req.file?.path) {
         await cleanupUploadedFile(req.file.path);
       }
@@ -223,7 +228,6 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
     const result = updateBranchSchema.safeParse(dataToValidate);
 
     if (!result.success) {
-      // Clean up uploaded file if exists
       if (req.file?.path) {
         await cleanupUploadedFile(req.file.path);
       }
@@ -243,26 +247,24 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
     }
 
     // Validasi apakah pengguna memiliki akses ke cabang ini
-    // Super admin dapat memperbarui cabang mana pun
     if (req.user?.role !== 'super_admin') {
       const isAuthorized = await prisma.branch.findFirst({
         where: {
           id: branchId,
           OR: [
-            { ownerId: req.user!.id }, // User is owner
+            { ownerId: req.user!.id },
             {
               admins: {
                 some: {
                   userId: req.user!.id,
                 },
               },
-            }, // User is admin
+            },
           ],
         },
       });
 
       if (!isAuthorized) {
-        // Clean up uploaded file if exists
         if (req.file?.path) {
           await cleanupUploadedFile(req.file.path);
         }
@@ -276,7 +278,6 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
 
       // Admin cabang dan pemilik cabang tidak dapat mengubah ownerId
       if (ownerId && ownerId !== existingBranch.ownerId) {
-        // Clean up uploaded file if exists
         if (req.file?.path) {
           await cleanupUploadedFile(req.file.path);
         }
@@ -297,20 +298,58 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
       (updateData as any).ownerId = ownerId;
     }
 
-    // Handle image update
-    if (req.file?.path) {
-      updateData.imageUrl = req.file.path;
-
-      // Clean up old image if exists
-      if (existingBranch.imageUrl) {
-        await cleanupUploadedFile(existingBranch.imageUrl);
+    // Handle image update logic
+    let shouldCleanupOldImage = false;
+    
+    console.log('📸 Image handling - removeImage flag:', req.body.removeImage);
+    console.log('📸 Image handling - has file:', !!req.file);
+    console.log('📸 Image handling - keepCurrentImage:', req.body.keepCurrentImage);
+    
+    if (req.body.removeImage === 'true') {
+      // User wants to remove the image - EXPLICITLY set to null
+      console.log('📸 Removing image as requested');
+      (updateData as any).imageUrl = null; // Force set to null
+      shouldCleanupOldImage = true;
+      
+      // Clean up uploaded file if any (shouldn't happen but just in case)
+      if (req.file?.path) {
+        await cleanupUploadedFile(req.file.path);
       }
+    } else if (req.file?.path) {
+      // New image is uploaded
+      console.log('📸 New image uploaded:', req.file.originalname);
+      updateData.imageUrl = req.file.path;
+      shouldCleanupOldImage = true;
+    } else if (req.body.keepCurrentImage === 'true') {
+      // Keep current image - don't change imageUrl field at all
+      console.log('📸 Keeping current image');
+      delete updateData.imageUrl;
+    } else {
+      // No specific instruction - don't modify imageUrl
+      console.log('📸 No image changes requested');
+      delete updateData.imageUrl;
     }
 
+    console.log('📝 Final update data:', {
+      ...updateData,
+      imageUrl: updateData.imageUrl === null ? 'WILL_BE_DELETED' : updateData.imageUrl ? 'SET' : 'UNCHANGED'
+    });
+
+    // IMPORTANT: Use spread operator to ensure null values are included
     const updatedBranch = await prisma.branch.update({
       where: { id: branchId },
-      data: updateData,
+      data: {
+        ...updateData,
+        // Explicitly handle imageUrl to ensure null is passed when removing
+        ...(req.body.removeImage === 'true' ? { imageUrl: null } : {}),
+      },
     });
+
+    // Clean up old image if needed
+    if (shouldCleanupOldImage && existingBranch.imageUrl) {
+      console.log('🗑️ Cleaning up old image:', existingBranch.imageUrl);
+      await cleanupUploadedFile(existingBranch.imageUrl);
+    }
 
     // Hapus cache secara komprehensif
     await invalidateBranchCache(branchId);
@@ -325,13 +364,15 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
       },
     });
 
+    console.log('✅ Branch updated successfully');
+
     res.status(200).json({
       status: true,
       message: 'Berhasil memperbarui cabang',
       data: updatedBranch,
     });
   } catch (error) {
-    console.error('Error updating branch:', error);
+    console.error('❌ Error updating branch:', error);
 
     // Clean up uploaded file if exists
     if (req.file?.path) {
