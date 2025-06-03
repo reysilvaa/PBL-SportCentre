@@ -32,6 +32,47 @@ export const getFieldTypes = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+export const getFieldTypeById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const fieldType = await prisma.fieldType.findUnique({
+      where: { id: Number(id) },
+      include: {
+        Fields: {
+          select: {
+            id: true,
+            name: true,
+            branch: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!fieldType) {
+      res.status(404).json({
+        status: false,
+        message: 'Field type not found',
+      });
+      return;
+    }
+
+    res.json({
+      status: true,
+      message: 'Successfully retrieved field type',
+      data: fieldType,
+    });
+  } catch (error) {
+    console.error('Error fetching field type:', error);
+    res.status(500).json({ 
+      status: false,
+      message: 'Internal Server Error',
+    });
+  }
+};
 
 export const createFieldType = async (req: User, res: Response): Promise<void> => {
   try {

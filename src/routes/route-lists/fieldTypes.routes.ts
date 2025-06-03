@@ -4,6 +4,7 @@ import {
   createFieldType,
   updateFieldType,
   deleteFieldType,
+  getFieldTypeById,
 } from '../../controllers/fieldType.controller';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { auth } from '../../middlewares/auth.middleware';
@@ -13,6 +14,7 @@ const router = express.Router();
 
 // Rute publik yang tidak memerlukan peran spesifik
 router.get('/', cacheMiddleware('field_types', 600), getFieldTypes);
+router.get('/:id', cacheMiddleware('field_types', 600), getFieldTypeById);
 
 // Rute khusus admin
 router.post(
