@@ -28,9 +28,9 @@ router.get(
 router.get(
   '/:id',
   cacheMiddleware('branch_detail', 10),
-  auth({
-    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
-  }),
+  // auth({
+  //   allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
+  // }),
   getBranches
 );
 
@@ -38,9 +38,9 @@ router.get(
 router.get(
   '/:id/fields',
   cacheMiddleware('branch_fields', 10),
-  auth({
-    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
-  }),
+  // auth({
+  //   allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang', 'user'],
+  // }),
   getBranchFields
 );
 

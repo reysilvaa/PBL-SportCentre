@@ -167,7 +167,8 @@ export const processMidtransPayment = async (
     item_details: [
       {
         id: field.id.toString(),
-        name: `${field.branch?.name || 'Field'} - ${field.name}`,
+        // name: `${field.branch?.name || 'Field'} - ${field.name}`,
+        name: `${field.name} - ${payment.id}`,
         price: totalPrice,
         quantity: 1,
       },
