@@ -178,13 +178,23 @@ export const getUserBookings = async (req: User, res: Response): Promise<void> =
   try {
     const { userId } = req.params;
     const parsedUserId = parseInt(userId);
+    const { statusPayment } = req.query;
 
     if (isNaN(parsedUserId)) {
       return sendErrorResponse(res, 400, 'Invalid user ID');
     }
 
+    let whereCondition: any = {userId: parsedUserId};
+
+    if (statusPayment !== undefined) {
+      whereCondition.payment = {
+        status: statusPayment,
+      };
+    }
+
+
     const bookings = await prisma.booking.findMany({
-      where: { userId: parsedUserId },
+      where: whereCondition,
       include: {
         field: {
           include: {
