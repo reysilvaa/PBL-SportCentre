@@ -90,46 +90,51 @@ jobs:
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            set -e
-            echo "=== Memulai deployment pada $(date) ==="
-
-            source ~/.profile
-            source ~/.bashrc
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-            echo "Node version: $(node -v)"
-            echo "NPM version: $(npm -v)"
-
-            cd /pbl/backend
-
-            echo "=> Menyiapkan dependensi"
-            if ! command -v pm2 &> /dev/null; then
-              echo "PM2 tidak ditemukan, menginstall..."
-              npm install -g pm2
-            fi
-
-            echo "=> Menghentikan aplikasi lama (jika ada)"
-            pm2 stop backend || true
-
-            echo "=> Menarik kode terbaru dari Git"
-            git pull origin main
-
-            echo "=> Install ulang dependensi"
-            rm -rf node_modules package-lock.json
-            npm install --no-fund --no-audit
-
-            echo "=> Generate ulang Prisma client"
-            npx prisma generate
-
-            echo "=> Menjalankan ulang aplikasi dengan PM2"
-            pm2 restart backend || pm2 start dist/app.js --name backend
-
-            echo "=> Status aplikasi:"
-            pm2 list
-
-            echo "✅ Deployment selesai!"
+            host: ${{ secrets.HOST }}
+            username: ${{ secrets.USERNAME }}
+            key: ${{ secrets.SSH_KEY }}
+            script: |
+              set -e
+              echo "=== Memulai deployment pada $(date) ==="
+  
+              source ~/.profile
+              source ~/.bashrc
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  
+              echo "Node version: $(node -v)"
+              echo "NPM version: $(npm -v)"
+  
+              cd /pbl/backend
+  
+              echo "=> Menyiapkan dependensi"
+              if ! command -v pm2 &> /dev/null; then
+                echo "PM2 tidak ditemukan, menginstall..."
+                npm install -g pm2
+              fi
+  
+              echo "=> Menghentikan aplikasi lama (jika ada)"
+              pm2 stop backend || true
+  
+              echo "=> Menarik kode terbaru dari Git"
+              git pull origin main
+  
+              echo "=> Install ulang dependensi"
+              rm -rf node_modules package-lock.json
+              npm install --no-fund --no-audit
+  
+              echo "=> Generate ulang Prisma client"
+              npx prisma generate
+  
+              echo "=> Build ulang dan minify"
+              npm run build
+              node scripts/minify.js
+  
+              echo "=> Menjalankan ulang aplikasi dengan PM2"
+              pm2 reload backend --update-env || pm2 start dist/app.js --name backend
+  
+              echo "=> Status aplikasi:"
+              pm2 list
+  
+              echo "✅ Deployment selesai!"
+  
