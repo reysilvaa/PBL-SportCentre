@@ -10,6 +10,7 @@ export const corsConfig = (): CorsOptions => {
   const allowedOrigins = [
     config.urls.frontend,
     '*',
+    'https://sportcenter.mywire.org',
     'http://localhost:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3000',
