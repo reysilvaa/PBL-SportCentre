@@ -31,14 +31,27 @@ jobs:
         
       - name: Create .env file for CI/CD
         run: |
-          echo "NODE_ENV=development" > .env
-          echo "PORT=3000" >> .env
-          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sportcenter_test" >> .env
-          echo "JWT_SECRET=test_secret_key_for_ci_cd" >> .env
-          echo "JWT_EXPIRES_IN=1h" >> .env
-          echo "REDIS_HOST=localhost" >> .env
-          echo "REDIS_PORT=6379" >> .env
-          echo "REDIS_PASSWORD=" >> .env
+          cat > .env << EOF
+          DATABASE_URL="mysql://root:root@localhost:3306/sport_center_test"
+          NODE_ENV=development
+          PORT=3000
+          JWT_SECRET="PPPye7eiDdaCfBjX8gpTDgYFDqbbTb+pTTfo6tYWHfA="
+          MIDTRANS_CLIENT_KEY=SB-Mid-client-VswB7qVp7dSJCEtP
+          MIDTRANS_SERVER_KEY=SB-Mid-server-k9I3kbysNWc5XW-QWkbDt38f
+          API_URL="https://api.sportcenter.id"
+          API_URL_DEV="http://localhost:3000"
+          FRONTEND_URL="http://localhost:3001"
+          COOKIE_DOMAIN=""
+          CACHE_TTL=300
+          REDIS_URL=redis://localhost:6379
+          REDIS_PASSWORD=
+          REDIS_TTL=300
+          COOKIE_SECRET="G3eA5tR7aP9sW2oL6xQ1zF4yD8bV0jH3"
+          COOKIE_MAX_AGE=86400000
+          CLOUDINARY_API_KEY=448879952211112
+          CLOUDINARY_API_SECRET=vCUNQtphUqAXj8CmaR1hEpXYOLU
+          CLOUDINARY_CLOUD_NAME=dxuxgut2c
+          EOF
       
       - name: Generate Prisma Client
         run: npx prisma generate
