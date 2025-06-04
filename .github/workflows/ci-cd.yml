@@ -95,11 +95,19 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /pbl/backend
+            
+            # Pastikan PM2 berhenti agar tidak ada konflik saat deploy
+            pm2 stop backend || true
+            
+            # Pull perubahan terbaru
             git pull origin main
             
             # Hapus node_modules dan package-lock.json
             rm -rf node_modules
             rm -f package-lock.json
+            
+            # Hapus dist yang ada jika masih ada error
+            rm -rf dist
             
             # Install global dependencies
             npm install -g rimraf
@@ -107,17 +115,35 @@ jobs:
             # Install ulang semua dependensi
             npm install --no-fund --no-audit
             
-            # Install debug, express dan finalhandler secara eksplisit
-            npm install debug express finalhandler --save
+            # Install semua dependensi yang sering bermasalah secara eksplisit
+            npm install debug express finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis --save
+            
+            # Regenerate Prisma Client
+            npx prisma generate
             
             # Bersihkan cache npm
             npm cache clean --force
             
+            # Buat .env file jika belum ada
+            if [ ! -f .env ]; then
+              echo "Membuat file .env dari template"
+              cp .env.example .env || echo "Tidak ada file .env.example"
+            fi
+            
             # Build aplikasi
             npm run build && node scripts/minify.js
+            
+            # Pastikan direktori dist dan file app.js ada
+            if [ ! -d "dist/src" ]; then
+              echo "Error: direktori dist/src tidak ditemukan!"
+              exit 1
+            fi
             
             # Restart aplikasi
             npm run restart:prod
             pm2 restart backend
+            
+            # Periksa status aplikasi
+            pm2 list
             
             echo "Deployment ke server selesai" 
