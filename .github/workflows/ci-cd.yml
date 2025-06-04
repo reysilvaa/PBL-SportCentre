@@ -28,6 +28,17 @@ jobs:
         
       - name: Install global dependencies
         run: npm install -g rimraf
+        
+      - name: Create .env file for CI/CD
+        run: |
+          echo "NODE_ENV=development" > .env
+          echo "PORT=3000" >> .env
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sportcenter_test" >> .env
+          echo "JWT_SECRET=test_secret_key_for_ci_cd" >> .env
+          echo "JWT_EXPIRES_IN=1h" >> .env
+          echo "REDIS_HOST=localhost" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "REDIS_PASSWORD=" >> .env
       
       - name: Generate Prisma Client
         run: npx prisma generate
