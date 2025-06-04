@@ -124,12 +124,6 @@ jobs:
             # Bersihkan cache npm
             npm cache clean --force
             
-            # Buat .env file jika belum ada
-            if [ ! -f .env ]; then
-              echo "Membuat file .env dari template"
-              cp .env.example .env || echo "Tidak ada file .env.example"
-            fi
-            
             # Build aplikasi
             npm run build && node scripts/minify.js
             
