@@ -94,46 +94,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # Memuat profile untuk mendapatkan path yang benar
-            source ~/.profile
-            source ~/.bashrc
-            
-            # Export PATH untuk mendapatkan npm dan node via NVM jika ada
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-            
-            # Export PATH untuk Volta jika ada
-            export VOLTA_HOME="$HOME/.volta"
-            export PATH="$VOLTA_HOME/bin:$PATH"
-            
-            # Periksa apakah node dan npm tersedia
-            echo "Checking for Node.js and npm..."
-            if ! command -v node &> /dev/null; then
-              echo "Node.js tidak ditemukan!"
-              exit 1
-            fi
-            
-            if ! command -v npm &> /dev/null; then
-              echo "npm tidak ditemukan!"
-              exit 1
-            fi
-            
-            # Tampilkan versi node dan npm
-            echo "Node version: $(node -v)"
-            echo "NPM version: $(npm -v)"
-            
             cd /pbl/backend
-            
-            # Pastikan PM2 tersedia
-            if ! command -v pm2 &> /dev/null; then
-              echo "PM2 tidak ditemukan, menginstall..."
-              npm install -g pm2
-            fi
-            
-            # Tampilkan path untuk troubleshooting
-            echo "PATH: $PATH"
-            echo "Current directory: $(pwd)"
             
             # Pastikan PM2 berhenti agar tidak ada konflik saat deploy
             pm2 stop backend || true
@@ -153,15 +114,9 @@ jobs:
             
             # Install ulang semua dependensi
             npm install --no-fund --no-audit
-                
-            # Perbaiki path-to-regexp yang menyebabkan error
-            npm install path-to-regexp@6.2.1 --save
             
             # Install semua dependensi yang sering bermasalah secara eksplisit
-            npm install debug express@4.18.2 finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis cookie-parser compression helmet jsonwebtoken --save
-            
-            # Perbaiki masalah deprecated res.clearCookie
-            # npm install express@latest --save
+            npm install debug express finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis --save
             
             # Regenerate Prisma Client
             npx prisma generate
@@ -172,40 +127,17 @@ jobs:
             # Build aplikasi
             npm run build && node scripts/minify.js
             
-            # Inspect file app.js untuk mencari modul yang hilang
-            echo "Checking app.js for imported modules..."
-            cat dist/src/app.js | grep -E "require\(|from '" | sed 's/.*require(\([^)]*\)).*/\1/g' | sed "s/.*from '\([^']*\)'.*/\1/g" | sort | uniq > required_modules.txt
-            
-            # Instal modul yang mungkin masih hilang
-            for module in $(cat required_modules.txt); do
-              if [[ $module != "." && $module != ".." && $module != "/" && !($module =~ ^\.\/|^\.\.\/|^\/|^@\/) ]]; then
-                echo "Installing potential missing module: $module"
-                npm install $module --save || true
-              fi
-            done
-            
             # Pastikan direktori dist dan file app.js ada
             if [ ! -d "dist/src" ]; then
               echo "Error: direktori dist/src tidak ditemukan!"
               exit 1
             fi
             
-            if [ ! -f "dist/src/app.js" ]; then
-              echo "Error: file dist/src/app.js tidak ditemukan!"
-              ls -la dist/src/
-              exit 1
-            fi
-            
             # Restart aplikasi
-            npm run restart:prod || npm run start:prod
-            
-            # Pastikan aplikasi berjalan dengan PM2
-            pm2 restart backend || pm2 start dist/src/app.js --name backend
+            npm run restart:prod
+            pm2 restart backend
             
             # Periksa status aplikasi
             pm2 list
-            
-            # Tampilkan log terakhir untuk memeriksa error
-            pm2 logs --lines 10 backend
             
             echo "Deployment ke server selesai" 
