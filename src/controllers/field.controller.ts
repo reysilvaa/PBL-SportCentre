@@ -324,7 +324,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     // Get branch ID from middleware
     const branchId = req.userBranch?.id;
 
-    if (!branchId) {
+    if (!branchId && req.user?.role !== 'super_admin') {
       // Clean up uploaded file if exists
       if (req.file?.path) {
         await cleanupUploadedFile(req.file.path);
@@ -374,9 +374,11 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
       updateData.typeId = parseInt(updateData.typeId);
     }
 
-    // Reguler user tidak bisa mengubah branchId
-    if (req.user?.role !== 'super_admin') {
-      // Ensure branchId is not changed to another branch
+    // ✅ PERBAIKAN: Handle branchId untuk super admin
+    if (req.user?.role === 'super_admin' && updateData.branchId) {
+      updateData.branchId = parseInt(updateData.branchId);
+    } else if (req.user?.role !== 'super_admin') {
+      // Reguler user tidak bisa mengubah branchId
       if (updateData.branchId && parseInt(updateData.branchId) !== branchId) {
         // Clean up uploaded file if exists
         if (req.file?.path) {
@@ -394,20 +396,32 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
       updateData.branchId = branchId;
     }
 
-    // Jika ada file baru yang diupload
-    if (req.file?.path) {
-      updateData.imageUrl = req.file.path;
+    // ✅ PERBAIKAN: Handle image operations
+    let shouldDeleteOldImage = false;
+    let oldImagePath = existingField.imageUrl;
 
-      // Hapus gambar lama jika ada
-      if (existingField.imageUrl) {
-        await cleanupUploadedFile(existingField.imageUrl);
-      }
+    // Check if user wants to remove image
+    if (updateData.removeImage === 'true' || updateData.removeImage === true) {
+      console.log('Removing image - setting imageUrl to null');
+      updateData.imageUrl = null;
+      shouldDeleteOldImage = true;
+    }
+    // Check if there's a new file uploaded
+    else if (req.file?.path) {
+      console.log('New image uploaded:', req.file.path);
+      updateData.imageUrl = req.file.path;
+      shouldDeleteOldImage = true; // Replace old image
     }
 
-    // Validasi data dengan Zod
+    // ✅ Remove non-database fields before validation
+    delete updateData.removeImage;
+
+    // ✅ PERBAIKAN: Validasi data dengan Zod schema yang sudah diperbaiki
     const result = updateFieldSchema.safeParse(updateData);
 
     if (!result.success) {
+      console.error('Validation failed:', result.error.format());
+      
       // Clean up uploaded file if exists
       if (req.file?.path) {
         await cleanupUploadedFile(req.file.path);
@@ -421,10 +435,38 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
       return;
     }
 
+    console.log('Updating field with data:', result.data);
+
+    // Update field in database
     const updatedField = await prisma.field.update({
       where: { id: fieldId },
       data: result.data,
+      include: {
+        branch: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        type: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     });
+
+    // ✅ PERBAIKAN: Delete old image after successful database update
+    if (shouldDeleteOldImage && oldImagePath) {
+      try {
+        await cleanupUploadedFile(oldImagePath);
+        console.log('Old image deleted:', oldImagePath);
+      } catch (error) {
+        console.error('Error deleting old image:', error);
+        // Don't fail the request if image deletion fails
+      }
+    }
 
     // Hapus cache yang relevan
     await invalidateFieldCache();
@@ -455,6 +497,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     res.status(500).json({
       status: false,
       message: 'Gagal memperbarui lapangan',
+      error: process.env.NODE_ENV === 'development' ? error : undefined,
     });
   }
 };
