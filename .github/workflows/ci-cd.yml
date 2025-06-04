@@ -31,14 +31,27 @@ jobs:
         
       - name: Create .env file for CI/CD
         run: |
-          echo "NODE_ENV=development" > .env
-          echo "PORT=3000" >> .env
-          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sportcenter_test" >> .env
-          echo "JWT_SECRET=test_secret_key_for_ci_cd" >> .env
-          echo "JWT_EXPIRES_IN=1h" >> .env
-          echo "REDIS_HOST=localhost" >> .env
-          echo "REDIS_PORT=6379" >> .env
-          echo "REDIS_PASSWORD=" >> .env
+          cat > .env << EOF
+          NODE_ENV=development
+          PORT=3000
+          DATABASE_URL=${{ secrets.DATABASE_URL || 'mysql://root:root@localhost:3306/sport_center_test' }}
+          JWT_SECRET=${{ secrets.JWT_SECRET || 'test_jwt_secret_for_ci_cd' }}
+          MIDTRANS_CLIENT_KEY=${{ secrets.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-dummy' }}
+          MIDTRANS_SERVER_KEY=${{ secrets.MIDTRANS_SERVER_KEY || 'SB-Mid-server-dummy' }}
+          API_URL=${{ secrets.API_URL || 'http://localhost:3000' }}
+          API_URL_DEV=${{ secrets.API_URL_DEV || 'http://localhost:3000' }}
+          FRONTEND_URL=${{ secrets.FRONTEND_URL || 'http://localhost:3001' }}
+          COOKIE_DOMAIN=
+          CACHE_TTL=300
+          REDIS_URL=${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD || '' }}
+          REDIS_TTL=300
+          COOKIE_SECRET=${{ secrets.COOKIE_SECRET || 'test_cookie_secret_for_ci_cd' }}
+          COOKIE_MAX_AGE=86400000
+          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY || 'dummy_key' }}
+          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET || 'dummy_secret' }}
+          CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME || 'dummy_cloud_name' }}
+          EOF
       
       - name: Generate Prisma Client
         run: npx prisma generate

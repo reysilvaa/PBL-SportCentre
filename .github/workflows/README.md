@@ -11,10 +11,25 @@ Workflow ini mengotomatisasi proses build, test, dan deployment untuk aplikasi b
 
 Untuk menggunakan workflow ini, tambahkan secrets berikut di repository GitHub:
 
-### Production Server
+### Deployment Server
 - `HOST`: Alamat IP atau hostname server
 - `USERNAME`: Username untuk SSH ke server
 - `SSH_KEY`: Private key SSH untuk server
+
+### Konfigurasi Aplikasi (.env)
+- `DATABASE_URL`: URL koneksi database
+- `JWT_SECRET`: Secret key untuk JWT
+- `MIDTRANS_CLIENT_KEY`: Client key Midtrans
+- `MIDTRANS_SERVER_KEY`: Server key Midtrans
+- `API_URL`: URL API untuk production
+- `API_URL_DEV`: URL API untuk development
+- `FRONTEND_URL`: URL frontend untuk CORS
+- `REDIS_URL`: URL koneksi Redis
+- `REDIS_PASSWORD`: Password Redis (opsional)
+- `COOKIE_SECRET`: Secret untuk signed cookies
+- `CLOUDINARY_API_KEY`: API key Cloudinary
+- `CLOUDINARY_API_SECRET`: API secret Cloudinary
+- `CLOUDINARY_CLOUD_NAME`: Cloud name Cloudinary
 
 ## Cara Menambahkan Secrets
 
