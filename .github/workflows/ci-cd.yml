@@ -25,6 +25,9 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+        
+      - name: Install global dependencies
+        run: npm install -g rimraf
       
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -73,6 +76,9 @@ jobs:
             # Hapus node_modules dan package-lock.json
             rm -rf node_modules
             rm -f package-lock.json
+            
+            # Install global dependencies
+            npm install -g rimraf
             
             # Install ulang semua dependensi
             npm install --no-fund --no-audit
