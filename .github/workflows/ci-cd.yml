@@ -9,26 +9,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [22.x]
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install global dependencies
         run: npm install -g rimraf
-        
+
       - name: Create .env file for CI/CD
         run: |
           cat > .env << EOF
@@ -52,21 +51,13 @@ jobs:
           CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET || 'dummy_secret' }}
           CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME || 'dummy_cloud_name' }}
           EOF
-      
+
       - name: Generate Prisma Client
         run: npx prisma generate
-      
-      - name: Build
+
+      - name: Build project
         run: npm run build
-      
-    #   - name: Run linter
-    #     run: npm run lint
-      
-    #   - name: Run tests
-    #     run: npm run test:quiet
-    #     env:
-    #       NODE_ENV: test
-      
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -77,16 +68,25 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
-      
+
+      - name: Copy build files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "dist/"
+          target: "/pbl/backend/dist/"
+
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -94,71 +94,42 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # Memuat profile untuk mendapatkan path yang benar
+            set -e
+            echo "=== Memulai deployment pada $(date) ==="
+
             source ~/.profile
             source ~/.bashrc
-            
-            # Export PATH untuk mendapatkan npm dan node
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-            
-            # Pastikan perintah node dan npm tersedia
+
             echo "Node version: $(node -v)"
             echo "NPM version: $(npm -v)"
-            
+
             cd /pbl/backend
-            
-            # Pastikan PM2 tersedia
+
+            echo "=> Menyiapkan dependensi"
             if ! command -v pm2 &> /dev/null; then
               echo "PM2 tidak ditemukan, menginstall..."
               npm install -g pm2
             fi
-            
-            # Pastikan PM2 berhenti agar tidak ada konflik saat deploy
+
+            echo "=> Menghentikan aplikasi lama (jika ada)"
             pm2 stop backend || true
-            
-            # Pull perubahan terbaru
+
+            echo "=> Menarik kode terbaru dari Git"
             git pull origin main
-            
-            # Hapus node_modules dan package-lock.json
-            rm -rf node_modules
-            rm -f package-lock.json
-            
-            # Hapus dist yang ada jika masih ada error
-            rm -rf dist
-            
-            # Install global dependencies
-            npm install -g rimraf
-            
-            # Install ulang semua dependensi
+
+            echo "=> Install ulang dependensi"
+            rm -rf node_modules package-lock.json
             npm install --no-fund --no-audit
-            
-            # Install semua dependensi yang sering bermasalah secara eksplisit
-            npm install debug express finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis --save
-            
-            # Regenerate Prisma Client
+
+            echo "=> Generate ulang Prisma client"
             npx prisma generate
-            
-            # Bersihkan cache npm
-            npm cache clean --force
-            
-            # Build aplikasi
-            npm run build && node scripts/minify.js
-            
-            # Pastikan direktori dist dan file app.js ada
-            if [ ! -d "dist/src" ]; then
-              echo "Error: direktori dist/src tidak ditemukan!"
-              exit 1
-            fi
-            
-            # Restart aplikasi
-            npm run restart:prod || npm run start:prod
-            
-            # Pastikan aplikasi berjalan dengan PM2
+
+            echo "=> Menjalankan ulang aplikasi dengan PM2"
             pm2 restart backend || pm2 start dist/app.js --name backend
-            
-            # Periksa status aplikasi
+
+            echo "=> Status aplikasi:"
             pm2 list
-            
-            echo "Deployment ke server selesai" 
+
+            echo "✅ Deployment selesai!"
