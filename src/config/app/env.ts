@@ -36,12 +36,19 @@ function getEnvValue<K extends keyof EnvConfig>(key: K): string {
   return value;
 }
 
+// Cek apakah harus memaksa Midtrans menggunakan sandbox
+const forceMidtransSandbox = process.env.FORCE_MIDTRANS_SANDBOX === 'true';
+if (forceMidtransSandbox && env === 'production') {
+  console.info('⚠️ Memaksa Midtrans menggunakan mode Sandbox meskipun di lingkungan production');
+}
+
 // Buat konfigurasi aplikasi hanya dari nilai .env
 export const config = {
   port: getEnvValue('PORT'),
   jwtSecret: getEnvValue('JWT_SECRET'),
   midtransServerKey: getEnvValue('MIDTRANS_SERVER_KEY'),
   midtransClientKey: getEnvValue('MIDTRANS_CLIENT_KEY'),
+  forceMidtransSandbox: forceMidtransSandbox,
   db: {
     url: getEnvValue('DATABASE_URL'),
   },
@@ -84,6 +91,7 @@ console.info(`📌 Frontend URL: ${config.urls.frontend}`);
 console.info(`📌 Redis URL: ${config.redis.url}`);
 console.info(`📌 Redis TTL: ${config.redis.ttl}`);
 console.info(`📌 Cache TTL: ${config.cache.ttl}`);
+console.info(`📌 Force Midtrans Sandbox: ${config.forceMidtransSandbox}`);
 
 // Validasi konfigurasi
 function validateConfig(): void {
@@ -95,7 +103,7 @@ function validateConfig(): void {
     }
 
     // Cek Midtrans
-    if (config.midtransServerKey.includes('SB-Mid-server')) {
+    if (config.midtransServerKey.includes('SB-Mid-server') && !config.forceMidtransSandbox) {
       console.warn('⚠️ Menggunakan kunci Midtrans sandbox di mode production');
     }
 
