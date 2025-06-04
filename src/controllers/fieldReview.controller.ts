@@ -68,14 +68,17 @@ export const getFieldReviews = async (req: Request, res: Response) => {
 
 export const createFieldReview = async (req: User, res: Response): Promise<void> => {
   try {
+    const { fieldId } = req.params;
+
     // Validasi data dengan Zod dan pastikan userId adalah pengguna saat ini
     const result = createFieldReviewSchema.safeParse({
       ...req.body,
-      userId: req.user?.id, // Force userId to be current user
+      userId: req.user?.id,
+      fieldId: parseInt(fieldId),
     });
 
     if (!result.success) {
-      res.status(400).json({
+      res.status(400).json({  
         status: false,
         message: 'Validasi gagal',
         errors: result.error.format(),
@@ -83,11 +86,11 @@ export const createFieldReview = async (req: User, res: Response): Promise<void>
       return;
     }
 
-    const { userId, fieldId, rating, review } = result.data;
+    const { userId, fieldId: parsedFieldId, rating, review } = result.data;
 
     // Cek apakah lapangan ada
     const field = await prisma.field.findUnique({
-      where: { id: fieldId },
+      where: { id: parsedFieldId },
       select: { name: true, branchId: true },
     });
 
@@ -103,7 +106,7 @@ export const createFieldReview = async (req: User, res: Response): Promise<void>
     const userBooking = await prisma.booking.findFirst({
       where: {
         userId,
-        fieldId,
+        fieldId: parsedFieldId,
         payment: {
           status: 'paid',
         },
@@ -122,7 +125,7 @@ export const createFieldReview = async (req: User, res: Response): Promise<void>
     const existingReview = await prisma.fieldReview.findFirst({
       where: {
         userId,
-        fieldId,
+        fieldId: parsedFieldId,
       },
     });
 
@@ -138,7 +141,7 @@ export const createFieldReview = async (req: User, res: Response): Promise<void>
     const newReview = await prisma.fieldReview.create({
       data: {
         userId,
-        fieldId,
+        fieldId: parsedFieldId,
         rating,
         review,
       },

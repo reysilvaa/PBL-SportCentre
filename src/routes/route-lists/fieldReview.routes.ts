@@ -14,7 +14,7 @@ const router = express.Router();
 router.get('/', cacheMiddleware('field_reviews', 300), getFieldReviews);
 
 router.post(
-  '/',
+  '/field/:fieldId',
   auth({
     allowedRoles: ['user'],
   }),
