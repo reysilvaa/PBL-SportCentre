@@ -11,6 +11,7 @@ export const corsConfig = (): CorsOptions => {
     config.urls.frontend,
     '*',
     'https://sportcenter.mywire.org',
+    'https://api.sportcenter.mywire.org',
     'http://localhost:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3000',

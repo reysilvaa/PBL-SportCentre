@@ -94,7 +94,26 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            # Memuat profile untuk mendapatkan path yang benar
+            source ~/.profile
+            source ~/.bashrc
+            
+            # Export PATH untuk mendapatkan npm dan node
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+            
+            # Pastikan perintah node dan npm tersedia
+            echo "Node version: $(node -v)"
+            echo "NPM version: $(npm -v)"
+            
             cd /pbl/backend
+            
+            # Pastikan PM2 tersedia
+            if ! command -v pm2 &> /dev/null; then
+              echo "PM2 tidak ditemukan, menginstall..."
+              npm install -g pm2
+            fi
             
             # Pastikan PM2 berhenti agar tidak ada konflik saat deploy
             pm2 stop backend || true
@@ -134,8 +153,10 @@ jobs:
             fi
             
             # Restart aplikasi
-            npm run restart:prod
-            pm2 restart backend
+            npm run restart:prod || npm run start:prod
+            
+            # Pastikan aplikasi berjalan dengan PM2
+            pm2 restart backend || pm2 start dist/app.js --name backend
             
             # Periksa status aplikasi
             pm2 list
