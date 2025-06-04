@@ -510,6 +510,13 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     const { id } = req.params;
     const fieldId = parseInt(id);
 
+    console.log('Delete field request:', {
+      fieldId,
+      userRole: req.user?.role,
+      userBranch: req.userBranch,
+      userId: req.user?.id
+    });
+
     if (isNaN(fieldId)) {
       res.status(400).json({
         status: false,
@@ -518,28 +525,15 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
       return;
     }
 
-    // Get branch ID from middleware
-    const branchId = req.userBranch?.id;
-
-    if (!branchId) {
-      res.status(400).json({
-        status: false,
-        message: 'Branch ID is required',
-      });
-      return;
-    }
-
-    // Super admin bisa menghapus lapangan manapun
-    const whereCondition = req.user?.role === Role.SUPER_ADMIN ? { id: fieldId } : { id: fieldId, branchId };
-
-    // Check if field exists and belongs to the user's branch
-    const existingField = await prisma.field.findFirst({
-      where: whereCondition,
+    // Ambil field data terlebih dahulu untuk mendapatkan branch info
+    const existingField = await prisma.field.findUnique({
+      where: { id: fieldId },
       include: {
         branch: {
           select: {
             id: true,
             name: true,
+            ownerId: true, // Tambahkan ini untuk validasi owner
           },
         },
       },
@@ -548,7 +542,40 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
     if (!existingField) {
       res.status(404).json({
         status: false,
-        message: 'Lapangan tidak ditemukan atau tidak berada dalam cabang Anda',
+        message: 'Lapangan tidak ditemukan',
+      });
+      return;
+    }
+
+    // Validasi permission berdasarkan role
+    if (req.user?.role === Role.SUPER_ADMIN) {
+      // Super admin bisa hapus semua lapangan
+      console.log('Super admin access granted');
+    } else if (req.user?.role === Role.OWNER_CABANG) {
+      // Owner cabang hanya bisa hapus lapangan dari cabang yang dimilikinya
+      if (existingField.branch.ownerId !== req.user.id) {
+        res.status(403).json({
+          status: false,
+          message: 'Anda tidak memiliki akses untuk menghapus lapangan ini',
+        });
+        return;
+      }
+    } else if (req.user?.role === Role.ADMIN_CABANG) {
+      // Admin cabang hanya bisa hapus lapangan dari cabang tempat dia bekerja
+      const userBranchId = req.userBranch?.id;
+      
+      if (!userBranchId || existingField.branchId !== userBranchId) {
+        res.status(403).json({
+          status: false,
+          message: 'Anda tidak memiliki akses untuk menghapus lapangan ini',
+        });
+        return;
+      }
+    } else {
+      // Role lain tidak diizinkan
+      res.status(403).json({
+        status: false,
+        message: 'Anda tidak memiliki akses untuk menghapus lapangan',
       });
       return;
     }
@@ -588,6 +615,8 @@ export const deleteField = async (req: User, res: Response): Promise<void> => {
         ipAddress: req.ip || undefined,
       },
     });
+
+    console.log('Field deleted successfully:', fieldId);
 
     res.status(200).json({
       status: true,
