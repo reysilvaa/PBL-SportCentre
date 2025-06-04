@@ -1,0 +1,92 @@
+name: CI/CD Backend Sport Center
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Run tests
+        run: npm run test:quiet
+        env:
+          NODE_ENV: test
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist/
+      
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /pbl/backend
+            git pull origin main
+            
+            # Hapus node_modules dan package-lock.json
+            rm -rf node_modules
+            rm -f package-lock.json
+            
+            # Install ulang semua dependensi
+            npm install --no-fund --no-audit
+            
+            # Install debug, express dan finalhandler secara eksplisit
+            npm install debug express finalhandler --save
+            
+            # Bersihkan cache npm
+            npm cache clean --force
+            
+            # Build aplikasi
+            npm run build
+            
+            # Restart aplikasi
+            npm run restart:prod
+            
+            echo "Deployment ke server selesai" 
