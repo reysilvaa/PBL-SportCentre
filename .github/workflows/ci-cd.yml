@@ -40,7 +40,7 @@ jobs:
           MIDTRANS_SERVER_KEY=${{ secrets.MIDTRANS_SERVER_KEY || 'SB-Mid-server-dummy' }}
           API_URL=${{ secrets.API_URL || 'http://localhost:3000' }}
           API_URL_DEV=${{ secrets.API_URL_DEV || 'http://localhost:3000' }}
-          FRONTEND_URL=${{ secrets.FRONTEND_URL || 'http://localhost:3001' }}
+          FRONTEND_URL=${{ secrets.FRONTEND_URL || 'https://sportcenter.mywire.org' }}
           COOKIE_DOMAIN=
           CACHE_TTL=300
           REDIS_URL=${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
