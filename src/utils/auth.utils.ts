@@ -70,8 +70,8 @@ export const clearCookie = (
     secure: config.cookies.secure,
     sameSite: config.cookies.sameSite,
     ...options,
-    // Set expiry ke masa lalu untuk memastikan cookie dihapus
-    expires: new Date(0),
+    // Tidak perlu mengatur expires karena sudah deprecated di Express v5
+    // res.clearCookie akan otomatis mengatur cookie kedaluwarsa
   };
 
   res.clearCookie(name, cookieOptions);

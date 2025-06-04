@@ -155,7 +155,10 @@ jobs:
             npm install --no-fund --no-audit
             
             # Install semua dependensi yang sering bermasalah secara eksplisit
-            npm install debug express finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis --save
+            npm install debug express finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis cookie-parser compression helmet jsonwebtoken --save
+            
+            # Perbaiki masalah deprecated res.clearCookie
+            npm install express@latest --save
             
             # Regenerate Prisma Client
             npx prisma generate
@@ -165,6 +168,18 @@ jobs:
             
             # Build aplikasi
             npm run build && node scripts/minify.js
+            
+            # Inspect file app.js untuk mencari modul yang hilang
+            echo "Checking app.js for imported modules..."
+            cat dist/src/app.js | grep -E "require\(|from '" | sed 's/.*require(\([^)]*\)).*/\1/g' | sed "s/.*from '\([^']*\)'.*/\1/g" | sort | uniq > required_modules.txt
+            
+            # Instal modul yang mungkin masih hilang
+            for module in $(cat required_modules.txt); do
+              if [[ $module != "." && $module != ".." && $module != "/" && !($module =~ ^\.\/|^\.\.\/|^\/|^@\/) ]]; then
+                echo "Installing potential missing module: $module"
+                npm install $module --save || true
+              fi
+            done
             
             # Pastikan direktori dist dan file app.js ada
             if [ ! -d "dist/src" ]; then
@@ -186,5 +201,8 @@ jobs:
             
             # Periksa status aplikasi
             pm2 list
+            
+            # Tampilkan log terakhir untuk memeriksa error
+            pm2 logs --lines 10 backend
             
             echo "Deployment ke server selesai" 
