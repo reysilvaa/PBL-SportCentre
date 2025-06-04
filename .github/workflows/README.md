@@ -26,7 +26,7 @@ Untuk menggunakan workflow ini, tambahkan secrets berikut di repository GitHub:
 
 ## Catatan Penting
 
-- Pastikan server memiliki Node.js dan npm yang terinstall
+- Server menggunakan Node.js v22.16.0 dan npm v10.9.2
 - Pastikan server memiliki akses ke repository GitHub
 - Pastikan server memiliki direktori `/pbl/backend` yang sudah diinisialisasi dengan Git
 - Struktur build aplikasi berada di folder `dist/src/`
