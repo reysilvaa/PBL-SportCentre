@@ -38,11 +38,17 @@ router.get(
   userController.getAdminProfile
 );
 
-// Mendapatkan profil pengguna (semua role, tapi hanya milik sendiri kecuali super admin)
-router.get('/profile/:id?', auth(), cacheMiddleware('user_profile', 300), userController.getUserProfile);
+// Mendapatkan profil pengguna sendiri (tanpa ID)
+router.get('/profile', auth(), cacheMiddleware('user_profile', 300), userController.getUserProfile);
 
-// Update profil pengguna sendiri
-router.put('/profile/:id?', auth(), userController.updateUserProfile);
+// Mendapatkan profil pengguna berdasarkan ID
+router.get('/profile/:id', auth(), cacheMiddleware('user_profile', 300), userController.getUserProfile);
+
+// Update profil pengguna sendiri (tanpa ID)
+router.put('/profile', auth(), userController.updateUserProfile);
+
+// Update profil pengguna berdasarkan ID
+router.put('/profile/:id', auth(), userController.updateUserProfile);
 
 // Membuat pengguna (super admin dan admin cabang)
 router.post('/', auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }), userController.createUser);

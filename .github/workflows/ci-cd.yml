@@ -153,12 +153,15 @@ jobs:
             
             # Install ulang semua dependensi
             npm install --no-fund --no-audit
+                
+            # Perbaiki path-to-regexp yang menyebabkan error
+            npm install path-to-regexp@6.2.1 --save
             
             # Install semua dependensi yang sering bermasalah secara eksplisit
-            npm install debug express finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis cookie-parser compression helmet jsonwebtoken --save
+            npm install debug express@4.18.2 finalhandler cors socket.io dotenv @prisma/client zod bull redis ioredis cookie-parser compression helmet jsonwebtoken --save
             
             # Perbaiki masalah deprecated res.clearCookie
-            npm install express@latest --save
+            # npm install express@latest --save
             
             # Regenerate Prisma Client
             npx prisma generate
