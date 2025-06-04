@@ -114,9 +114,10 @@ jobs:
             npm cache clean --force
             
             # Build aplikasi
-            npm run build
+            npm run build && node scripts/minify.js
             
             # Restart aplikasi
             npm run restart:prod
+            pm2 restart backend
             
             echo "Deployment ke server selesai" 
