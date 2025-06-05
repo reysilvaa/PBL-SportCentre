@@ -34,6 +34,7 @@ interface AppConfig {
   autorestart: boolean;
   exp_backoff_restart_delay: number;
   node_args: string[];
+  interpreter: string;
 }
 
 interface PM2Config {
@@ -51,6 +52,7 @@ const config: PM2Config = {
       max_memory_restart: '200M',
       min_uptime: '5s',
       max_restarts: 5,
+      interpreter: 'node',
       env: {
         NODE_ENV: 'development',
         PORT: 3000,
