@@ -1,0 +1,141 @@
+name: CI/CD Frontend Sport Center
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env file for CI/CD
+        run: |
+          cat > .env << EOF
+          NEXT_PUBLIC_API_URL=${{ secrets.FRONTEND_API_URL || 'https://api.sportcenter.mywire.org' }}
+          NEXT_PUBLIC_SOCKET_URL=${{ secrets.FRONTEND_SOCKET_URL || 'wss://api.sportcenter.mywire.org' }}
+          EOF
+
+    #   - name: Lint
+    #     run: npm run lint
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/.next/
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend-build/
+
+      - name: Copy package files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "frontend/package.json,frontend/package-lock.json,frontend/next.config.ts"
+          target: "/pbl/frontend/"
+
+      - name: Copy build files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "frontend-build/"
+          target: "/pbl/frontend/.next/"
+          strip_components: 1
+
+      - name: Copy public directory
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "frontend/public/"
+          target: "/pbl/frontend/"
+
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            echo "=== Memulai deployment frontend pada $(date) ==="
+
+            source ~/.profile
+            source ~/.bashrc
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            echo "Node version: $(node -v)"
+            echo "NPM version: $(npm -v)"
+
+            cd /pbl/frontend
+
+            echo "=> Menyiapkan dependensi"
+            if ! command -v pm2 &> /dev/null; then
+              echo "PM2 tidak ditemukan, menginstall..."
+              npm install -g pm2
+            fi
+
+            echo "=> Menghentikan aplikasi frontend lama (jika ada)"
+            pm2 stop frontend || true
+
+            echo "=> Membuat file .env"
+            cat > .env << EOF
+            NEXT_PUBLIC_API_URL=${{ secrets.FRONTEND_API_URL || 'https://api.sportcenter.mywire.org' }}
+            NEXT_PUBLIC_SOCKET_URL=${{ secrets.FRONTEND_SOCKET_URL || 'wss://api.sportcenter.mywire.org' }}
+            EOF
+
+            echo "=> Install ulang dependensi"
+            npm install --no-fund --no-audit --production
+
+            echo "=> Menjalankan ulang aplikasi dengan PM2"
+            pm2 reload frontend --update-env || pm2 start npm --name frontend -- start
+
+            echo "=> Status aplikasi:"
+            pm2 list
+
+            echo "✅ Deployment frontend selesai!" 
