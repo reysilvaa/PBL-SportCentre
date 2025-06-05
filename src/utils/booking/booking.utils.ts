@@ -167,8 +167,8 @@ export const processMidtransPayment = async (
     item_details: [
       {
         id: field.id.toString(),
-        // name: `${field.branch?.name || 'Field'} - ${field.name}`,
-        name: `${field.name} - ${payment.id}`,
+        // Buat nama item lebih pendek untuk mencegah error "Name too long"
+        name: `Booking ${field.name}`, 
         price: totalPrice,
         quantity: 1,
       },
