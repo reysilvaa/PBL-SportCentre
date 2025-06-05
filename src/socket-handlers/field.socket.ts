@@ -134,6 +134,53 @@ export const setupFieldSocketHandlers = (): void => {
       handleGetAvailableTimeSlots(socket, data, callback)
     );
 
+    // Handle request for availability update
+    socket.on('request_availability_update', async (data) => {
+      console.log(`📅 Client ${socket.id} requested availability update:`, data);
+      try {
+        const { date, branchId } = data;
+        const results = await getAllFieldsAvailability(date);
+        
+        // Filter by branchId if provided
+        const filteredResults = branchId 
+          ? results.filter((field: any) => {
+              const fieldBranchId = field.branchId || 
+                (field.field && field.field.branchId) || 
+                (field.branch && field.branch.id);
+              return fieldBranchId === branchId;
+            })
+          : results;
+        
+        // Emit directly to the requesting client
+        socket.emit('fieldsAvailabilityUpdate', filteredResults);
+        
+        console.log(`📤 Sent availability update to client ${socket.id}`);
+      } catch (error) {
+        console.error('Error processing availability update request:', error);
+        socket.emit('error', { message: 'Failed to get availability data' });
+      }
+    });
+
+    // Handle joining rooms
+    socket.on('join_room', (data) => {
+      const { room } = data;
+      if (room) {
+        socket.join(room);
+        console.log(`🚪 Client ${socket.id} joined room: ${room}`);
+        socket.emit('joined_room', { room, success: true });
+      }
+    });
+
+    // Handle leaving rooms
+    socket.on('leave_room', (data) => {
+      const { room } = data;
+      if (room) {
+        socket.leave(room);
+        console.log(`🚶 Client ${socket.id} left room: ${room}`);
+        socket.emit('left_room', { room, success: true });
+      }
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`🏟️ Client disconnected from fields namespace: ${socket.id}`);

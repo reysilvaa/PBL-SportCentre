@@ -44,11 +44,13 @@ export const emitBookingEvents = (eventType: string, data: any) => {
 const handleBookingCreatedEvent = (io: any, data: any) => {
   // Emit to branch channel if booking includes field with branch
   if (data.booking?.field?.branchId) {
+    console.log(`📢 Emitting booking:created to branch-${data.booking.field.branchId}`);
     io.to(`branch-${data.booking.field.branchId}`).emit('booking:created', data.booking);
   }
 
   // Emit to user's personal channel
   if (data.booking?.userId) {
+    console.log(`📢 Emitting booking:created to user-${data.booking.userId}`);
     io.to(`user-${data.booking.userId}`).emit('booking:created', {
       booking: data.booking,
       message: 'A new booking has been created for you',
@@ -64,6 +66,7 @@ const handleBookingCreatedEvent = (io: any, data: any) => {
 
   // Emit to field availability channel
   if (data.booking?.fieldId) {
+    console.log(`📢 Emitting field:availability-changed to field-${data.booking.fieldId}`);
     io.to(`field-${data.booking.fieldId}`).emit('field:availability-changed', {
       fieldId: data.booking.fieldId,
       date: data.booking.bookingDate,
@@ -80,11 +83,13 @@ const handleBookingCreatedEvent = (io: any, data: any) => {
 const handlePaymentUpdateEvent = (io: any, data: any) => {
   // Emit to branch channel
   if (data.branchId) {
+    console.log(`📢 Emitting booking:updated to branch-${data.branchId}`);
     io.to(`branch-${data.branchId}`).emit('booking:updated', data.booking);
   }
 
   // Emit to user's personal channel
   if (data.userId) {
+    console.log(`📢 Emitting booking:updated to user-${data.userId}`);
     io.to(`user-${data.userId}`).emit('booking:updated', {
       bookingId: data.booking?.id,
       paymentStatus: data.paymentStatus,
