@@ -44,7 +44,7 @@ const config: PM2Config = {
   apps: [
     {
       name: 'sport-center-api',
-      script: 'dist/src/app.js',
+      script: 'dist/app.js',
       instances: 'auto',
       exec_mode: 'cluster',
       watch: false,
