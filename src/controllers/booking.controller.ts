@@ -21,6 +21,8 @@ export const getBranchBookings = AdminBookingController.getBranchBookings;
 export const getBranchBookingById = AdminBookingController.getBranchBookingById;
 export const updateBranchBookingStatus = AdminBookingController.updateBranchBookingStatus;
 export const createManualBooking = AdminBookingController.createManualBooking;
+export const markPaymentAsPaid = AdminBookingController.markPaymentAsPaid;
+export const updatePaymentStatus = AdminBookingController.updatePaymentStatus;
 
 // Export Super Admin Operations
 export const getAllBookings = SuperAdminBookingController.getAllBookings;

@@ -93,6 +93,12 @@ router.get(
   bookingController.getBookingStats
 );
 
+// Endpoint untuk menandai pembayaran sebagai lunas
+router.post('/payments/:paymentId/mark-paid', branchAdminAuth(), bookingController.markPaymentAsPaid);
+
+// Endpoint untuk update status pembayaran
+router.post('/payments/:paymentId/update-status', branchAdminAuth(), bookingController.updatePaymentStatus);
+
 // Laporan pendapatan untuk owner
 router.get(
   '/owner/reports/revenue',

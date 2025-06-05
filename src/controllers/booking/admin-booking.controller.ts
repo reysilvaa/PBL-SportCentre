@@ -346,3 +346,125 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
     sendErrorResponse(res, 500, 'Internal Server Error');
   }
 };
+
+export const markPaymentAsPaid = async (req: User, res: Response): Promise<void> => {
+  try {
+    const { paymentId } = req.params;
+    const payment = await prisma.payment.findUnique({
+      where: { id: parseInt(paymentId) },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
+    });
+
+    if (!payment) {
+      return sendErrorResponse(res, 404, 'Pembayaran tidak ditemukan');
+    }
+
+    // Pastikan admin cabang hanya dapat memperbarui booking di cabang yang mereka kelola
+    const branchId = req.userBranch?.id;
+    if (branchId !== 0 && payment.booking.field.branchId !== branchId) {
+      return sendErrorResponse(res, 403, 'Anda tidak memiliki akses untuk memperbarui pembayaran ini');
+    }
+
+    // Perbarui status pembayaran menjadi PAID
+    const updatedPayment = await prisma.payment.update({
+      where: { id: parseInt(paymentId) },
+      data: { status: PaymentStatus.PAID }
+    });
+
+    // Emit WebSocket event untuk perubahan status pembayaran
+    emitBookingEvents('update-payment', {
+      booking: payment.booking,
+      userId: payment.booking.userId,
+      branchId: payment.booking.field.branchId,
+      paymentStatus: PaymentStatus.PAID,
+    });
+
+    // Hapus cache yang terkait booking
+    await invalidateBookingCache(
+      payment.bookingId, 
+      payment.booking.fieldId, 
+      payment.booking.field.branchId, 
+      payment.booking.userId
+    );
+
+    res.status(200).json({
+      status: true,
+      message: 'Pembayaran berhasil dilunasi',
+      data: updatedPayment
+    });
+  } catch (error) {
+    console.error('Error marking payment as paid:', error);
+    sendErrorResponse(res, 500, 'Terjadi kesalahan saat melunasi pembayaran');
+  }
+};
+
+export const updatePaymentStatus = async (req: User, res: Response): Promise<void> => {
+  try {
+    const { paymentId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return sendErrorResponse(res, 400, 'Status pembayaran diperlukan');
+    }
+
+    const payment = await prisma.payment.findUnique({
+      where: { id: parseInt(paymentId) },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
+    });
+
+    if (!payment) {
+      return sendErrorResponse(res, 404, 'Pembayaran tidak ditemukan');
+    }
+
+    // Pastikan admin cabang hanya dapat memperbarui booking di cabang yang mereka kelola
+    const branchId = req.userBranch?.id;
+    if (branchId !== 0 && payment.booking.field.branchId !== branchId) {
+      return sendErrorResponse(res, 403, 'Anda tidak memiliki akses untuk memperbarui pembayaran ini');
+    }
+
+    // Perbarui status pembayaran
+    const updatedPayment = await prisma.payment.update({
+      where: { id: parseInt(paymentId) },
+      data: { status }
+    });
+
+    // Emit WebSocket event untuk perubahan status pembayaran
+    emitBookingEvents('update-payment', {
+      booking: payment.booking,
+      userId: payment.booking.userId,
+      branchId: payment.booking.field.branchId,
+      paymentStatus: status,
+    });
+
+    // Hapus cache yang terkait booking
+    await invalidateBookingCache(
+      payment.bookingId, 
+      payment.booking.fieldId, 
+      payment.booking.field.branchId, 
+      payment.booking.userId
+    );
+
+    res.status(200).json({
+      status: true,
+      message: 'Status pembayaran berhasil diperbarui',
+      data: updatedPayment
+    });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    sendErrorResponse(res, 500, 'Terjadi kesalahan saat memperbarui status pembayaran');
+  }
+};
