@@ -34,7 +34,7 @@ interface AppConfig {
   autorestart: boolean;
   exp_backoff_restart_delay: number;
   node_args: string[];
-  interpreter: string;
+  interpreter: 'node';
 }
 
 interface PM2Config {
