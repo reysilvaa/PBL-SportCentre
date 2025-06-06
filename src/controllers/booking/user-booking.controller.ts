@@ -10,7 +10,7 @@ import {
 } from '../../utils/booking/booking.utils';
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { parseISO } from 'date-fns';
-import { combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
+import { combineDateAndTime } from '../../utils/date.utils';
 import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
 import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 import { User } from '../../middlewares/auth.middleware';
@@ -44,11 +44,11 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
     
     console.log('🗓️ Booking Date:', bookingDateTime.toISOString());
 
-    // Combine date with time in WIB timezone
+    // Combine date with time in UTC
     // PENTING: startTime bersifat inclusive, endTime bersifat exclusive
     // Contoh: booking 08:00-10:00 berarti dari jam 08:00 sampai 09:59:59
-    const startDateTime = combineDateWithTimeWIB(bookingDateTime, startTime);
-    const endDateTime = combineDateWithTimeWIB(bookingDateTime, endTime);
+    const startDateTime = combineDateAndTime(bookingDateTime, startTime);
+    const endDateTime = combineDateAndTime(bookingDateTime, endTime);
 
     console.log('⏰ Start Time:', startDateTime.toISOString());
     console.log('⏰ End Time (exclusive):', endDateTime.toISOString());

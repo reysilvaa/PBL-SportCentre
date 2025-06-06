@@ -192,7 +192,7 @@ export const calculateAvailableTimeSlots = (
 /**
  * Memeriksa ketersediaan lapangan pada waktu tertentu
  * PENTING: Fungsi ini menggunakan waktu yang sama untuk perbandingan konsisten
- * Jika input menggunakan WIB (dari controller), maka pengecekan juga menggunakan WIB
+ * Semua waktu dalam UTC
  */
 export const isFieldAvailable = async (
   fieldId: number,

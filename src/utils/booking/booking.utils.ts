@@ -37,7 +37,7 @@ export const verifyFieldBranch = async (
 
 /**
  * Check booking time validity and availability
- * Fungsi menggunakan waktu dalam timezone WIB untuk pengecekan
+ * Fungsi menggunakan waktu dalam timezone UTC untuk pengecekan
  */
 export const validateBookingTime = async (
   fieldId: number,
@@ -84,7 +84,7 @@ export const validateBookingTime = async (
 
 /**
  * Create booking and payment records
- * PENTING: Semua parameter waktu harus dalam format WIB untuk konsistensi di database
+ * PENTING: Semua parameter waktu harus dalam format UTC untuk konsistensi di database
  */
 export const createBookingWithPayment = async (
   userId: number,
