@@ -12,7 +12,8 @@ export const TIMEZONE = 'Asia/Jakarta';
  * @returns String tanggal dalam format WIB
  */
 export const formatDateToWIB = (date: Date): string => {
-  return formatInTimeZone(date, TIMEZONE, 'yyyy-MM-dd HH:mm:ss xxxx');
+  if (!date) return '';
+  return formatInTimeZone(date, TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
 };
 
 /**

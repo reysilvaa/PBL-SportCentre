@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { formatDateToWIB } from '../../utils/variables/timezone.utils';
 
 /**
  * Memvalidasi rentang tanggal untuk laporan
@@ -32,6 +33,10 @@ export const validateDateRange = (
       res.status(400).json({
         status: false,
         message: 'endDate tidak boleh sebelum startDate',
+        details: {
+          startDate: formatDateToWIB(start),
+          endDate: formatDateToWIB(end)
+        }
       });
       return false;
     }
@@ -41,6 +46,11 @@ export const validateDateRange = (
       res.status(400).json({
         status: false,
         message: 'Rentang waktu maksimal adalah 1 tahun',
+        details: {
+          startDate: formatDateToWIB(start),
+          endDate: formatDateToWIB(end),
+          days: diffDays
+        }
       });
       return false;
     }

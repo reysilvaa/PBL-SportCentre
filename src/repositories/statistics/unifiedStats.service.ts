@@ -2,9 +2,9 @@ import prisma from '../../config/services/database';
 import { Decimal } from '@prisma/client/runtime/library';
 import { 
   startOfMonth, endOfMonth, startOfDay, endOfDay, 
-  startOfYear, endOfYear, subMonths, subYears, format 
+  startOfYear, endOfYear, subMonths, subYears
 } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { formatDateToWIB } from '../../utils/variables/timezone.utils';
 import { PaymentStatus } from '../../types';
 
 // Tipe periode untuk filter
@@ -34,7 +34,6 @@ export const getTimeRange = (period: PeriodType) => {
           start: startOfDay(new Date(now.setDate(now.getDate() - 1))),
           end: endOfDay(new Date(now.setDate(now.getDate() - 1))),
         },
-        formatFn: (date: Date) => format(date, 'HH:mm', { locale: id }),
         interval: 'hour',
         pastPeriods: 7, // 7 hari terakhir
       };
@@ -46,7 +45,6 @@ export const getTimeRange = (period: PeriodType) => {
           start: startOfYear(subYears(now, 1)),
           end: endOfYear(subYears(now, 1)),
         },
-        formatFn: (date: Date) => format(date, 'yyyy', { locale: id }),
         interval: 'year',
         pastPeriods: 6, // 6 tahun terakhir
       };
@@ -59,7 +57,6 @@ export const getTimeRange = (period: PeriodType) => {
           start: startOfMonth(subMonths(now, 1)),
           end: endOfMonth(subMonths(now, 1)),
         },
-        formatFn: (date: Date) => format(date, 'MMM', { locale: id }),
         interval: 'month',
         pastPeriods: 12, // 12 bulan terakhir
       };
@@ -569,14 +566,13 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
 
 // Helper functions untuk format data
 function formatRole(role: any): string {
-  // Format role agar lebih user friendly
-  switch(role) {
-    case 'admin_cabang':
-      return 'Admin Cabang';
-    case 'owner_cabang':
-      return 'Owner Cabang';
+  switch (role) {
     case 'super_admin':
       return 'Super Admin';
+    case 'branch_owner':
+      return 'Pemilik Cabang';
+    case 'branch_admin':
+      return 'Admin Cabang';
     case 'user':
       return 'User';
     default:
@@ -586,13 +582,7 @@ function formatRole(role: any): string {
 
 function formatDate(date: any): string {
   if (!date) return 'N/A';
-  // Format: DD-MM-YYYY HH:MM
-  const d = new Date(date);
-  return `${d.getDate().toString().padStart(2, '0')}-${
-    (d.getMonth() + 1).toString().padStart(2, '0')
-  }-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${
-    d.getMinutes().toString().padStart(2, '0')
-  }`;
+  return formatDateToWIB(new Date(date));
 }
 
 /**
