@@ -45,6 +45,7 @@ if (forceMidtransSandbox && env === 'production') {
 // Buat konfigurasi aplikasi hanya dari nilai .env
 export const config = {
   port: getEnvValue('PORT'),
+  timezone: getEnvValue('TIMEZONE'),
   jwtSecret: getEnvValue('JWT_SECRET'),
   midtransServerKey: getEnvValue('MIDTRANS_SERVER_KEY'),
   midtransClientKey: getEnvValue('MIDTRANS_CLIENT_KEY'),
@@ -116,3 +117,7 @@ function validateConfig(): void {
 
 // Jalankan validasi konfigurasi
 validateConfig();
+
+// Atur timezone untuk seluruh aplikasi
+process.env.TIMEZONE = config.timezone;
+console.info(`🌍 Timezone server: ${config.timezone}`);

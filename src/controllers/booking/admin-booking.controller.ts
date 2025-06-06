@@ -273,15 +273,6 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
     const paymentStatus = PaymentStatus.PAID;
     const paymentMethod = PaymentMethod.CASH;
 
-    console.log('📑 Admin membuat booking manual:');
-    console.log('👤 User ID:', userId);
-    console.log('🏟️ Field ID:', fieldId);
-    console.log('📅 Booking Date:', bookingDate);
-    console.log('🕒 Start Time:', startTime);
-    console.log('🕒 End Time:', endTime);
-    console.log('🌐 Timezone server:', process.env.TZ);
-    console.log('🌐 Waktu server saat ini:', new Date().toString());
-
     if (!branchId) {
       return sendErrorResponse(res, 400, 'Branch ID is required');
     }
@@ -320,17 +311,13 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       }
     }
     
-    console.log('📆 Booking Date (parsed):', bookingDateTime.toISOString());
-    console.log('📆 Booking Date (local):', bookingDateTime.toString());
+    console.log('📆 Booking Date:', bookingDateTime.toISOString());
 
-    console.log('🔄 Menggabungkan tanggal dan waktu untuk booking manual...');
     const startDateTime = combineDateWithTime(bookingDateTime, startTime);
     const endDateTime = combineDateWithTime(bookingDateTime, endTime);
 
-    console.log('⏰ Start Date Time (UTC):', startDateTime.toISOString());
-    console.log('⏰ End Date Time (UTC):', endDateTime.toISOString());
-    console.log('⏰ Start Date Time (local):', startDateTime.toString());
-    console.log('⏰ End Date Time (local):', endDateTime.toString());
+    console.log('⏰ Start Time:', startDateTime.toISOString());
+    console.log('⏰ End Time:', endDateTime.toISOString());
 
     // Validate booking time and availability
     const timeValidation = await validateBookingTime(parseInt(fieldId), bookingDateTime, startDateTime, endDateTime);
@@ -366,11 +353,7 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       totalPrice
     );
 
-    console.log('✅ Booking manual berhasil dibuat:');
-    console.log('📋 Booking ID:', booking.id);
-    console.log('📅 Booking Date:', booking.bookingDate);
-    console.log('⏰ Start Time:', booking.startTime);
-    console.log('⏰ End Time:', booking.endTime);
+    console.log('✅ Booking manual berhasil dibuat:', booking.id);
 
     // Emit real-time events
     emitBookingEvents('booking:created', { booking, payment });

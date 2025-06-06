@@ -6,6 +6,7 @@ export interface EnvConfig {
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: string;
   JWT_SECRET: string;
+  TIMEZONE: string; // Timezone, contoh: Asia/Jakarta
 
   // Payment Gateway Configuration (Midtrans)
   MIDTRANS_CLIENT_KEY: string;

@@ -24,9 +24,8 @@ import { PaymentMethod, PaymentStatus } from '../../types';
 export const createBooking = async (req: User, res: Response): Promise<void> => {
   try {
     console.log('📥 Request body:', req.body);
-    console.log('🕒 Timezone server saat ini:', process.env.TZ);
-    process.env.TZ = 'Asia/Jakarta';
-    console.log('🕒 Timezone setelah diatur:', process.env.TZ);
+    
+    // Timezone sudah diatur di config/app/env.ts
 
     // Validasi data dengan Zod
     const result = createBookingSchema.safeParse(req.body);
@@ -37,15 +36,6 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
 
     const { userId, fieldId, bookingDate, startTime, endTime } = result.data;
 
-    console.log('📝 Data booking yang diterima:');
-    console.log('👤 User ID:', userId);
-    console.log('🏟️ Field ID:', fieldId);
-    console.log('📅 Booking Date:', bookingDate);
-    console.log('🕒 Start Time:', startTime);
-    console.log('🕒 End Time:', endTime);
-    console.log('🌐 Server time:', new Date().toString());
-    console.log('🌐 Offset server:', new Date().getTimezoneOffset());
-
     // Convert strings to Date objects
     const bookingDateTime = parseISO(bookingDate);
     
@@ -54,20 +44,16 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       return sendErrorResponse(res, 400, 'Format tanggal booking tidak valid. Harus dalam format ISO-8601 (YYYY-MM-DD)');
     }
     
-    console.log('🗓️ Booking Date (parsed):', bookingDateTime.toISOString());
-    console.log('🗓️ Booking Date (local):', bookingDateTime.toString());
+    console.log('🗓️ Booking Date:', bookingDateTime.toISOString());
 
     // Combine date with time in UTC
     // PENTING: startTime bersifat inclusive, endTime bersifat exclusive
     // Contoh: booking 08:00-10:00 berarti dari jam 08:00 sampai 09:59:59
-    console.log('🔄 Menggabungkan tanggal dan waktu...');
     const startDateTime = combineDateAndTime(bookingDateTime, startTime);
     const endDateTime = combineDateAndTime(bookingDateTime, endTime);
 
-    console.log('⏰ Start Time (UTC):', startDateTime.toISOString());
-    console.log('⏰ End Time (UTC, exclusive):', endDateTime.toISOString());
-    console.log('⏰ Start Time (local):', startDateTime.toString());
-    console.log('⏰ End Time (local):', endDateTime.toString());
+    console.log('⏰ Start Time:', startDateTime.toISOString());
+    console.log('⏰ End Time (exclusive):', endDateTime.toISOString());
     console.log('⏰ Durasi booking:', Math.floor((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)), 'jam');
 
     // Validate booking time and availability

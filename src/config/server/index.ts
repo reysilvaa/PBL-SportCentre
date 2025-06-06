@@ -24,11 +24,6 @@ import { initializeCloudinary } from '../services/cloudinary';
 import { ensureConnection } from '../services/redis';
 import { config } from '../app/env';
 
-// Setup global timezone untuk aplikasi
-process.env.TZ = 'Asia/Jakarta';
-console.log('🌍 Timezone server diatur ke:', process.env.TZ);
-console.log('🕒 Waktu server saat ini:', new Date().toString());
-console.log('🕒 Timezone offset server:', new Date().getTimezoneOffset());
 
 /**
  * Inisialisasi semua komponen sebelum server dimulai
