@@ -4,7 +4,6 @@ import {
   startOfMonth, endOfMonth, startOfDay, endOfDay, 
   startOfYear, endOfYear, subMonths, subYears
 } from 'date-fns';
-import { formatDateToWIB } from '../../utils/variables/timezone.utils';
 import { PaymentStatus } from '../../types';
 
 // Tipe periode untuk filter
@@ -582,7 +581,14 @@ function formatRole(role: any): string {
 
 function formatDate(date: any): string {
   if (!date) return 'N/A';
-  return formatDateToWIB(new Date(date));
+  
+  // Format: DD-MM-YYYY HH:MM
+  const d = new Date(date);
+  return `${d.getDate().toString().padStart(2, '0')}-${
+    (d.getMonth() + 1).toString().padStart(2, '0')
+  }-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${
+    d.getMinutes().toString().padStart(2, '0')
+  }`;
 }
 
 /**

@@ -1,20 +1,10 @@
 import { setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 
 /**
  * Tetapkan timezone WIB
  */
 export const TIMEZONE = 'Asia/Jakarta';
-
-/**
- * Mengkonversi tanggal ke string format WIB
- * @param date Tanggal yang akan diformat
- * @returns String tanggal dalam format WIB
- */
-export const formatDateToWIB = (date: Date): string => {
-  if (!date) return '';
-  return formatInTimeZone(date, TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
-};
 
 /**
  * Mengkonversi tanggal ke awal hari dalam timezone WIB

@@ -1,6 +1,5 @@
 import { getIO } from '../config/server/socket';
 import prisma from '../config/services/database';
-import { formatDateToWIB } from '../utils/variables/timezone.utils';
 import { broadcastActivityLogUpdates } from './activityLog.socket';
 
 /**
@@ -60,7 +59,7 @@ const handleBookingCreatedEvent = (io: any, data: any) => {
     logBookingActivity(data.booking.userId, 'CREATE_BOOKING', {
       bookingId: data.booking.id,
       fieldId: data.booking.fieldId,
-      date: formatDateToWIB(data.booking.bookingDate),
+      date: data.booking.bookingDate,
     });
   }
 
@@ -70,8 +69,8 @@ const handleBookingCreatedEvent = (io: any, data: any) => {
     io.to(`field-${data.booking.fieldId}`).emit('field:availability-changed', {
       fieldId: data.booking.fieldId,
       date: data.booking.bookingDate,
-      startTime: formatDateToWIB(data.booking.startTime),
-      endTime: formatDateToWIB(data.booking.endTime),
+      startTime: data.booking.startTime,
+      endTime: data.booking.endTime,
       available: false,
     });
   }
@@ -121,8 +120,8 @@ const handleBookingCanceledEvent = (io: any, data: any) => {
       fieldId: data.fieldId,
       date: data.bookingDate,
       timeSlot: {
-        start: formatDateToWIB(data.startTime),
-        end: formatDateToWIB(data.endTime),
+        start: data.startTime,
+        end: data.endTime,
       },
       available: true,
     });

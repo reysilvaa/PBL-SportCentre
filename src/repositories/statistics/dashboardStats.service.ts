@@ -1,7 +1,6 @@
 import prisma from '../../config/services/database';
 import { Decimal } from '@prisma/client/runtime/library';
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, startOfYear, endOfYear, subMonths, subYears } from 'date-fns';
-import { formatDateToWIB } from '../../utils/variables/timezone.utils';
 
 // Tipe periode untuk filter
 export type PeriodType = 'daily' | 'monthly' | 'yearly';
@@ -570,8 +569,8 @@ export const getUserStats = async (userId: number, _timeRange: any): Promise<Das
       id: booking.id.toString(),
       fieldName: booking.field.name,
       branchName: booking.field.branch.name,
-      date: formatDateToWIB(booking.bookingDate),
-      time: `${formatDateToWIB(booking.startTime)} - ${formatDateToWIB(booking.endTime)}`,
+      date: booking.bookingDate.toISOString().split('T')[0],
+      time: `${booking.startTime.toISOString().split('T')[1].substring(0, 5)} - ${booking.endTime.toISOString().split('T')[1].substring(0, 5)}`,
       status: statusText,
       paymentStatus,
     };

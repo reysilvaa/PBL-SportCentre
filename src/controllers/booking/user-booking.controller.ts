@@ -10,7 +10,7 @@ import {
 } from '../../utils/booking/booking.utils';
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { parseISO } from 'date-fns';
-import { formatDateToWIB, combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
+import { combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
 import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
 import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 import { User } from '../../middlewares/auth.middleware';
@@ -42,7 +42,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
       return sendErrorResponse(res, 400, 'Format tanggal booking tidak valid. Harus dalam format ISO-8601 (YYYY-MM-DD)');
     }
     
-    console.log('🗓️ Booking Date (WIB):', formatDateToWIB(bookingDateTime));
+    console.log('🗓️ Booking Date:', bookingDateTime.toISOString());
 
     // Combine date with time in WIB timezone
     // PENTING: startTime bersifat inclusive, endTime bersifat exclusive
@@ -50,8 +50,8 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
     const startDateTime = combineDateWithTimeWIB(bookingDateTime, startTime);
     const endDateTime = combineDateWithTimeWIB(bookingDateTime, endTime);
 
-    console.log('⏰ Start Time (WIB):', formatDateToWIB(startDateTime));
-    console.log('⏰ End Time (WIB) (exclusive):', formatDateToWIB(endDateTime));
+    console.log('⏰ Start Time:', startDateTime.toISOString());
+    console.log('⏰ End Time (exclusive):', endDateTime.toISOString());
     console.log('⏰ Durasi booking:', Math.floor((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)), 'jam');
 
     // Validate booking time and availability

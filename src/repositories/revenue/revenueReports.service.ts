@@ -1,8 +1,6 @@
 import { prisma } from '../../config';
 import { Decimal } from '@prisma/client/runtime/library';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { formatDateToWIB } from '../../utils/variables/timezone.utils';
-
 
 /**
  * Menghasilkan laporan pendapatan berdasarkan periode waktu
@@ -49,7 +47,7 @@ export const generateRevenueReport = async (
 
       data.forEach((payment) => {
         const date = new Date(payment.booking.bookingDate);
-        const periodKey = formatDateToWIB(date);
+        const periodKey = date.toISOString().split('T')[0]; // Format YYYY-MM-DD
 
         if (!groupedData[periodKey]) {
           groupedData[periodKey] = { total: new Decimal(0), count: 0 };
@@ -91,8 +89,8 @@ export const generateRevenueReport = async (
     return {
       reportType: type,
       dateRange: {
-        start: formatDateToWIB(start),
-        end: formatDateToWIB(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
       },
       totalRevenue,
       totalBookings,
@@ -168,8 +166,8 @@ export const generateOccupancyReport = async (start: Date, end: Date, branchId?:
 
     return {
       dateRange: {
-        start: formatDateToWIB(start),
-        end: formatDateToWIB(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
       },
       totalBookings,
       totalHours,
@@ -198,7 +196,7 @@ export const generateBusinessPerformanceReport = async (branchId?: number): Prom
     for (let i = 0; i < 6; i++) {
       const monthStart = startOfMonth(subMonths(now, i));
       const monthEnd = endOfMonth(subMonths(now, i));
-      const monthLabel = formatDateToWIB(monthStart).substring(0, 7); // Ambil YYYY-MM saja
+      const monthLabel = monthStart.toISOString().split('T')[0].substring(0, 7); // Ambil YYYY-MM saja
 
       // Query pendapatan bulan ini
       const payments = await prisma.payment.findMany({
@@ -318,7 +316,7 @@ export const generateBookingForecast = async (branchId?: number): Promise<any> =
     const bookingsByMonth: Record<string, number> = {};
     
     bookings.forEach(booking => {
-      const monthKey = formatDateToWIB(new Date(booking.bookingDate)).substring(0, 7); // Ambil YYYY-MM saja
+      const monthKey = new Date(booking.bookingDate).toISOString().split('T')[0].substring(0, 7); // Ambil YYYY-MM saja
       bookingsByMonth[monthKey] = (bookingsByMonth[monthKey] || 0) + 1;
     });
 
@@ -337,7 +335,7 @@ export const generateBookingForecast = async (branchId?: number): Promise<any> =
     for (let i = 1; i <= 3; i++) {
       const futureMonth = new Date(now.getFullYear(), currentMonthIndex + i, 1);
       forecastData.push({
-        month: formatDateToWIB(futureMonth).substring(0, 7), // Ambil YYYY-MM saja
+        month: futureMonth.toISOString().split('T')[0].substring(0, 7), // Ambil YYYY-MM saja
         bookings: Math.round(avgBookings * (1 + 0.05 * i)),
         type: 'forecast',
       });
