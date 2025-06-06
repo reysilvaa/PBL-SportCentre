@@ -10,9 +10,14 @@
  * @returns Date object dengan tanggal dan waktu yang digabungkan dalam UTC
  */
 export const combineDateAndTime = (date: Date, timeString: string): Date => {
+  console.log(`⚙️ Input: date=${date}, time=${timeString}`);
   const [hours, minutes] = timeString.split(':').map(Number);
-  const result = new Date(date);
-  result.setHours(hours, minutes, 0, 0);
+  
+  // Buat tanggal baru dengan komponen yang sama tapi waktu yang berbeda
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
+  
+  console.log(`⚙️ Hasil: ${result} (${result.toISOString()})`);
+  console.log(`⚙️ Lokal: ${result.getHours()}:${result.getMinutes()}`);
   return result;
 };
 

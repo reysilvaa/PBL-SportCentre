@@ -273,6 +273,15 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
     const paymentStatus = PaymentStatus.PAID;
     const paymentMethod = PaymentMethod.CASH;
 
+    console.log('📑 Admin membuat booking manual:');
+    console.log('👤 User ID:', userId);
+    console.log('🏟️ Field ID:', fieldId);
+    console.log('📅 Booking Date:', bookingDate);
+    console.log('🕒 Start Time:', startTime);
+    console.log('🕒 End Time:', endTime);
+    console.log('🌐 Timezone server:', process.env.TZ);
+    console.log('🌐 Waktu server saat ini:', new Date().toString());
+
     if (!branchId) {
       return sendErrorResponse(res, 400, 'Branch ID is required');
     }
@@ -287,11 +296,41 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       return sendErrorResponse(res, 404, 'Field not found in this branch');
     }
 
-    const bookingDateTime = new Date(bookingDate);
-    console.log('📆 Booking Date:', bookingDateTime);
+    // Ensure we have a proper date object
+    let bookingDateTime;
+    try {
+      bookingDateTime = new Date(bookingDate);
+      if (isNaN(bookingDateTime.getTime())) {
+        throw new Error('Invalid date format');
+      }
+    } catch (error) {
+      console.error('❌ Error parsing booking date:', error);
+      
+      try {
+        // Coba parse format YYYY-MM-DD
+        const [year, month, day] = bookingDate.split('-').map(Number);
+        bookingDateTime = new Date(year, month - 1, day);
+        
+        if (isNaN(bookingDateTime.getTime())) {
+          throw new Error('Invalid date components');
+        }
+      } catch (error) {
+        console.error('❌ Semua percobaan parsing tanggal gagal:', error);
+        return sendErrorResponse(res, 400, 'Format tanggal booking tidak valid. Gunakan format YYYY-MM-DD');
+      }
+    }
+    
+    console.log('📆 Booking Date (parsed):', bookingDateTime.toISOString());
+    console.log('📆 Booking Date (local):', bookingDateTime.toString());
 
+    console.log('🔄 Menggabungkan tanggal dan waktu untuk booking manual...');
     const startDateTime = combineDateWithTime(bookingDateTime, startTime);
     const endDateTime = combineDateWithTime(bookingDateTime, endTime);
+
+    console.log('⏰ Start Date Time (UTC):', startDateTime.toISOString());
+    console.log('⏰ End Date Time (UTC):', endDateTime.toISOString());
+    console.log('⏰ Start Date Time (local):', startDateTime.toString());
+    console.log('⏰ End Date Time (local):', endDateTime.toString());
 
     // Validate booking time and availability
     const timeValidation = await validateBookingTime(parseInt(fieldId), bookingDateTime, startDateTime, endDateTime);
@@ -326,6 +365,12 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       paymentMethod,
       totalPrice
     );
+
+    console.log('✅ Booking manual berhasil dibuat:');
+    console.log('📋 Booking ID:', booking.id);
+    console.log('📅 Booking Date:', booking.bookingDate);
+    console.log('⏰ Start Time:', booking.startTime);
+    console.log('⏰ End Time:', booking.endTime);
 
     // Emit real-time events
     emitBookingEvents('booking:created', { booking, payment });

@@ -9,7 +9,10 @@ import { BookingTime } from '../../types/booking';
  * @returns Combined date and time in UTC
  */
 export const combineDateWithTime = (date: Date, timeString: string): Date => {
-  return combineDateAndTime(date, timeString);
+  console.log(`🧮 combineDateWithTime Input: date=${date}, time=${timeString}`);
+  const result = combineDateAndTime(date, timeString);
+  console.log(`🧮 combineDateWithTime Result: ${result} (${result.toISOString()})`);
+  return result;
 };
 
 /**
@@ -26,6 +29,10 @@ export const calculateTotalPrice = (
   dayPrice: number,
   nightPrice: number
 ): number => {
+  console.log(`💰 Menghitung harga: dayPrice=${dayPrice}, nightPrice=${nightPrice}`);
+  console.log(`💰 Start time: ${startTime} (${startTime.toISOString()})`);
+  console.log(`💰 End time: ${endTime} (${endTime.toISOString()})`);
+
   // Daytime is considered from 06:00 to 18:00
   const bookingDate = startTime;
 
@@ -33,9 +40,14 @@ export const calculateTotalPrice = (
   const dayStart = combineDateAndTime(bookingDate, '06:00');
   const nightStart = combineDateAndTime(bookingDate, '18:00');
 
+  console.log(`💰 Day start: ${dayStart} (${dayStart.toISOString()})`);
+  console.log(`💰 Night start: ${nightStart} (${nightStart.toISOString()})`);
+
   // Duration in hours (convert milliseconds to hours)
   const durationMs = endTime.getTime() - startTime.getTime();
   const durationHours = durationMs / (1000 * 60 * 60);
+
+  console.log(`💰 Duration: ${durationHours} jam`);
 
   // Check if booking is entirely within daytime or nighttime
   const isEntirelyDaytime =
@@ -46,12 +58,19 @@ export const calculateTotalPrice = (
     (startTime < dayStart && endTime < dayStart) ||
     (startTime >= nightStart && endTime >= nightStart);
 
+  console.log(`💰 isEntirelyDaytime: ${isEntirelyDaytime}`);
+  console.log(`💰 isEntirelyNighttime: ${isEntirelyNighttime}`);
+
   if (isEntirelyDaytime) {
-    return dayPrice * durationHours;
+    const price = dayPrice * durationHours;
+    console.log(`💰 Hasil: ${price} (harga siang)`);
+    return price;
   }
 
   if (isEntirelyNighttime) {
-    return nightPrice * durationHours;
+    const price = nightPrice * durationHours;
+    console.log(`💰 Hasil: ${price} (harga malam)`);
+    return price;
   }
 
   // If booking spans day and night, calculate separately
@@ -84,5 +103,7 @@ export const calculateTotalPrice = (
     nightHours = durationHours;
   }
 
-  return dayHours * dayPrice + nightHours * nightPrice;
+  const totalPrice = dayHours * dayPrice + nightHours * nightPrice;
+  console.log(`💰 Hasil: ${totalPrice} (jam siang: ${dayHours}, jam malam: ${nightHours})`);
+  return totalPrice;
 };
