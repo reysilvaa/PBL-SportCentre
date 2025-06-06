@@ -22,10 +22,7 @@ export const formatDateToWIB = (date: Date): string => {
  */
 export const getStartOfDayWIB = (date: Date): Date => {
   const zonedDate = toZonedTime(date, TIMEZONE);
-  // Set jam, menit, detik, milidetik ke 0
-  const startOfDay = setMilliseconds(setSeconds(setMinutes(setHours(zonedDate, 0), 0), 0), 0);
-  // Tidak perlu konversi balik ke UTC karena Date selalu disimpan sebagai UTC
-  return startOfDay;
+  return setMilliseconds(setSeconds(setMinutes(setHours(zonedDate, 0), 0), 0), 0);
 };
 
 /**
@@ -36,10 +33,7 @@ export const getStartOfDayWIB = (date: Date): Date => {
  */
 export const createDateWithHourWIB = (baseDate: Date, hour: number): Date => {
   const zonedDate = toZonedTime(baseDate, TIMEZONE);
-  // Set jam spesifik dan reset menit, detik, milidetik
-  const dateWithHour = setMilliseconds(setSeconds(setMinutes(setHours(zonedDate, hour), 0), 0), 0);
-  // Tidak perlu konversi balik ke UTC karena Date selalu disimpan sebagai UTC
-  return dateWithHour;
+  return setMilliseconds(setSeconds(setMinutes(setHours(zonedDate, hour), 0), 0), 0);
 };
 
 /**

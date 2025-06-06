@@ -6,7 +6,7 @@ import { BookingTime } from '../../types/booking';
  * Combines a date with time string
  * @param date Base date
  * @param timeString Time in format "HH:mm"
- * @returns Combined date and time
+ * @returns Combined date and time in WIB
  */
 export const combineDateWithTime = (date: Date, timeString: string): Date => {
   return combineDateWithTimeWIB(date, timeString);

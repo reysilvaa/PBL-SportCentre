@@ -85,7 +85,7 @@ export const validateBookingTime = async (
 
 /**
  * Create booking and payment records
- * PENTING: Semua parameter waktu harus dalam format UTC untuk konsistensi di database
+ * PENTING: Semua parameter waktu harus dalam format WIB untuk konsistensi di database
  */
 export const createBookingWithPayment = async (
   userId: number,
@@ -98,7 +98,7 @@ export const createBookingWithPayment = async (
   amount?: any
 ): Promise<{ booking: Booking; payment: Payment }> => {
   // Log nilai waktu untuk debugging
-  console.log('Creating booking with UTC times:');
+  console.log('Creating booking with WIB times:');
   console.log(`Booking Date: ${bookingDate.toISOString()}`);
   console.log(`Start Time: ${startTime.toISOString()}`);
   console.log(`End Time: ${endTime.toISOString()}`);

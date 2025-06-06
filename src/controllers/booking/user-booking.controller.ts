@@ -10,8 +10,7 @@ import {
 } from '../../utils/booking/booking.utils';
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { parseISO } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
-import { TIMEZONE, formatDateToWIB, combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
+import { formatDateToWIB, combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
 import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
 import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
 import { User } from '../../middlewares/auth.middleware';
@@ -48,21 +47,15 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
     // Combine date with time in WIB timezone
     // PENTING: startTime bersifat inclusive, endTime bersifat exclusive
     // Contoh: booking 08:00-10:00 berarti dari jam 08:00 sampai 09:59:59
-    const startDateTimeWIB = toZonedTime(combineDateWithTimeWIB(bookingDateTime, startTime), TIMEZONE);
-    const endDateTimeWIB = toZonedTime(combineDateWithTimeWIB(bookingDateTime, endTime), TIMEZONE);
+    const startDateTime = combineDateWithTimeWIB(bookingDateTime, startTime);
+    const endDateTime = combineDateWithTimeWIB(bookingDateTime, endTime);
 
-    // Konversi ke UTC untuk penyimpanan di database
-    const startDateTime = new Date(startDateTimeWIB.toISOString());
-    const endDateTime = new Date(endDateTimeWIB.toISOString());
+    console.log('⏰ Start Time (WIB):', formatDateToWIB(startDateTime));
+    console.log('⏰ End Time (WIB) (exclusive):', formatDateToWIB(endDateTime));
+    console.log('⏰ Durasi booking:', Math.floor((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)), 'jam');
 
-    console.log('⏰ Start Time (WIB):', formatDateToWIB(startDateTimeWIB));
-    console.log('⏰ End Time (WIB) (exclusive):', formatDateToWIB(endDateTimeWIB));
-    console.log('⏰ Start Time (UTC):', startDateTime.toISOString());
-    console.log('⏰ End Time (UTC):', endDateTime.toISOString());
-    console.log('⏰ Durasi booking:', Math.floor((endDateTimeWIB.getTime() - startDateTimeWIB.getTime()) / (1000 * 60 * 60)), 'jam');
-
-    // Validate booking time and availability (tetap gunakan waktu WIB untuk validasi)
-    const timeValidation = await validateBookingTime(fieldId, bookingDateTime, startDateTimeWIB, endDateTimeWIB);
+    // Validate booking time and availability
+    const timeValidation = await validateBookingTime(fieldId, bookingDateTime, startDateTime, endDateTime);
 
     if (!timeValidation.valid) {
       return sendErrorResponse(res, 400, timeValidation.message, timeValidation.details);
