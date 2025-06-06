@@ -1,15 +1,15 @@
 import { isWithinInterval } from 'date-fns';
-import { combineDateWithTimeWIB } from '../../utils/variables/timezone.utils';
+import { combineDateAndTime } from '../../utils/date.utils';
 import { BookingTime } from '../../types/booking';
 
 /**
  * Combines a date with time string
  * @param date Base date
  * @param timeString Time in format "HH:mm"
- * @returns Combined date and time in WIB
+ * @returns Combined date and time in UTC
  */
 export const combineDateWithTime = (date: Date, timeString: string): Date => {
-  return combineDateWithTimeWIB(date, timeString);
+  return combineDateAndTime(date, timeString);
 };
 
 /**
@@ -26,12 +26,12 @@ export const calculateTotalPrice = (
   dayPrice: number,
   nightPrice: number
 ): number => {
-  // Daytime is considered from 06:00 to 18:00 WIB
+  // Daytime is considered from 06:00 to 18:00
   const bookingDate = startTime;
 
   // Create Date objects for day/night transition points
-  const dayStart = combineDateWithTimeWIB(bookingDate, '06:00');
-  const nightStart = combineDateWithTimeWIB(bookingDate, '18:00');
+  const dayStart = combineDateAndTime(bookingDate, '06:00');
+  const nightStart = combineDateAndTime(bookingDate, '18:00');
 
   // Duration in hours (convert milliseconds to hours)
   const durationMs = endTime.getTime() - startTime.getTime();

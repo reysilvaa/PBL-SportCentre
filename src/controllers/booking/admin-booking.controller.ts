@@ -287,11 +287,37 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       return sendErrorResponse(res, 404, 'Field not found in this branch');
     }
 
-    const bookingDateTime = new Date(bookingDate);
-    console.log('📆 Booking Date:', bookingDateTime);
+    // Ensure we have a proper date object
+    let bookingDateTime;
+    try {
+      bookingDateTime = new Date(bookingDate);
+      if (isNaN(bookingDateTime.getTime())) {
+        throw new Error('Invalid date format');
+      }
+    } catch (error) {
+      console.error('❌ Error parsing booking date:', error);
+      
+      try {
+        // Coba parse format YYYY-MM-DD
+        const [year, month, day] = bookingDate.split('-').map(Number);
+        bookingDateTime = new Date(year, month - 1, day);
+        
+        if (isNaN(bookingDateTime.getTime())) {
+          throw new Error('Invalid date components');
+        }
+      } catch (error) {
+        console.error('❌ Semua percobaan parsing tanggal gagal:', error);
+        return sendErrorResponse(res, 400, 'Format tanggal booking tidak valid. Gunakan format YYYY-MM-DD');
+      }
+    }
+    
+    console.log('📆 Booking Date:', bookingDateTime.toISOString());
 
     const startDateTime = combineDateWithTime(bookingDateTime, startTime);
     const endDateTime = combineDateWithTime(bookingDateTime, endTime);
+
+    console.log('⏰ Start Time:', startDateTime.toISOString());
+    console.log('⏰ End Time:', endDateTime.toISOString());
 
     // Validate booking time and availability
     const timeValidation = await validateBookingTime(parseInt(fieldId), bookingDateTime, startDateTime, endDateTime);
@@ -326,6 +352,8 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       paymentMethod,
       totalPrice
     );
+
+    console.log('✅ Booking manual berhasil dibuat:', booking.id);
 
     // Emit real-time events
     emitBookingEvents('booking:created', { booking, payment });

@@ -1,8 +1,6 @@
 import { prisma } from '../../config';
 import { Decimal } from '@prisma/client/runtime/library';
-import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
-import { id } from 'date-fns/locale';
-
+import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 /**
  * Menghasilkan laporan pendapatan berdasarkan periode waktu
@@ -43,13 +41,13 @@ export const generateRevenueReport = async (
     });
 
     // Format data untuk laporan
-    const formatReportData = (data: any[], timeFormat: string) => {
+    const formatReportData = (data: any[]) => {
       // Kelompokkan data berdasarkan periode waktu
       const groupedData: Record<string, { total: Decimal; count: number }> = {};
 
       data.forEach((payment) => {
         const date = new Date(payment.booking.bookingDate);
-        const periodKey = format(date, timeFormat, { locale: id });
+        const periodKey = date.toISOString().split('T')[0]; // Format YYYY-MM-DD
 
         if (!groupedData[periodKey]) {
           groupedData[periodKey] = { total: new Decimal(0), count: 0 };
@@ -69,24 +67,19 @@ export const generateRevenueReport = async (
 
     // Format berdasarkan tipe laporan
     let reportData;
-    let timeFormat;
 
     switch (type) {
       case 'daily':
-        timeFormat = 'dd MMM yyyy';
-        reportData = formatReportData(payments, timeFormat);
+        reportData = formatReportData(payments);
         break;
       case 'monthly':
-        timeFormat = 'MMM yyyy';
-        reportData = formatReportData(payments, timeFormat);
+        reportData = formatReportData(payments);
         break;
       case 'yearly':
-        timeFormat = 'yyyy';
-        reportData = formatReportData(payments, timeFormat);
+        reportData = formatReportData(payments);
         break;
       default:
-        timeFormat = 'dd MMM yyyy';
-        reportData = formatReportData(payments, timeFormat);
+        reportData = formatReportData(payments);
     }
 
     // Hitung total pendapatan
@@ -96,8 +89,8 @@ export const generateRevenueReport = async (
     return {
       reportType: type,
       dateRange: {
-        start: format(start, 'dd MMM yyyy', { locale: id }),
-        end: format(end, 'dd MMM yyyy', { locale: id }),
+        start: start.toISOString(),
+        end: end.toISOString(),
       },
       totalRevenue,
       totalBookings,
@@ -173,8 +166,8 @@ export const generateOccupancyReport = async (start: Date, end: Date, branchId?:
 
     return {
       dateRange: {
-        start: format(start, 'dd MMM yyyy', { locale: id }),
-        end: format(end, 'dd MMM yyyy', { locale: id }),
+        start: start.toISOString(),
+        end: end.toISOString(),
       },
       totalBookings,
       totalHours,
@@ -203,7 +196,7 @@ export const generateBusinessPerformanceReport = async (branchId?: number): Prom
     for (let i = 0; i < 6; i++) {
       const monthStart = startOfMonth(subMonths(now, i));
       const monthEnd = endOfMonth(subMonths(now, i));
-      const monthLabel = format(monthStart, 'MMM', { locale: id });
+      const monthLabel = monthStart.toISOString().split('T')[0].substring(0, 7); // Ambil YYYY-MM saja
 
       // Query pendapatan bulan ini
       const payments = await prisma.payment.findMany({
@@ -323,7 +316,7 @@ export const generateBookingForecast = async (branchId?: number): Promise<any> =
     const bookingsByMonth: Record<string, number> = {};
     
     bookings.forEach(booking => {
-      const monthKey = format(new Date(booking.bookingDate), 'MMM', { locale: id });
+      const monthKey = new Date(booking.bookingDate).toISOString().split('T')[0].substring(0, 7); // Ambil YYYY-MM saja
       bookingsByMonth[monthKey] = (bookingsByMonth[monthKey] || 0) + 1;
     });
 
@@ -342,7 +335,7 @@ export const generateBookingForecast = async (branchId?: number): Promise<any> =
     for (let i = 1; i <= 3; i++) {
       const futureMonth = new Date(now.getFullYear(), currentMonthIndex + i, 1);
       forecastData.push({
-        month: format(futureMonth, 'MMM', { locale: id }),
+        month: futureMonth.toISOString().split('T')[0].substring(0, 7), // Ambil YYYY-MM saja
         bookings: Math.round(avgBookings * (1 + 0.05 * i)),
         type: 'forecast',
       });

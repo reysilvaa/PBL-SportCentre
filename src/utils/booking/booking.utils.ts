@@ -3,7 +3,6 @@ import prisma from '../../config/services/database';
 import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field } from '../../types';
 import { isFieldAvailable } from './checkAvailability.utils';
 import { bookingCleanupQueue } from '../../config/services/queue';
-import { formatDateToWIB } from '../variables/timezone.utils';
 import { midtrans } from '../../config/services/midtrans';
 import { emitBookingEvents } from '../../socket-handlers/booking.socket';
 
@@ -38,7 +37,7 @@ export const verifyFieldBranch = async (
 
 /**
  * Check booking time validity and availability
- * Fungsi menggunakan waktu dalam timezone WIB untuk pengecekan
+ * Fungsi menggunakan waktu dalam timezone UTC untuk pengecekan
  */
 export const validateBookingTime = async (
   fieldId: number,
@@ -52,8 +51,8 @@ export const validateBookingTime = async (
       valid: false,
       message: 'Waktu selesai harus setelah waktu mulai',
       details: {
-        startTime: formatDateToWIB(startTime),
-        endTime: formatDateToWIB(endTime),
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
       },
     };
   }
@@ -73,9 +72,9 @@ export const validateBookingTime = async (
       message: 'Lapangan sudah dibooking untuk waktu yang dipilih',
       details: {
         fieldId,
-        date: formatDateToWIB(bookingDate),
-        startTime: formatDateToWIB(startTime),
-        endTime: formatDateToWIB(endTime),
+        date: bookingDate.toISOString(),
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
       },
     };
   }
@@ -85,7 +84,7 @@ export const validateBookingTime = async (
 
 /**
  * Create booking and payment records
- * PENTING: Semua parameter waktu harus dalam format WIB untuk konsistensi di database
+ * PENTING: Semua parameter waktu harus dalam format UTC untuk konsistensi di database
  */
 export const createBookingWithPayment = async (
   userId: number,
@@ -98,7 +97,7 @@ export const createBookingWithPayment = async (
   amount?: any
 ): Promise<{ booking: Booking; payment: Payment }> => {
   // Log nilai waktu untuk debugging
-  console.log('Creating booking with WIB times:');
+  console.log('Creating booking:');
   console.log(`Booking Date: ${bookingDate.toISOString()}`);
   console.log(`Start Time: ${startTime.toISOString()}`);
   console.log(`End Time: ${endTime.toISOString()}`);

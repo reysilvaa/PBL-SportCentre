@@ -24,6 +24,7 @@ import { initializeCloudinary } from '../services/cloudinary';
 import { ensureConnection } from '../services/redis';
 import { config } from '../app/env';
 
+
 /**
  * Inisialisasi semua komponen sebelum server dimulai
  */

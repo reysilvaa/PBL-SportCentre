@@ -1,7 +1,6 @@
 import prisma from '../../config/services/database';
 import { Decimal } from '@prisma/client/runtime/library';
-import { startOfMonth, endOfMonth, startOfDay, endOfDay, startOfYear, endOfYear, subMonths, subYears, format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { startOfMonth, endOfMonth, startOfDay, endOfDay, startOfYear, endOfYear, subMonths, subYears } from 'date-fns';
 
 // Tipe periode untuk filter
 export type PeriodType = 'daily' | 'monthly' | 'yearly';
@@ -26,7 +25,6 @@ export const getTimeRange = (period: PeriodType) => {
           start: startOfDay(new Date(now.setDate(now.getDate() - 1))),
           end: endOfDay(new Date(now.setDate(now.getDate() - 1))),
         },
-        formatFn: (date: Date) => format(date, 'HH:mm', { locale: id }),
         interval: 'hour',
         pastPeriods: 7, // 7 hari terakhir
       };
@@ -38,7 +36,6 @@ export const getTimeRange = (period: PeriodType) => {
           start: startOfYear(subYears(now, 1)),
           end: endOfYear(subYears(now, 1)),
         },
-        formatFn: (date: Date) => format(date, 'yyyy', { locale: id }),
         interval: 'year',
         pastPeriods: 6, // 6 tahun terakhir
       };
@@ -51,7 +48,6 @@ export const getTimeRange = (period: PeriodType) => {
           start: startOfMonth(subMonths(now, 1)),
           end: endOfMonth(subMonths(now, 1)),
         },
-        formatFn: (date: Date) => format(date, 'MMM', { locale: id }),
         interval: 'month',
         pastPeriods: 12, // 12 bulan terakhir
       };
@@ -573,8 +569,8 @@ export const getUserStats = async (userId: number, _timeRange: any): Promise<Das
       id: booking.id.toString(),
       fieldName: booking.field.name,
       branchName: booking.field.branch.name,
-      date: format(new Date(booking.bookingDate), 'dd MMM yyyy', { locale: id }),
-      time: `${format(new Date(booking.startTime), 'HH:mm')} - ${format(new Date(booking.endTime), 'HH:mm')}`,
+      date: booking.bookingDate.toISOString().split('T')[0],
+      time: `${booking.startTime.toISOString().split('T')[1].substring(0, 5)} - ${booking.endTime.toISOString().split('T')[1].substring(0, 5)}`,
       status: statusText,
       paymentStatus,
     };

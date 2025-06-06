@@ -32,6 +32,10 @@ export const validateDateRange = (
       res.status(400).json({
         status: false,
         message: 'endDate tidak boleh sebelum startDate',
+        details: {
+          startDate: start.toISOString(),
+          endDate: end.toISOString()
+        }
       });
       return false;
     }
@@ -41,6 +45,11 @@ export const validateDateRange = (
       res.status(400).json({
         status: false,
         message: 'Rentang waktu maksimal adalah 1 tahun',
+        details: {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          days: diffDays
+        }
       });
       return false;
     }
