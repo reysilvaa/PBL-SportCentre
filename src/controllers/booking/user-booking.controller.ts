@@ -156,15 +156,30 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
     // Clear any cached data that might be affected by this new booking
     await invalidateBookingCache(booking.id, fieldId, field.branchId, userId);
 
+    // Ambil data booking terbaru dengan relasi untuk memastikan semua data tersedia
+    const updatedBooking = await prisma.booking.findUnique({
+      where: { id: booking.id },
+      include: {
+        field: {
+          include: {
+            branch: true,
+          }
+        },
+        payment: true,
+      },
+    });
+
+    if (!updatedBooking) {
+      return sendErrorResponse(res, 500, 'Failed to retrieve updated booking data');
+    }
+
     // Return response with booking and payment details
     res.status(201).json({
       booking: {
-        ...booking,
-        field,
+        ...updatedBooking,
         payment: {
-          ...payment,
+          ...updatedBooking.payment,
           paymentUrl: paymentResult.transaction.redirect_url,
-          status: PaymentStatus.PENDING,
         },
       },
     });
