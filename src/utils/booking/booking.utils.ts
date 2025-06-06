@@ -103,12 +103,18 @@ export const createBookingWithPayment = async (
   console.log(`Start Time: ${startTime.toISOString()}`);
   console.log(`End Time: ${endTime.toISOString()}`);
 
+  // Pastikan bookingDate adalah objek Date yang valid
+  const bookingDateObj = new Date(bookingDate);
+  if (isNaN(bookingDateObj.getTime())) {
+    throw new Error('Invalid bookingDate format. Must be a valid Date object or ISO-8601 string.');
+  }
+
   // Create booking record
   const booking = await prisma.booking.create({
     data: {
       userId,
       fieldId,
-      bookingDate,
+      bookingDate: bookingDateObj,
       startTime,
       endTime,
     },

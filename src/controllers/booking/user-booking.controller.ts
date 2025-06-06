@@ -37,6 +37,12 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
 
     // Convert strings to Date objects
     const bookingDateTime = parseISO(bookingDate);
+    
+    // Validasi tambahan untuk bookingDate
+    if (isNaN(bookingDateTime.getTime())) {
+      return sendErrorResponse(res, 400, 'Format tanggal booking tidak valid. Harus dalam format ISO-8601 (YYYY-MM-DD)');
+    }
+    
     console.log('🗓️ Booking Date (WIB):', formatDateToWIB(bookingDateTime));
 
     // Combine date with time in WIB timezone
