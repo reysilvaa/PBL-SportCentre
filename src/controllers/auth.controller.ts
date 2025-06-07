@@ -416,7 +416,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
     try {
       // Coba kirim email
-      const emailSent = await sendPasswordResetEmail(user.email, resetToken);
+      const emailSent = await sendPasswordResetEmail(user.email, resetToken, user.name);
       
       if (!emailSent) {
         // Jika pengiriman email gagal, tetap berikan respons sukses
