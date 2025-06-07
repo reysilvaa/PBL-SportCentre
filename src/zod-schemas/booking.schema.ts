@@ -50,25 +50,23 @@ export const createBookingSchema = z.object({
     }),
   paymentMethod: z
     .enum([
-      PaymentMethod.CASH, 
-      PaymentMethod.CREDIT_CARD,
-      PaymentMethod.BCA_VA,
-      PaymentMethod.BNI_VA,
-      PaymentMethod.BRI_VA,
-      PaymentMethod.MANDIRI_VA,
-      PaymentMethod.PERMATA_VA,
-      PaymentMethod.CIMB_VA,
-      PaymentMethod.DANAMON_VA,
       PaymentMethod.GOPAY,
       PaymentMethod.SHOPEEPAY,
       PaymentMethod.QRIS,
-      PaymentMethod.DANA,
+      PaymentMethod.BCA_VA,
+      PaymentMethod.BRI_VA,
+      PaymentMethod.BNI_VA,
+      PaymentMethod.PERMATA_VA,
+      PaymentMethod.MANDIRI_BILL,
+      PaymentMethod.CIMB_VA,
+      PaymentMethod.DANAMON_VA,
       PaymentMethod.INDOMARET,
       PaymentMethod.ALFAMART,
       PaymentMethod.AKULAKU,
       PaymentMethod.KREDIVO,
-      PaymentMethod.PAYPAL,
-      PaymentMethod.GOOGLE_PAY
+      PaymentMethod.DANA,
+      PaymentMethod.CREDIT_CARD,
+      PaymentMethod.CASH
     ] as const)
     .optional()
     .describe('Metode pembayaran: kartu kredit, virtual account bank, e-wallet, dll. Bisa null/undefined karena akan ditentukan oleh webhook Midtrans'),
