@@ -425,7 +425,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
         
         if (!config.isProduction) {
           // Di lingkungan development, kembalikan token untuk testing
-          const resetUrl = `${config.frontendUrl}/auth/reset-password?token=${resetToken}`;
+          const resetUrl = `${config.frontendUrl}/auth/reset-password/${encodeURIComponent(resetToken)}`;
           res.json({
             message: 'Mode development: Link reset password',
             resetUrl,
@@ -443,7 +443,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       
       // Fallback untuk development
       if (!config.isProduction) {
-        const resetUrl = `${config.frontendUrl}/auth/reset-password?token=${resetToken}`;
+        const resetUrl = `${config.frontendUrl}/auth/reset-password/${encodeURIComponent(resetToken)}`;
         res.json({
           message: 'Mode development: Email service error, gunakan link ini',
           resetUrl,

@@ -18,7 +18,7 @@ export const sendPasswordResetEmail = async (
   token: string
 ): Promise<boolean> => {
   try {
-    const resetUrl = `${config.frontendUrl}/auth/reset-password?token=${token}`;
+    const resetUrl = `${config.frontendUrl}/auth/reset-password/${encodeURIComponent(token)}`;
 
     const mailOptions = {
       from: `"Sport Center" <${config.mail.user}>`,
