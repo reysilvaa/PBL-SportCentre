@@ -28,11 +28,38 @@ export enum PaymentStatus {
 }
 
 export enum PaymentMethod {
-  MIDTRANS = 'midtrans',
+  // Opsi pembayaran tunai di tempat (tidak melalui Midtrans)
   CASH = 'cash',
-  TRANSFER = 'transfer',
+  
+  // Kartu kredit/debit via Midtrans
   CREDIT_CARD = 'credit_card',
-  E_WALLET = 'ewallet',
+  
+  // Bank transfer via Midtrans
+  BCA_VA = 'bca_va',
+  BNI_VA = 'bni_va', 
+  BRI_VA = 'bri_va',
+  MANDIRI_VA = 'mandiri_va',
+  PERMATA_VA = 'permata_va',
+  CIMB_VA = 'cimb_va',
+  DANAMON_VA = 'danamon_va',
+  
+  // E-Wallet via Midtrans
+  GOPAY = 'gopay',
+  SHOPEEPAY = 'shopeepay',
+  QRIS = 'qris',
+  DANA = 'dana',
+  
+  // Gerai Retail via Midtrans
+  INDOMARET = 'indomaret',
+  ALFAMART = 'alfamart',
+
+  // Paylater via Midtrans
+  AKULAKU = 'akulaku',
+  KREDIVO = 'kredivo',
+  
+  // International Payment
+  PAYPAL = 'paypal',
+  GOOGLE_PAY = 'google_pay',
 }
 
 export enum PromotionStatus {

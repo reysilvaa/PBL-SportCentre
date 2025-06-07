@@ -127,7 +127,7 @@ model Payment {
   user          User          @relation(fields: [userId], references: [id])
   userId        Int
   amount        Decimal       @db.Decimal(10, 2)
-  paymentMethod PaymentMethod
+  paymentMethod PaymentMethod?
   status        PaymentStatus @default(pending)
   createdAt     DateTime      @default(now())
   expiresDate   DateTime?
@@ -136,11 +136,23 @@ model Payment {
 }
 
 enum PaymentMethod {
-  midtrans
-  cash
-  transfer
+  gopay
+  shopeepay
+  qris
+  bca_va
+  bri_va
+  bni_va
+  permata_va
+  mandiri_bill
+  cimb_va
+  danamon_va
+  indomaret
+  alfamart
+  akulaku
+  kredivo
+  dana
   credit_card
-  ewallet
+  cash
 }
 
 model ActivityLog {

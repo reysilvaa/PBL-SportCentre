@@ -154,7 +154,7 @@ export const setupFieldSocketHandlers = (): void => {
         // Emit directly to the requesting client
         socket.emit('fieldsAvailabilityUpdate', filteredResults);
         
-        console.log(`📤 Sent availability update to client ${socket.id}`);
+        // console.log(`📤 Sent availability update to client ${socket.id}`);
       } catch (error) {
         console.error('Error processing availability update request:', error);
         socket.emit('error', { message: 'Failed to get availability data' });

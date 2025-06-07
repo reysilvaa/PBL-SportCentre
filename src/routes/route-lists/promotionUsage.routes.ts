@@ -5,13 +5,13 @@ import {
   deletePromotionUsage,
 } from '../../controllers/promotionUsage.controller';
 import { auth } from '../../middlewares/auth.middleware';
-
+import { Role } from '../../types';
 const router = express.Router();
 
 router.get(
   '/',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
   }),
   getPromotionUsages
 );
@@ -19,7 +19,7 @@ router.get(
 router.post(
   '/',
   auth({
-    allowedRoles: ['user'],
+    allowedRoles: [Role.USER],
   }),
   createPromotionUsage
 );
@@ -27,7 +27,7 @@ router.post(
 router.delete(
   '/:id',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
   }),
   deletePromotionUsage
 );

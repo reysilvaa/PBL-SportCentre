@@ -7,7 +7,7 @@ import { bookingRateLimiter } from '../../middlewares/security.middleware';
 const router = Router();
 
 // Pembuatan booking
-router.post('/', userAuth(), bookingRateLimiter, bookingController.createBooking);
+router.post('/', userAuth(), bookingController.createBooking);
 
 // Mendapatkan booking pengguna berdasarkan userId
 router.get(

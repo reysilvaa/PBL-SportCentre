@@ -3,13 +3,13 @@ import express from 'express';
 import * as userController from '../../controllers/user.controller';
 import { auth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
-
+import { Role } from '../../types';
 const router = express.Router();
 
 // Mendapatkan daftar pengguna (super admin dan admin cabang)
 router.get(
   '/',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }),
   cacheMiddleware('users_unified', 300),
   userController.getUsers
 );
@@ -17,7 +17,7 @@ router.get(
 // Mendapatkan daftar pengguna berdasarkan role
 router.get(
   '/by-role/:role',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }),
   cacheMiddleware('users_by_role', 300),
   userController.getUsersByRole
 );
@@ -25,7 +25,7 @@ router.get(
 // Mendapatkan daftar admin cabang yang dimiliki/dikelola oleh user yang login
 router.get(
   '/branch-admins',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }),
   cacheMiddleware('user_branch_admins', 60),
   userController.getUserBranchAdmins
 );
@@ -33,7 +33,7 @@ router.get(
 // Mendapatkan cabang untuk admin berdasarkan ID
 router.get(
   '/:id/branches',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }),
   cacheMiddleware('user_branches', 60),
   userController.getUserBranches
 );
@@ -41,7 +41,7 @@ router.get(
 // Mendapatkan detail profil admin berdasarkan ID
 router.get(
   '/detail/:id',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }),
   cacheMiddleware('user_branches', 60),
   userController.getAdminProfile
 );
@@ -59,15 +59,15 @@ router.put('/profile', auth(), userController.updateUserProfile);
 router.put('/profile/:id', auth(), userController.updateUserProfile);
 
 // Membuat pengguna (super admin dan admin cabang)
-router.post('/', auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }), userController.createUser);
+router.post('/', auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }), userController.createUser);
 
 // Mengupdate pengguna (super admin dan admin cabang)
-router.put('/:id', auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }), userController.updateUser);
+router.put('/:id', auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }), userController.updateUser);
 
 // Menghapus pengguna (super admin dan admin cabang)
 router.delete(
   '/:id',
-  auth({ allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'] }),
+  auth({ allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG] }),
   userController.deleteUser
 );
 

@@ -15,6 +15,7 @@ import {
 import { hashPassword, verifyPassword } from '../utils/password.utils';
 import { verifyToken } from '../utils/jwt.utils';
 import { sendPasswordResetEmail } from '../config/services/email';
+import { Role } from '../types';
 
 // Fungsi untuk generate token
 const generateTokens = (user: { id: number; email: string; role: string }) => {
@@ -340,7 +341,7 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
       delete userWithoutPassword.password;
 
       // Jika admin cabang, ambil branches dengan query terpisah
-      if (decoded.role === 'admin_cabang') {
+      if (decoded.role === Role.ADMIN_CABANG) {
         const branchAdmins = await prisma.branchAdmin.findMany({
           where: { userId: decoded.id },
           include: {

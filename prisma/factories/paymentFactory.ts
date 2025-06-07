@@ -13,11 +13,14 @@ export const generatePayment = (
   // Metode pembayaran dengan distribusi yang lebih realistis
   // Data menunjukkan bahwa di Indonesia transfer dan e-wallet lebih populer
   const paymentMethodWeights = [
-    { value: PaymentMethod.transfer, weight: 35 },    // 35% Transfer
-    { value: PaymentMethod.midtrans, weight: 25 },    // 25% Midtrans
-    { value: PaymentMethod.ewallet, weight: 20 },     // 20% E-wallet
+    { value: PaymentMethod.bca_va, weight: 15 },    // 15% BCA VA
+    { value: PaymentMethod.gopay, weight: 20 },     // 20% GoPay
+    { value: PaymentMethod.shopeepay, weight: 15 }, // 15% ShopeePay
+    { value: PaymentMethod.qris, weight: 10 },      // 10% QRIS
+    { value: PaymentMethod.bni_va, weight: 10 },    // 10% BNI VA
+    { value: PaymentMethod.bri_va, weight: 5 },     // 5% BRI VA
     { value: PaymentMethod.credit_card, weight: 10 }, // 10% Credit Card
-    { value: PaymentMethod.cash, weight: 10 }         // 10% Cash
+    { value: PaymentMethod.cash, weight: 15 }         // 15% Cash
   ];
 
   const paymentMethod = overrides.paymentMethod || 
@@ -74,22 +77,28 @@ export const generatePayment = (
   let transactionId: string | null = null;
   let paymentUrl: string | null = null;
   
-  if (paymentMethod === PaymentMethod.midtrans) {
+  if (paymentMethod === PaymentMethod.credit_card) {
     transactionId = `ORDER-${faker.string.alphanumeric(8).toUpperCase()}`;
     paymentUrl = `https://sandbox.midtrans.com/snap/v2/vtweb/${faker.string.alphanumeric(32)}`;
-  } else if (paymentMethod === PaymentMethod.transfer) {
-    const banks = ['BCA', 'BNI', 'BRI', 'Mandiri', 'CIMB'];
-    const selectedBank = faker.helpers.arrayElement(banks);
-    transactionId = `${selectedBank}-${faker.string.numeric(8)}`;
+  } else if (paymentMethod === PaymentMethod.bca_va || 
+             paymentMethod === PaymentMethod.bni_va || 
+             paymentMethod === PaymentMethod.bri_va || 
+             paymentMethod === PaymentMethod.permata_va) {
+    // Untuk Virtual Account atau transfer bank
+    const bankCode = String(paymentMethod).split('_')[0].toUpperCase();
+    transactionId = `${bankCode}-${faker.string.numeric(8)}`;
     paymentUrl = null;
-  } else if (paymentMethod === PaymentMethod.ewallet) {
-    // Metode e-wallet seperti OVO, GoPay, DANA, dll
-    const ewallets = ['OVO', 'GoPay', 'DANA', 'LinkAja', 'ShopeePay'];
-    const selectedEwallet = faker.helpers.arrayElement(ewallets);
-    transactionId = `${selectedEwallet}-${faker.string.alphanumeric(10).toUpperCase()}`;
-    paymentUrl = null;
+  } else if (paymentMethod === PaymentMethod.gopay || 
+             paymentMethod === PaymentMethod.shopeepay || 
+             paymentMethod === PaymentMethod.dana || 
+             paymentMethod === PaymentMethod.qris) {
+    // E-wallet seperti GoPay, ShopeePay, DANA, dll
+    const ewalletName = String(paymentMethod).toUpperCase();
+    transactionId = `${ewalletName}-${faker.string.alphanumeric(10).toUpperCase()}`;
+    paymentUrl = paymentMethod === PaymentMethod.qris ? 
+      `https://sandbox.midtrans.com/qris/${faker.string.alphanumeric(16)}` : null;
   } else {
-    // Metode lain
+    // Metode lain (cash, dll)
     transactionId = `TRX-${faker.string.alphanumeric(10).toUpperCase()}`;
     paymentUrl = null;
   }

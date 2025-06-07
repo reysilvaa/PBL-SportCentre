@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PaymentMethod } from '../types/enums';
 
 // Skema validasi Zod untuk pembuatan booking
 export const createBookingSchema = z.object({
@@ -47,6 +48,30 @@ export const createBookingSchema = z.object({
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
       message: 'Format waktu selesai tidak valid (HH:MM)',
     }),
+  paymentMethod: z
+    .enum([
+      PaymentMethod.CASH, 
+      PaymentMethod.CREDIT_CARD,
+      PaymentMethod.BCA_VA,
+      PaymentMethod.BNI_VA,
+      PaymentMethod.BRI_VA,
+      PaymentMethod.MANDIRI_VA,
+      PaymentMethod.PERMATA_VA,
+      PaymentMethod.CIMB_VA,
+      PaymentMethod.DANAMON_VA,
+      PaymentMethod.GOPAY,
+      PaymentMethod.SHOPEEPAY,
+      PaymentMethod.QRIS,
+      PaymentMethod.DANA,
+      PaymentMethod.INDOMARET,
+      PaymentMethod.ALFAMART,
+      PaymentMethod.AKULAKU,
+      PaymentMethod.KREDIVO,
+      PaymentMethod.PAYPAL,
+      PaymentMethod.GOOGLE_PAY
+    ] as const)
+    .optional()
+    .describe('Metode pembayaran: kartu kredit, virtual account bank, e-wallet, dll. Bisa null/undefined karena akan ditentukan oleh webhook Midtrans'),
 });
 
 // Skema untuk update booking (semua field opsional)

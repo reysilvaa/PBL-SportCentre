@@ -247,7 +247,7 @@ export const updateBranch = async (req: MulterRequest & User, res: Response): Pr
     }
 
     // Validasi apakah pengguna memiliki akses ke cabang ini
-    if (req.user?.role !== 'super_admin') {
+    if (req.user?.role !== Role.SUPER_ADMIN) {
       const isAuthorized = await prisma.branch.findFirst({
         where: {
           id: branchId,

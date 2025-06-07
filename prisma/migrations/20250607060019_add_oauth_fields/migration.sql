@@ -1,0 +1,2 @@
+-- This is an empty migration file
+-- Created to fix the missing migration error 

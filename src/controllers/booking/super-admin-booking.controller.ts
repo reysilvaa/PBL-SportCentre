@@ -119,14 +119,19 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
       return;
     }
 
+    const updateData: any = {
+      status: (result.data.paymentStatus as PaymentStatus) || booking.payment.status,
+      amount: result.data.amount !== undefined ? result.data.amount : booking.payment.amount,
+    };
+    
+    if (result.data.paymentMethod) {
+      updateData.paymentMethod = result.data.paymentMethod as PaymentMethod;
+    }
+    
     // Update payment details
     const updatedPayment = await prisma.payment.update({
       where: { id: booking.payment.id },
-      data: {
-        status: (result.data.paymentStatus as PaymentStatus) || booking.payment.status,
-        paymentMethod: (result.data.paymentMethod as PaymentMethod) || booking.payment.paymentMethod,
-        amount: result.data.amount !== undefined ? result.data.amount : booking.payment.amount,
-      },
+      data: updateData,
     });
 
     // Emit WebSocket event for booking update

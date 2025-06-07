@@ -12,6 +12,7 @@ import {
   getFieldById,
 } from '../../controllers/field.controller';
 import { checkAllFieldsAvailability } from '../../controllers/availability.controller';
+import { Role } from '../../types';
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ router.get(
 router.get(
   '/admin',
   auth({
-    allowedRoles: ['admin_cabang', 'owner_cabang', 'super_admin'],
+    allowedRoles: [Role.ADMIN_CABANG, Role.OWNER_CABANG, Role.SUPER_ADMIN],
     attachBranch: true,
   }),
   cacheMiddleware('admin_fields', 300),
@@ -48,7 +49,7 @@ router.get(
 router.post(
   '/',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
     attachBranch: true,
   }),
   fieldUpload.single('imageUrl'),
@@ -60,7 +61,7 @@ router.post(
 router.put(
   '/:id',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
     attachBranch: true,
     ownerOnly: true,
     resourceName: 'field',
@@ -74,7 +75,7 @@ router.put(
 router.delete(
   '/:id',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
     attachBranch: true,
     ownerOnly: true,
     resourceName: 'field',

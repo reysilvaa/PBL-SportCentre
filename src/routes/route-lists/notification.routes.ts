@@ -3,13 +3,13 @@
 import { Router } from 'express';
 import { getNotifications, readNotification } from '../../controllers/webhook/notification.controller';
 import { auth } from '../../middlewares/auth.middleware';
-
+import { Role } from '../../types';
 const router = Router();
 
 router.get(
   '/user/:userId',
   auth({
-    allowedRoles: ['user', 'admin_cabang', 'owner_cabang', 'super_admin'],
+    allowedRoles: [Role.USER, Role.ADMIN_CABANG, Role.OWNER_CABANG, Role.SUPER_ADMIN],
   }),
   getNotifications
 );
@@ -17,7 +17,7 @@ router.get(
 router.patch(
   '/:id/read',
   auth({
-    allowedRoles: ['user', 'admin_cabang', 'owner_cabang', 'super_admin'],
+    allowedRoles: [Role.USER, Role.ADMIN_CABANG, Role.OWNER_CABANG, Role.SUPER_ADMIN],
   }),
   readNotification
 );

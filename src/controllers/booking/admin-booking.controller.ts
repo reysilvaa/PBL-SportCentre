@@ -269,9 +269,10 @@ export const updateBranchBookingStatus = async (req: User, res: Response): Promi
 export const createManualBooking = async (req: User, res: Response): Promise<void> => {
   try {
     const branchId = req.userBranch?.id;
-    const { fieldId, userId, bookingDate, startTime, endTime } = req.body;
+    const { fieldId, userId, bookingDate, startTime, endTime, paymentMethod } = req.body;
     const paymentStatus = PaymentStatus.PAID;
-    const paymentMethod = PaymentMethod.CASH;
+    // Gunakan payment method dari request body atau default ke CASH
+    const selectedPaymentMethod = paymentMethod || PaymentMethod.CASH;
 
     if (!branchId) {
       return sendErrorResponse(res, 400, 'Branch ID is required');
@@ -349,11 +350,12 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
       startDateTime,
       endDateTime,
       paymentStatus,
-      paymentMethod,
+      selectedPaymentMethod,
       totalPrice
     );
 
     console.log('✅ Booking manual berhasil dibuat:', booking.id);
+    console.log('💳 Metode pembayaran:', selectedPaymentMethod);
 
     // Emit real-time events
     emitBookingEvents('booking:created', { booking, payment });
@@ -363,7 +365,7 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
 
     res.status(201).json({
       status: true,
-      message: 'Booking manual berhasil dibuat dengan pembayaran cash',
+      message: 'Booking manual berhasil dibuat dengan pembayaran ' + selectedPaymentMethod,
       data: {
         booking,
         payment,
@@ -378,13 +380,16 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
 export const markPaymentAsPaid = async (req: User, res: Response): Promise<void> => {
   try {
     const { paymentId } = req.params;
+    const { paymentMethod } = req.body;
+    const selectedPaymentMethod = paymentMethod || PaymentMethod.CASH;
+
     const payment = await prisma.payment.findUnique({
       where: { id: parseInt(paymentId) },
       include: {
         booking: {
           include: {
             field: true,
-            user: { select: { id: true, name: true, email: true } }
+            user: { select: { id: true, name: true, email: true, role: true } }
           }
         }
       }
@@ -400,10 +405,18 @@ export const markPaymentAsPaid = async (req: User, res: Response): Promise<void>
       return sendErrorResponse(res, 403, 'Anda tidak memiliki akses untuk memperbarui pembayaran ini');
     }
 
-    // Perbarui status pembayaran menjadi PAID
+    // Tentukan status pembayaran berdasarkan role pengguna
+    const paymentStatus = payment.booking.user.role === 'user' 
+      ? PaymentStatus.DP_PAID  // User biasa mendapat status DP_PAID
+      : PaymentStatus.PAID;    // Admin/owner mendapat status PAID
+    
+    // Perbarui status pembayaran dan metode pembayaran
     const updatedPayment = await prisma.payment.update({
       where: { id: parseInt(paymentId) },
-      data: { status: PaymentStatus.PAID }
+      data: { 
+        status: paymentStatus,
+        paymentMethod: selectedPaymentMethod
+      }
     });
 
     // Emit WebSocket event untuk perubahan status pembayaran
@@ -411,7 +424,17 @@ export const markPaymentAsPaid = async (req: User, res: Response): Promise<void>
       booking: payment.booking,
       userId: payment.booking.userId,
       branchId: payment.booking.field.branchId,
-      paymentStatus: PaymentStatus.PAID,
+      paymentStatus: paymentStatus,
+    });
+
+    // Tambahkan log aktivitas
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user?.id || 0,
+        action: 'PAYMENT_MARKED_AS_PAID',
+        details: `Admin menandai pembayaran #${paymentId} sebagai ${paymentStatus} dengan metode ${selectedPaymentMethod}`,
+        ipAddress: req.ip || undefined,
+      }
     });
 
     // Hapus cache yang terkait booking
@@ -424,7 +447,7 @@ export const markPaymentAsPaid = async (req: User, res: Response): Promise<void>
 
     res.status(200).json({
       status: true,
-      message: 'Pembayaran berhasil dilunasi',
+      message: `Pembayaran berhasil ditandai sebagai ${paymentStatus === PaymentStatus.DP_PAID ? 'uang muka' : 'lunas'} dengan metode ${selectedPaymentMethod}`,
       data: updatedPayment
     });
   } catch (error) {
@@ -436,7 +459,7 @@ export const markPaymentAsPaid = async (req: User, res: Response): Promise<void>
 export const updatePaymentStatus = async (req: User, res: Response): Promise<void> => {
   try {
     const { paymentId } = req.params;
-    const { status } = req.body;
+    const { status, paymentMethod } = req.body;
 
     if (!status) {
       return sendErrorResponse(res, 400, 'Status pembayaran diperlukan');
@@ -464,10 +487,18 @@ export const updatePaymentStatus = async (req: User, res: Response): Promise<voi
       return sendErrorResponse(res, 403, 'Anda tidak memiliki akses untuk memperbarui pembayaran ini');
     }
 
-    // Perbarui status pembayaran
+    // Persiapkan data untuk update
+    const updateData: any = { status };
+    
+    // Jika paymentMethod diberikan, tambahkan ke data update
+    if (paymentMethod) {
+      updateData.paymentMethod = paymentMethod;
+    }
+
+    // Perbarui status pembayaran dan metode pembayaran (jika diberikan)
     const updatedPayment = await prisma.payment.update({
       where: { id: parseInt(paymentId) },
-      data: { status }
+      data: updateData
     });
 
     // Emit WebSocket event untuk perubahan status pembayaran
@@ -476,6 +507,16 @@ export const updatePaymentStatus = async (req: User, res: Response): Promise<voi
       userId: payment.booking.userId,
       branchId: payment.booking.field.branchId,
       paymentStatus: status,
+    });
+    
+    // Tambahkan log aktivitas
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user?.id || 0,
+        action: 'PAYMENT_STATUS_UPDATED',
+        details: `Admin mengubah status pembayaran #${paymentId} menjadi ${status}${paymentMethod ? ` dengan metode ${paymentMethod}` : ''}`,
+        ipAddress: req.ip || undefined,
+      }
     });
 
     // Hapus cache yang terkait booking
@@ -488,7 +529,7 @@ export const updatePaymentStatus = async (req: User, res: Response): Promise<voi
 
     res.status(200).json({
       status: true,
-      message: 'Status pembayaran berhasil diperbarui',
+      message: `Status pembayaran berhasil diperbarui menjadi ${status}${paymentMethod ? ` dengan metode ${paymentMethod}` : ''}`,
       data: updatedPayment
     });
   } catch (error) {
