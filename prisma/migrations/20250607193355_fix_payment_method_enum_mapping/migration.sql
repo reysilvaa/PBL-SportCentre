@@ -5,5 +5,5 @@
 
 */
 -- AlterTable
-ALTER TABLE `payment` DROP COLUMN `paymentMethod`,
+ALTER TABLE `Payment` DROP COLUMN `paymentMethod`,
     ADD COLUMN `payment_paymentMethod` ENUM('gopay', 'shopeepay', 'qris', 'bca_va', 'bri_va', 'bni_va', 'permata_va', 'mandiri_bill', 'cimb_va', 'danamon_va', 'indomaret', 'alfamart', 'akulaku', 'kredivo', 'dana', 'credit_card', 'cash') NULL;
