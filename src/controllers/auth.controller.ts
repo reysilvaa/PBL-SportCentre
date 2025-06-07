@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/services/database';
 import { config } from '../config/app/env';
-import { loginSchema, registerSchema } from '../zod-schemas/auth.schema';
+import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from '../zod-schemas/auth.schema';
 import {
   blacklistToken,
   setAuthCookie,
@@ -14,6 +14,7 @@ import {
 } from '../utils/auth.utils';
 import { hashPassword, verifyPassword } from '../utils/password.utils';
 import { verifyToken } from '../utils/jwt.utils';
+import { sendPasswordResetEmail } from '../config/services/email';
 
 // Fungsi untuk generate token
 const generateTokens = (user: { id: number; email: string; role: string }) => {
@@ -369,5 +370,163 @@ export const getAuthStatus = async (req: Request, res: Response): Promise<void> 
   } catch (error) {
     console.error('Auth Status Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Controller untuk forgot password
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Validasi data dengan Zod
+    const result = forgotPasswordSchema.safeParse(req.body);
+
+    if (!result.success) {
+      res.status(400).json({
+        error: 'Validasi gagal',
+        details: result.error.format(),
+      });
+      return;
+    }
+
+    const { email } = result.data;
+
+    // Cek apakah email ada di database
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // Tetap kirim respons sukses meskipun email tidak ditemukan
+      // Ini untuk mencegah enumeration attack
+      res.json({
+        message: 'Jika email terdaftar, instruksi reset password akan dikirim',
+      });
+      return;
+    }
+
+    // Buat token reset password (berlaku 1 jam)
+    const resetToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        purpose: 'password_reset',
+      },
+      config.jwtSecret,
+      { expiresIn: '1h' }
+    );
+
+    try {
+      // Coba kirim email
+      const emailSent = await sendPasswordResetEmail(user.email, resetToken);
+      
+      if (!emailSent) {
+        // Jika pengiriman email gagal, tetap berikan respons sukses
+        // tapi log errornya dan berikan link reset langsung di development mode
+        console.error('Failed to send password reset email');
+        
+        if (!config.isProduction) {
+          // Di lingkungan development, kembalikan token untuk testing
+          const resetUrl = `${config.frontendUrl}/auth/reset-password?token=${resetToken}`;
+          res.json({
+            message: 'Mode development: Link reset password',
+            resetUrl,
+            token: resetToken
+          });
+          return;
+        }
+      }
+      
+      res.json({
+        message: 'Instruksi reset password telah dikirim ke email Anda',
+      });
+    } catch (error) {
+      console.error('Email service error:', error);
+      
+      // Fallback untuk development
+      if (!config.isProduction) {
+        const resetUrl = `${config.frontendUrl}/auth/reset-password?token=${resetToken}`;
+        res.json({
+          message: 'Mode development: Email service error, gunakan link ini',
+          resetUrl,
+          token: resetToken
+        });
+        return;
+      }
+      
+      res.json({
+        message: 'Instruksi reset password telah dikirim ke email Anda',
+      });
+    }
+  } catch (error) {
+    console.error('Forgot Password Error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+// Controller untuk reset password
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Validasi data dengan Zod
+    const result = resetPasswordSchema.safeParse(req.body);
+
+    if (!result.success) {
+      res.status(400).json({
+        error: 'Validasi gagal',
+        details: result.error.format(),
+      });
+      return;
+    }
+
+    const { token, password } = result.data;
+
+    // Verifikasi token
+    try {
+      const decoded = verifyToken(token) as {
+        id: number;
+        email: string;
+        purpose: string;
+      };
+
+      // Cek apakah token memang untuk tujuan reset password
+      if (!decoded || decoded.purpose !== 'password_reset') {
+        res.status(400).json({ error: 'Token reset password tidak valid' });
+        return;
+      }
+
+      // Cek apakah user ada
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'User tidak ditemukan' });
+        return;
+      }
+
+      // Hash password baru
+      const hashedPassword = await hashPassword(password);
+
+      // Update password
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+
+      // Tambahkan token ke blacklist untuk mencegah penggunaan kembali
+      await blacklistToken(token);
+
+      res.json({ message: 'Password berhasil diperbarui' });
+    } catch (error) {
+      console.error('Token verification error:', error);
+      res.status(400).json({ error: 'Token reset password tidak valid atau kedaluwarsa' });
+    }
+  } catch (error) {
+    console.error('Reset Password Error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 };

@@ -60,5 +60,46 @@ export const loginSchema = z.object({
     }),
 });
 
+// Skema validasi untuk forgot password
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string({
+      message: 'Email wajib diisi',
+    })
+    .email({
+      message: 'Format email tidak valid',
+    }),
+});
+
+// Skema validasi untuk reset password
+export const resetPasswordSchema = z.object({
+  token: z
+    .string({
+      message: 'Token reset password wajib diisi',
+    })
+    .min(1, {
+      message: 'Token reset password tidak boleh kosong',
+    }),
+  password: z
+    .string({
+      message: 'Password baru wajib diisi',
+    })
+    .min(6, {
+      message: 'Password baru minimal 6 karakter',
+    }),
+  confirmPassword: z
+    .string({
+      message: 'Konfirmasi password wajib diisi',
+    })
+    .min(1, {
+      message: 'Konfirmasi password tidak boleh kosong',
+    }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Konfirmasi password tidak cocok dengan password baru',
+  path: ['confirmPassword'],
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

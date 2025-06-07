@@ -34,4 +34,11 @@ export interface EnvConfig {
   CLOUDINARY_API_KEY: string;
   CLOUDINARY_API_SECRET: string;
   CLOUDINARY_CLOUD_NAME: string;
+  
+  // Email Configuration
+  MAIL_HOST: string;
+  MAIL_PORT: string;
+  MAIL_SECURE: string;
+  MAIL_USER: string;
+  MAIL_PASSWORD: string;
 }
