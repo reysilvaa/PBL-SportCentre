@@ -293,14 +293,14 @@ export const createUser = async (req: AuthUser, res: Response): Promise<void> =>
         name,
         email,
         password: hashedPassword,
-        role: role || 'user', // Default ke role 'user'
+        role: role || Role.USER, // Default ke role 'user'
         phone,
       },
     });
 
     // Jika admin cabang membuat user dan role adalah admin_cabang, buat relasi dengan cabang
     if (
-      (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') && role === 'admin_cabang' && branchId
+      (req.user?.role === Role.ADMIN_CABANG || req.user?.role === Role.OWNER_CABANG) && role === Role.ADMIN_CABANG && branchId
     ) {
       await prisma.branchAdmin.create({
         data: {
@@ -315,7 +315,7 @@ export const createUser = async (req: AuthUser, res: Response): Promise<void> =>
       data: {
         userId: req.user!.id,
         action: 'CREATE_USER',
-        details: `Membuat user baru "${name}" dengan role ${role || 'user'}`,
+        details: `Membuat user baru "${name}" dengan role ${role || Role.USER}`,
         ipAddress: req.ip || undefined,
       },
     });
@@ -371,11 +371,11 @@ export const updateUser = async (req: AuthUser, res: Response): Promise<void> =>
     }
 
     // Validasi peran berdasarkan role pengguna yang mengupdate
-    if (role && req.user?.role !== 'super_admin') {
-      let allowedRoles = ['user'];
+    if (role && req.user?.role !== Role.SUPER_ADMIN) {
+      let allowedRoles = [Role.USER];
 
-      if (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') {
-        allowedRoles = ['user', 'admin_cabang'];
+      if (req.user?.role === Role.ADMIN_CABANG || req.user?.role === Role.OWNER_CABANG) {
+        allowedRoles = [Role.USER, Role.ADMIN_CABANG];
       }
 
       if (!allowedRoles.includes(role)) {
@@ -418,7 +418,7 @@ export const updateUser = async (req: AuthUser, res: Response): Promise<void> =>
       updateData.password = await hashPassword(password);
     }
 
-    if (role && req.user?.role === 'super_admin') {
+    if (role && req.user?.role === Role.SUPER_ADMIN) {
       updateData.role = role;
     }
 
@@ -486,9 +486,9 @@ export const deleteUser = async (req: AuthUser, res: Response): Promise<void> =>
 
     // Super admin dapat menghapus user manapun kecuali dirinya sendiri
     // Admin cabang hanya dapat menghapus user reguler terkait cabangnya
-    if (req.user?.role !== 'super_admin') {
+    if (req.user?.role !== Role.SUPER_ADMIN) {
       // Jika bukan superadmin, cek batasan lain
-      if (existingUser.role !== 'user') {
+      if (existingUser.role !== Role.USER) {
         res.status(403).json({
           status: false,
           message: 'Anda hanya dapat menghapus user reguler',
@@ -737,7 +737,7 @@ export const getUserBranches = async (req: AuthUser, res: Response): Promise<voi
       return;
     }
 
-    if (user.role !== 'admin_cabang') {
+    if (user.role !== Role.ADMIN_CABANG) {
       res.status(400).json({
         status: false,
         message: 'User bukan admin cabang',
@@ -817,3 +817,57 @@ export const getAdminProfile = async (req: AuthUser, res: Response): Promise<voi
     });
   }
 }
+
+// Mendapatkan daftar pengguna berdasarkan role
+export const getUsersByRole = async (req: AuthUser, res: Response): Promise<void> => {
+  try {
+    const { role } = req.params;
+    
+    // Validasi role
+    const validRoles = [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG, Role.USER];
+    if (!validRoles.includes(role as Role)) {
+      res.status(400).json({
+        status: false,
+        message: 'Role tidak valid',
+      });
+      return;
+    }
+    
+    // Authorization check
+    if (req.user?.role !== Role.SUPER_ADMIN) {
+      // Non-super admin hanya bisa melihat admin_cabang dan user
+      if (![Role.ADMIN_CABANG, Role.USER].includes(role as Role)) {
+        res.status(403).json({
+          status: false,
+          message: 'Anda tidak memiliki akses untuk melihat daftar pengguna dengan role ini',
+        });
+        return;
+      }
+    }
+    
+    // Dapatkan daftar pengguna berdasarkan role
+    const users = await prisma.user.findMany({
+      where: { role: role as Role },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+    
+    res.status(200).json({
+      status: true,
+      message: `Daftar pengguna dengan role ${role} berhasil didapatkan`,
+      data: users,
+    });
+  } catch (error) {
+    console.error('Error fetching users by role:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Terjadi kesalahan server internal',
+    });
+  }
+};
