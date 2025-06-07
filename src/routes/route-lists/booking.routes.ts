@@ -7,7 +7,10 @@ import { bookingRateLimiter } from '../../middlewares/security.middleware';
 const router = Router();
 
 // Pembuatan booking
-router.post('/', userAuth(), bookingController.createBooking);
+router.post('/', userAuth(), bookingRateLimiter, bookingController.createBooking);
+
+// Pembuatan booking oleh admin cabang (mirip booking user tapi untuk admin)
+router.post('/admin', branchAdminAuth(), bookingController.createAdminBooking);
 
 // Mendapatkan booking pengguna berdasarkan userId
 router.get(
@@ -59,9 +62,6 @@ router.get(
 
 // Update status booking
 router.put('/branches/:branchId/bookings/:id/status', branchAdminAuth(), bookingController.updateBranchBookingStatus);
-
-// Buat booking manual
-router.post('/branches/:branchId/bookings/manual', branchAdminAuth(), bookingController.createManualBooking);
 
 // Daftar semua booking (admin)
 router.get(

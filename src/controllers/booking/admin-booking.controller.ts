@@ -7,11 +7,16 @@ import {
   emitBookingEvents,
   getCompleteBooking,
   verifyFieldBranch,
+  processMidtransPayment,
 } from '../../utils/booking/booking.utils';
-import { calculateTotalPrice, combineDateWithTime } from '../../utils/booking/calculateBooking.utils';
+import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
 import { User } from '../../middlewares/auth.middleware';
 import { PaymentMethod, PaymentStatus } from '../../types';
+import { parseISO } from 'date-fns';
+import { combineDateAndTime } from '../../utils/date.utils';
+import { createBookingSchema } from '../../zod-schemas/booking.schema';
+import { resetFailedBookingCounter } from '../../middlewares/security.middleware';
 
 /**
  * Branch Admin Booking Controller
@@ -266,117 +271,6 @@ export const updateBranchBookingStatus = async (req: User, res: Response): Promi
   }
 };
 
-export const createManualBooking = async (req: User, res: Response): Promise<void> => {
-  try {
-    const branchId = req.userBranch?.id;
-    const { fieldId, userId, bookingDate, startTime, endTime, paymentMethod } = req.body;
-    const paymentStatus = PaymentStatus.PAID;
-    // Gunakan payment method dari request body atau default ke CASH
-    const selectedPaymentMethod = paymentMethod || PaymentMethod.CASH;
-
-    if (!branchId) {
-      return sendErrorResponse(res, 400, 'Branch ID is required');
-    }
-
-    // Super admin dapat membuat booking untuk branch tertentu
-    const whereBranchCondition = branchId === 0 && req.body.branchId ? parseInt(req.body.branchId) : branchId;
-
-    // Verify the field belongs to this branch
-    const field = await verifyFieldBranch(parseInt(fieldId), whereBranchCondition);
-
-    if (!field) {
-      return sendErrorResponse(res, 404, 'Field not found in this branch');
-    }
-
-    // Ensure we have a proper date object
-    let bookingDateTime;
-    try {
-      bookingDateTime = new Date(bookingDate);
-      if (isNaN(bookingDateTime.getTime())) {
-        throw new Error('Invalid date format');
-      }
-    } catch (error) {
-      console.error('❌ Error parsing booking date:', error);
-      
-      try {
-        // Coba parse format YYYY-MM-DD
-        const [year, month, day] = bookingDate.split('-').map(Number);
-        bookingDateTime = new Date(year, month - 1, day);
-        
-        if (isNaN(bookingDateTime.getTime())) {
-          throw new Error('Invalid date components');
-        }
-      } catch (error) {
-        console.error('❌ Semua percobaan parsing tanggal gagal:', error);
-        return sendErrorResponse(res, 400, 'Format tanggal booking tidak valid. Gunakan format YYYY-MM-DD');
-      }
-    }
-    
-    console.log('📆 Booking Date:', bookingDateTime.toISOString());
-
-    const startDateTime = combineDateWithTime(bookingDateTime, startTime);
-    const endDateTime = combineDateWithTime(bookingDateTime, endTime);
-
-    console.log('⏰ Start Time:', startDateTime.toISOString());
-    console.log('⏰ End Time:', endDateTime.toISOString());
-
-    // Validate booking time and availability
-    const timeValidation = await validateBookingTime(parseInt(fieldId), bookingDateTime, startDateTime, endDateTime);
-
-    if (!timeValidation.valid) {
-      return sendErrorResponse(res, 400, timeValidation.message, timeValidation.details);
-    }
-
-    // Calculate price
-    const totalPrice = calculateTotalPrice(
-      startDateTime,
-      endDateTime,
-      Number(field.priceDay),
-      Number(field.priceNight)
-    );
-
-  
-    const bookingUserId = userId ? parseInt(userId) : req.user?.id;
-
-    if (!bookingUserId) {
-      return sendErrorResponse(res, 400, 'User ID is required');
-    }
-
-    // Create booking and payment records - selalu set PAID untuk admin cabang
-    const { booking, payment } = await createBookingWithPayment(
-      bookingUserId,
-      parseInt(fieldId),
-      bookingDateTime,
-      startDateTime,
-      endDateTime,
-      paymentStatus,
-      selectedPaymentMethod,
-      totalPrice
-    );
-
-    console.log('✅ Booking manual berhasil dibuat:', booking.id);
-    console.log('💳 Metode pembayaran:', selectedPaymentMethod);
-
-    // Emit real-time events
-    emitBookingEvents('booking:created', { booking, payment });
-
-    // Invalidate cache
-    await invalidateBookingCache(booking.id, parseInt(fieldId), whereBranchCondition, bookingUserId);
-
-    res.status(201).json({
-      status: true,
-      message: 'Booking manual berhasil dibuat dengan pembayaran ' + selectedPaymentMethod,
-      data: {
-        booking,
-        payment,
-      },
-    });
-  } catch (error) {
-    console.error('Error creating manual booking:', error);
-    sendErrorResponse(res, 500, 'Internal Server Error');
-  }
-};
-
 export const markPaymentAsPaid = async (req: User, res: Response): Promise<void> => {
   try {
     const { paymentId } = req.params;
@@ -535,5 +429,247 @@ export const updatePaymentStatus = async (req: User, res: Response): Promise<voi
   } catch (error) {
     console.error('Error updating payment status:', error);
     sendErrorResponse(res, 500, 'Terjadi kesalahan saat memperbarui status pembayaran');
+  }
+};
+
+/**
+ * Fungsi booking untuk admin yang menggabungkan fungsionalitas createManualBooking dan createAdminBooking
+ * Mendukung pembayaran PAID langsung lunas baik untuk cash maupun Midtrans
+ */
+export const createAdminBooking = async (req: User, res: Response): Promise<void> => {
+  try {
+    console.log('📥 Request body dari admin:', JSON.stringify(req.body, null, 2));
+    
+    // Cek branchId dari admin
+    const branchId = req.userBranch?.id;
+    if (!branchId) {
+      return sendErrorResponse(res, 400, 'Branch ID diperlukan');
+    }
+
+    // Validasi data dengan Zod
+    const result = createBookingSchema.safeParse(req.body);
+
+    if (!result.success) {
+      console.error('❌ Validasi gagal:', result.error.format());
+      return sendErrorResponse(res, 400, 'Validasi gagal', result.error.format());
+    }
+
+    console.log('✅ Data validasi berhasil:', JSON.stringify(result.data, null, 2));
+
+    const { userId, fieldId, bookingDate, startTime, endTime, paymentMethod } = result.data;
+    
+    // Tentukan apakah menggunakan Midtrans
+    const isUsingMidtrans = paymentMethod !== PaymentMethod.CASH;
+    
+    console.log('💳 Metode Pembayaran:', paymentMethod);
+    console.log('🔍 Menggunakan Midtrans:', isUsingMidtrans);
+
+    // Super admin dapat membuat booking untuk branch tertentu
+    const whereBranchCondition = branchId === 0 && req.body.branchId ? parseInt(req.body.branchId) : branchId;
+
+    // Verify the field belongs to this branch
+    const field = await verifyFieldBranch(fieldId, whereBranchCondition);
+
+    if (!field) {
+      return sendErrorResponse(res, 404, 'Lapangan tidak ditemukan di cabang ini');
+    }
+
+    // Convert strings to Date objects
+    const bookingDateTime = parseISO(bookingDate);
+    
+    // Validasi tambahan untuk bookingDate
+    if (isNaN(bookingDateTime.getTime())) {
+      return sendErrorResponse(res, 400, 'Format tanggal booking tidak valid. Harus dalam format ISO-8601 (YYYY-MM-DD)');
+    }
+    
+    console.log('🗓️ Booking Date:', bookingDateTime.toISOString());
+
+    // Combine date with time in UTC
+    const startDateTime = combineDateAndTime(bookingDateTime, startTime);
+    const endDateTime = combineDateAndTime(bookingDateTime, endTime);
+
+    console.log('⏰ Start Time:', startDateTime.toISOString());
+    console.log('⏰ End Time:', endDateTime.toISOString());
+    console.log('⏰ Durasi booking:', Math.floor((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)), 'jam');
+
+    // Validate booking time and availability
+    const timeValidation = await validateBookingTime(fieldId, bookingDateTime, startDateTime, endDateTime);
+
+    if (!timeValidation.valid) {
+      return sendErrorResponse(res, 400, timeValidation.message, timeValidation.details);
+    }
+
+    // Fetch user details for customer information
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, phone: true, role: true },
+    });
+
+    if (!user) {
+      return sendErrorResponse(res, 404, 'Pengguna tidak ditemukan');
+    }
+
+    // Calculate total price
+    const totalPrice = calculateTotalPrice(
+      startDateTime,
+      endDateTime,
+      Number(field.priceDay),
+      Number(field.priceNight)
+    );
+
+    if (totalPrice <= 0) {
+      return sendErrorResponse(res, 400, 'Perhitungan harga tidak valid');
+    }
+
+    console.log('💵 Total harga:', totalPrice);
+
+    // Gunakan status pembayaran dari request body jika ada, jika tidak default ke PAID
+    const paymentStatus = req.body.paymentStatus || PaymentStatus.PAID;
+    console.log('💰 Status pembayaran:', paymentStatus);
+    
+    let paymentResult: any = null;
+
+    // Create booking with payment status sesuai pilihan
+    const { booking, payment } = await createBookingWithPayment(
+      userId,
+      fieldId,
+      bookingDateTime,
+      startDateTime,
+      endDateTime,
+      paymentStatus,
+      // Untuk booking Midtrans, tetap kirim paymentMethod agar dicatat di database
+      paymentMethod,
+      totalPrice
+    );
+
+    console.log('✅ Booking admin berhasil dibuat:', booking.id);
+    console.log('💳 Pembayaran dibuat:', payment.id);
+    console.log('💰 Metode pembayaran:', paymentMethod);
+
+    // Proses payment gateway jika menggunakan Midtrans
+    if (isUsingMidtrans) {
+      try {
+        // Process payment via Midtrans API
+        paymentResult = await processMidtransPayment(
+          booking,
+          payment,
+          field as any,
+          user as any,
+          totalPrice,
+          paymentMethod as PaymentMethod
+        );
+
+        if (paymentResult) {
+          // Update payment record with Midtrans transaction details
+          // Gunakan status pembayaran yang dipilih
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              expiresDate: paymentResult.expiryDate,
+              status: paymentStatus, // Gunakan status pembayaran yang dipilih
+              transactionId: paymentResult.transaction.transaction_id,
+              paymentUrl: paymentResult.transaction.redirect_url,
+            },
+          });
+
+          console.log('💳 Pembayaran diperbarui dengan detail transaksi');
+        }
+      } catch (error) {
+        console.error('Error processing payment with Midtrans:', error);
+        // Tetap lanjutkan meskipun ada error dengan Midtrans
+        // Karena booking sudah dibuat dengan status yang dipilih
+      }
+    }
+
+    // Tambahkan log aktivitas
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user?.id || 0,
+        action: 'ADMIN_BOOKING_CREATED',
+        details: `Admin membuat booking #${booking.id} untuk lapangan ${field.name} dengan pembayaran ${paymentMethod} (status: ${paymentStatus})`,
+        ipAddress: req.ip || undefined,
+      },
+    });
+    
+    // Untuk metode pembayaran tunai, tambahkan expiry date
+    if (paymentMethod === PaymentMethod.CASH) {
+      // Catat expiry date (24 jam dari sekarang) untuk pembayaran tunai
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 24);
+
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          expiresDate: expiryDate,
+        },
+      });
+    }
+
+    // Reset counter jika booking berhasil dibuat
+    if (req.user?.id) {
+      resetFailedBookingCounter(req.user.id);
+    }
+
+    // Emit real-time events
+    emitBookingEvents('booking:created', { booking, payment });
+
+    // Invalidate cache
+    await invalidateBookingCache(booking.id, fieldId, whereBranchCondition, userId);
+
+    // Pesan sesuai status pembayaran
+    const statusMessage = paymentStatus === PaymentStatus.PAID 
+      ? 'lunas' 
+      : 'down payment';
+
+    res.status(201).json({
+      status: true,
+      message: isUsingMidtrans 
+        ? `Booking berhasil dibuat dengan pembayaran online (status ${statusMessage})`
+        : `Booking berhasil dibuat dengan pembayaran tunai (status ${statusMessage})`,
+      data: {
+        booking,
+        payment,
+        paymentUrl: paymentResult?.transaction?.redirect_url || null,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating admin booking:', error);
+    sendErrorResponse(res, 500, 'Internal Server Error');
+  }
+};
+
+/**
+ * Fungsi booking manual untuk kompatibilitas dengan API lama
+ * Meneruskan ke createAdminBooking
+ */
+export const createManualBooking = async (req: User, res: Response): Promise<void> => {
+  try {
+    console.log('📥 Request createManualBooking dialihkan ke createAdminBooking');
+    
+    // Modifikasi format body untuk memenuhi skema createBookingSchema
+    const { fieldId, userId, bookingDate, startTime, endTime, paymentMethod, paymentStatus } = req.body;
+    
+    // Default ke CASH jika tidak ada paymentMethod
+    const selectedPaymentMethod = paymentMethod || PaymentMethod.CASH;
+    
+    // Buat request body baru untuk createAdminBooking
+    req.body = {
+      fieldId,
+      userId: userId || req.user?.id,
+      bookingDate,
+      startTime, 
+      endTime,
+      paymentMethod: selectedPaymentMethod,
+      // Sertakan paymentStatus jika ada
+      ...(paymentStatus ? { paymentStatus } : {}),
+      // Sertakan branchId jika ada
+      ...(req.body.branchId ? { branchId: req.body.branchId } : {})
+    };
+    
+    // Delegasikan ke createAdminBooking
+    return createAdminBooking(req, res);
+  } catch (error) {
+    console.error('Error in createManualBooking:', error);
+    sendErrorResponse(res, 500, 'Internal Server Error');
   }
 };

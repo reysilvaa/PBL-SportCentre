@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PaymentMethod } from '../types/enums';
+import { PaymentMethod, PaymentStatus } from '../types/enums';
 
 // Skema validasi Zod untuk pembuatan booking
 export const createBookingSchema = z.object({
@@ -70,6 +70,16 @@ export const createBookingSchema = z.object({
     ] as const)
     .optional()
     .describe('Metode pembayaran: kartu kredit, virtual account bank, e-wallet, dll. Bisa null/undefined karena akan ditentukan oleh webhook Midtrans'),
+  paymentStatus: z
+    .enum([
+      PaymentStatus.PAID,
+      PaymentStatus.DP_PAID,
+      PaymentStatus.PENDING,
+      PaymentStatus.FAILED,
+      PaymentStatus.REFUNDED
+    ] as const)
+    .optional()
+    .describe('Status pembayaran: dibayar penuh, DP dibayar, menunggu pembayaran, dll. Untuk admin booking.')
 });
 
 // Skema untuk update booking (semua field opsional)
