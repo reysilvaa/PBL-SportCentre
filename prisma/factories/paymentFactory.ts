@@ -1,6 +1,27 @@
-import { PrismaClient, Payment, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { PrismaClient, Payment, PaymentStatus } from '@prisma/client';
 import { faker } from '@faker-js/faker/locale/id_ID';
 import { Decimal } from '@prisma/client/runtime/library';
+
+// Definisi enum PaymentMethod secara manual untuk kebutuhan factory
+enum PaymentMethod {
+  gopay = 'gopay',
+  shopeepay = 'shopeepay',
+  qris = 'qris',
+  bca_va = 'bca_va',
+  bri_va = 'bri_va',
+  bni_va = 'bni_va',
+  permata_va = 'permata_va',
+  mandiri_bill = 'mandiri_bill',
+  cimb_va = 'cimb_va',
+  danamon_va = 'danamon_va',
+  indomaret = 'indomaret',
+  alfamart = 'alfamart',
+  akulaku = 'akulaku',
+  kredivo = 'kredivo',
+  dana = 'dana',
+  credit_card = 'credit_card',
+  cash = 'cash'
+}
 
 // Fungsi untuk menghasilkan payment tunggal
 export const generatePayment = (
