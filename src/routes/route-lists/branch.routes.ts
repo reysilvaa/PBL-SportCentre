@@ -5,6 +5,7 @@ import { parseIds } from '../../middlewares/parseId.middleware';
 import { auth, superAdminAuth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { branchUpload } from '../../middlewares/multer.middleware';
+import { Role } from '../../types';
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ router.get(
 router.get(
   '/owner-branches',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG],
   }),
   getUserBranches
 );
@@ -48,7 +49,7 @@ router.get(
 router.get(
   '/:id/admins',
   auth({
-    allowedRoles: ['super_admin', 'owner_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.OWNER_CABANG],
     resourceName: 'branch',
   }),
   parseIds,
@@ -62,7 +63,7 @@ router.post('/', superAdminAuth(), branchUpload.single('imageUrl'), parseIds, cr
 router.put(
   '/:id',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang', 'owner_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG],
     ownerOnly: true,
     resourceName: 'branch',
   }),
@@ -74,7 +75,7 @@ router.put(
 router.get(
   '/admins/:id',
   auth({
-    allowedRoles: ['super_admin', 'owner_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.OWNER_CABANG],
     // ownerOnly: true,
     resourceName: 'branch',
   }),
@@ -86,7 +87,7 @@ router.get(
 router.get(
   '/:id/admins/:userId',
   auth({
-    allowedRoles: ['super_admin', 'owner_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.OWNER_CABANG],
     resourceName: 'branch',
   }),
   parseIds,
@@ -97,7 +98,7 @@ router.get(
 router.post(
   '/:id/admins/:userId',
   auth({
-    allowedRoles: ['super_admin', 'owner_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.OWNER_CABANG],
     ownerOnly: true,
     resourceName: 'branch',
   }),
@@ -112,7 +113,7 @@ router.delete('/:id', superAdminAuth(), deleteBranch);
 router.delete(
   '/:id/admins/:userId',
   auth({
-    allowedRoles: ['super_admin', 'owner_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.OWNER_CABANG],
     ownerOnly: true,
     resourceName: 'branch',
   }),

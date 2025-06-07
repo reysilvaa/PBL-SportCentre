@@ -41,7 +41,7 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
   endOfDay.setHours(23, 59, 59, 999);
 
   console.log(
-    'Searching for bookings between:',
+    // 'Searching for bookings between:',
     startOfDay.toISOString(),
     'and',
     endOfDay.toISOString()
@@ -76,55 +76,6 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
       { startTime: { gte: timeSlot.start }, endTime: { lte: timeSlot.end } },
       { startTime: { lte: timeSlot.start }, endTime: { gte: timeSlot.end } },
     ];
-  }
-
-  // Debug - Show all bookings for this field regardless of date
-  const debugQuery = await prisma.booking.findMany({
-    where: { fieldId },
-    include: { payment: true },
-  });
-
-  console.log('ALL bookings for field regardless of date:', debugQuery.length);
-
-  if (debugQuery.length > 0) {
-    console.log(
-      'First few bookings:',
-      debugQuery.slice(0, 3).map((b) => ({
-        id: b.id,
-        fieldId: b.fieldId,
-        date: b.bookingDate,
-        start: b.startTime,
-        end: b.endTime,
-      }))
-    );
-
-    // Debug - Payment status
-    debugQuery.forEach((booking) => {
-      console.log(
-        `Booking #${booking.id} payment:`,
-        booking.payment
-          ? {
-              status: booking.payment.status,
-              expires: booking.payment.expiresDate,
-            }
-          : 'No payment record'
-      );
-    });
-
-    // Debug - Date comparison
-    console.log('Date comparison:');
-    console.log('Query start date:', startOfDay.toISOString());
-    console.log('Query end date:', endOfDay.toISOString());
-    console.log('Booking date:', debugQuery[0].bookingDate.toISOString());
-
-    // Try a direct query with the exact booking date
-    const directQuery = await prisma.booking.findMany({
-      where: {
-        fieldId,
-        bookingDate: debugQuery[0].bookingDate,
-      },
-    });
-    console.log('Direct query with exact bookingDate:', directQuery.length);
   }
 
   // Execute the final query with all conditions
@@ -259,18 +210,6 @@ export const getAllFieldsAvailability = async (selectedDate?: string): Promise<F
       end: new Date(booking.endTime),
     }));
     
-    // Inside getAllFieldsAvailability, before checking hourly slots:
-    console.log(`All valid bookings for field ${field.id} on date ${date.toISOString().split('T')[0]}:`, 
-      validBookings.map((b) => ({
-        id: b.id,
-        date: b.bookingDate,
-        start: b.startTime,
-        end: b.endTime,
-        paymentStatus: b.payment?.status,
-        expires: b.payment?.expiresDate,
-      }))
-    );
-
     // Periksa setiap slot per jam
     for (const slot of hourlyTimeSlots) {
       const isOverlap = bookedSlots.some((bookedSlot) => isOverlapping(slot, bookedSlot));

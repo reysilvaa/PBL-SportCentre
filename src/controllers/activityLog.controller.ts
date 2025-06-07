@@ -60,7 +60,7 @@ export const createActivityLog = async (req: User, res: Response): Promise<void>
     const { userId, action, details, relatedId } = result.data;
 
     // Pengguna biasa hanya bisa membuat log untuk diri sendiri
-    if (req.user?.role !== 'super_admin' && userId !== req.user?.id) {
+    if (req.user?.role !== Role.SUPER_ADMIN && userId !== req.user?.id) {
       res.status(403).json({
         status: false,
         message: 'Anda hanya dapat membuat log untuk diri sendiri',
@@ -101,7 +101,7 @@ export const deleteActivityLog = async (req: User, res: Response): Promise<void>
     const logId = parseInt(id);
 
     // Hanya super admin yang bisa menghapus log aktivitas
-    if (req.user?.role !== 'super_admin') {
+    if (req.user?.role !== Role.SUPER_ADMIN) {
       res.status(403).json({
         status: false,
         message: 'Hanya super admin yang dapat menghapus log aktivitas',

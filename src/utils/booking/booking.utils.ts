@@ -1,10 +1,11 @@
 import { Response } from 'express';
 import prisma from '../../config/services/database';
-import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field } from '../../types';
+import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field, Role } from '../../types';
 import { isFieldAvailable } from './checkAvailability.utils';
 import { bookingCleanupQueue } from '../../config/services/queue';
 import { midtrans } from '../../config/services/midtrans';
 import { emitBookingEvents } from '../../socket-handlers/booking.socket';
+import { config } from '../../config/app/env';
 
 /**
  * Standardized error response
@@ -93,7 +94,7 @@ export const createBookingWithPayment = async (
   startTime: Date,
   endTime: Date,
   paymentStatus: PaymentStatus = PaymentStatus.PENDING,
-  paymentMethod: PaymentMethod = PaymentMethod.CASH,
+  paymentMethod?: PaymentMethod,
   amount?: any
 ): Promise<{ booking: Booking; payment: Payment }> => {
   // Log nilai waktu untuk debugging
@@ -130,15 +131,22 @@ export const createBookingWithPayment = async (
     }
   }
 
+  // Create payment record, tanpa paymentMethod saat awal
+  const paymentData: any = {
+    bookingId: booking.id,
+    userId,
+    amount: paymentAmount,
+    status: paymentStatus,
+  };
+
+  // Tambahkan payment method hanya jika disediakan (untuk pembayaran tunai)
+  if (paymentMethod) {
+    paymentData.paymentMethod = paymentMethod;
+  }
+
   // Create payment record
   const payment = await prisma.payment.create({
-    data: {
-      bookingId: booking.id,
-      userId,
-      amount: paymentAmount,
-      status: paymentStatus,
-      paymentMethod,
-    },
+    data: paymentData,
   });
 
   return { booking: booking as Booking, payment: payment as Payment };
@@ -146,23 +154,34 @@ export const createBookingWithPayment = async (
 
 /**
  * Process Midtrans payment for booking
+ * @param paymentMethod - Preferensi metode pembayaran dari pengguna, akan digunakan untuk konfigurasi Midtrans
+ * Metode pembayaran sebenarnya akan ditentukan oleh webhook Midtrans setelah pengguna menyelesaikan pembayaran
  */
 export const processMidtransPayment = async (
   booking: Booking,
   payment: Payment,
   field: Field,
   user: User,
-  totalPrice: number
+  totalPrice: number,
+  paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD
 ): Promise<{ transaction: any; expiryDate: Date }> => {
-  // Define the expiry time in Midtrans (5 minutes)
-  const expiryMinutes = 5;
+  const expiryMinutes = 5; //   
 
-  // Create Midtrans transaction with expiry
-  const midtransClient = midtrans();
-  const transaction = await midtransClient.createTransaction({
+  // Pastikan paymentMethod selalu memiliki nilai valid
+  const safePaymentMethod = paymentMethod || PaymentMethod.CREDIT_CARD;
+  
+  console.log(`💳 Processing Midtrans payment for booking #${booking.id} with method: ${safePaymentMethod}`);
+
+  // Tentukan apakah transaksi ini adalah DP atau pembayaran penuh
+  const isDownPayment = user.role === Role.USER;
+  const paymentAmount = isDownPayment ? Math.ceil(totalPrice * 0.3) : totalPrice; // DP 30% untuk user biasa
+  const paymentLabel = isDownPayment ? 'DP Booking' : 'Pembayaran';
+
+  // Config untuk transaksi Midtrans
+  const transactionConfig: any = {
     transaction_details: {
       order_id: `PAY-${payment.id}-${Date.now()}`,
-      gross_amount: totalPrice,
+      gross_amount: paymentAmount,
     },
     customer_details: {
       first_name: user.name || 'Customer',
@@ -172,19 +191,98 @@ export const processMidtransPayment = async (
     item_details: [
       {
         id: field.id.toString(),
-        // Buat nama item lebih pendek untuk mencegah error "Name too long"
-        name: `Booking ${field.name}`, 
-        price: totalPrice,
+        name: `${paymentLabel} ${field.name}`, 
+        price: paymentAmount,
         quantity: 1,
       },
     ],
     expiry: {
       unit: 'minutes',
       duration: expiryMinutes,
-    },
-  });
+    }
+  };
 
-  // Extract expiry time from Midtrans response and update payment record
+  // Konfigurasi tambahan berdasarkan metode pembayaran
+  switch (safePaymentMethod) {
+    case 'credit_card':
+      // Tambahan untuk Credit Card
+      transactionConfig.credit_card = {
+        secure: true,
+      };
+      break;
+      
+    case 'gopay':
+      // Konfigurasi khusus GoPay
+      transactionConfig.gopay = {
+        enable_callback: true,
+      };
+      break;
+      
+    case 'shopeepay':
+      // Konfigurasi khusus ShopeePay
+      transactionConfig.shopeepay = {
+        callback_url: `${config.frontendUrl}/bookings`
+      };
+      break;
+      
+    case 'bca_va':
+    case 'bni_va':
+    case 'bri_va':
+    case 'mandiri_va':
+    case 'permata_va':
+    case 'cimb_va':
+    case 'danamon_va':
+      // Ekstrak nama bank dari metode pembayaran (mis. bca dari bca_va)
+      const bankName = safePaymentMethod.split('_')[0];
+      
+      // Konfigurasi VA sesuai bank
+      transactionConfig.bank_transfer = {
+        bank: bankName
+      };
+      break;
+      
+    case 'indomaret':
+    case 'alfamart':
+      // Konfigurasi untuk pembayaran di retail store
+      transactionConfig.cstore = {
+        store: safePaymentMethod,
+        message: `Pembayaran untuk ${field.name}`,
+      };
+      break;
+      
+    case 'kredivo':
+    case 'akulaku':
+      // Konfigurasi untuk paylater
+      transactionConfig.enabled_payments = [safePaymentMethod];
+      break;
+      
+    case 'qris':
+      // Konfigurasi untuk QRIS
+      transactionConfig.qris = {
+        acquirer: "gopay"
+      };
+      break;
+      
+    case 'dana':
+      // Konfigurasi untuk DANA
+      transactionConfig.enabled_payments = ["dana"];
+      break;
+      
+    case 'paypal':
+      // Konfigurasi untuk PayPal
+      transactionConfig.enabled_payments = ["paypal"];
+      break;
+      
+    case 'google_pay':
+      // Konfigurasi untuk Google Pay
+      transactionConfig.enabled_payments = ["google_pay"];
+      break;
+  }
+
+  // Create Midtrans transaction with expiry
+  const midtransClient = midtrans();
+  const transaction = await midtransClient.createTransaction(transactionConfig);
+
   let expiryDate: Date;
 
   if (transaction.expiry_time) {
@@ -201,6 +299,9 @@ export const processMidtransPayment = async (
       expiresDate: expiryDate,
       paymentUrl: transaction.redirect_url,
       transactionId: transaction.transaction_id,
+      // Store the actual amount to be paid (may be DP amount)
+      amount: paymentAmount,
+      // Tidak set payment method di sini, akan diupdate dari webhook
     },
   });
 

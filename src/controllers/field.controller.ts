@@ -192,7 +192,7 @@ export const createField = async (req: MulterRequest & User, res: Response): Pro
     let branchId = req.userBranch?.id;
 
     // Super admin dapat menentukan branchId dari body request
-    if (req.user?.role === 'super_admin' && req.body.branchId) {
+    if (req.user?.role === Role.SUPER_ADMIN && req.body.branchId) {
       branchId = parseInt(req.body.branchId);
 
       // Verifikasi branch dengan ID tersebut ada
@@ -324,7 +324,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     // Get branch ID from middleware
     const branchId = req.userBranch?.id;
 
-    if (!branchId && req.user?.role !== 'super_admin') {
+    if (!branchId && req.user?.role !== Role.SUPER_ADMIN) {
       // Clean up uploaded file if exists
       if (req.file?.path) {
         await cleanupUploadedFile(req.file.path);
@@ -338,7 +338,7 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     }
 
     // Super admin bisa mengakses dan mengubah lapangan manapun
-    const whereCondition = req.user?.role === 'super_admin' ? { id: fieldId } : { id: fieldId, branchId };
+    const whereCondition = req.user?.role === Role.SUPER_ADMIN ? { id: fieldId } : { id: fieldId, branchId };
 
     // Check if field exists and belongs to the user's branch
     const existingField = await prisma.field.findFirst({
@@ -375,9 +375,9 @@ export const updateField = async (req: MulterRequest & User, res: Response): Pro
     }
 
     // ✅ PERBAIKAN: Handle branchId untuk super admin
-    if (req.user?.role === 'super_admin' && updateData.branchId) {
+    if (req.user?.role === Role.SUPER_ADMIN && updateData.branchId) {
       updateData.branchId = parseInt(updateData.branchId);
-    } else if (req.user?.role !== 'super_admin') {
+    } else if (req.user?.role !== Role.SUPER_ADMIN) {
       // Reguler user tidak bisa mengubah branchId
       if (updateData.branchId && parseInt(updateData.branchId) !== branchId) {
         // Clean up uploaded file if exists

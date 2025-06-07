@@ -7,7 +7,7 @@ import {
 } from '../../controllers/promotion.controller';
 import { auth } from '../../middlewares/auth.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
-
+import { Role } from '../../types';
 const router = express.Router();
 
 router.get('/', cacheMiddleware('promotions', 300), getPromotions);
@@ -15,7 +15,7 @@ router.get('/', cacheMiddleware('promotions', 300), getPromotions);
 router.post(
   '/',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
   }),
   createPromotion
 );
@@ -23,7 +23,7 @@ router.post(
 router.put(
   '/:id',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
   }),
   updatePromotion
 );
@@ -31,7 +31,7 @@ router.put(
 router.delete(
   '/:id',
   auth({
-    allowedRoles: ['super_admin', 'admin_cabang'],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
   }),
   deletePromotion
 );

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/services/database';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, PaymentMethod } from '../../types/enums';
 import { emitBookingEvents } from '../../utils/booking/booking.utils';
 import { getIO } from '../../config/server/socket';
 import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares/security.middleware';
@@ -22,6 +22,78 @@ declare global {
 }
 
 /**
+ * Map tipe pembayaran dari Midtrans ke PaymentMethod enum
+ */
+const mapMidtransPaymentTypeToEnum = (
+  paymentType: string, 
+  paymentCode?: string
+): PaymentMethod | undefined => {
+  if (!paymentType) return undefined;
+  
+  switch(paymentType) {
+    case 'credit_card':
+      return PaymentMethod.CREDIT_CARD;
+      
+    case 'bank_transfer':
+      // Cek bank dari payment code
+      if (paymentCode) {
+        if (paymentCode.includes('bca')) return PaymentMethod.BCA_VA;
+        if (paymentCode.includes('bni')) return PaymentMethod.BNI_VA;
+        if (paymentCode.includes('bri')) return PaymentMethod.BRI_VA;
+        if (paymentCode.includes('mandiri')) return PaymentMethod.MANDIRI_VA;
+        if (paymentCode.includes('permata')) return PaymentMethod.PERMATA_VA;
+        if (paymentCode.includes('cimb') || paymentCode.includes('niaga')) return PaymentMethod.CIMB_VA;
+        if (paymentCode.includes('danamon')) return PaymentMethod.DANAMON_VA;
+      }
+      return PaymentMethod.BCA_VA; // Default to BCA_VA jika tidak ada detail spesifik
+      
+    case 'echannel':
+      return PaymentMethod.MANDIRI_VA; // Mandiri Bill Payment
+      
+    case 'gopay':
+    case 'gopay-tokenization':
+      return PaymentMethod.GOPAY;
+      
+    case 'shopeepay':
+      return PaymentMethod.SHOPEEPAY;
+      
+    case 'qris':
+      return PaymentMethod.QRIS;
+      
+    case 'cstore':
+      if (!paymentCode) return undefined;
+      if (paymentCode.toLowerCase().includes('indomaret')) return PaymentMethod.INDOMARET;
+      if (paymentCode.toLowerCase().includes('alfa')) return PaymentMethod.ALFAMART;
+      return undefined;
+      
+    case 'akulaku':
+      return PaymentMethod.AKULAKU;
+      
+    case 'kredivo':
+      return PaymentMethod.KREDIVO;
+      
+    case 'dana':
+      return PaymentMethod.DANA;
+
+    case 'paypal':
+      return PaymentMethod.PAYPAL;
+
+    case 'google_pay':
+      return PaymentMethod.GOOGLE_PAY;
+
+    // Cash payment adalah jika dilakukan di tempat (bukan melalui Midtrans)
+    case 'cash':
+      return PaymentMethod.CASH;
+      
+    default:
+      // Jika tipe pembayaran tidak diketahui, kembalikan undefined
+      // dan biarkan status tetap saat ini
+      console.log(`[WEBHOOK] Unknown payment type: ${paymentType} with code: ${paymentCode}`);
+      return undefined;
+  }
+};
+
+/**
  * Membuat notifikasi untuk user terkait perubahan status pembayaran
  */
 const createPaymentNotification = async (
@@ -39,6 +111,10 @@ const createPaymentNotification = async (
       case 'paid':
         title = 'Pembayaran Berhasil';
         message = `Pembayaran untuk booking #${bookingId} lapangan ${fieldName} telah berhasil. Terima kasih!`;
+        break;
+      case 'dp_paid':
+        title = 'Uang Muka Berhasil Dibayar';
+        message = `Pembayaran uang muka untuk booking #${bookingId} lapangan ${fieldName} telah berhasil. Sisa pembayaran dapat dilakukan di tempat.`;
         break;
       case 'pending':
         title = 'Menunggu Pembayaran';
@@ -94,7 +170,6 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     const notification = req.body;
     console.log('[WEBHOOK] Received Midtrans notification:', JSON.stringify(notification));
 
-    // Verify notification signature if one is provided
     if (notification.signature_key) {
       const orderId = notification.order_id;
       const statusCode = notification.status_code;
@@ -151,7 +226,9 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       include: {
         booking: {
           include: {
-            user: { select: { id: true, email: true, name: true } },
+            user: { 
+              select: { id: true, email: true, name: true, role: true } 
+            },
             field: {
               select: {
                 id: true,
@@ -180,36 +257,55 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     let paymentStatus: PaymentStatus;
     const transactionId = notification.transaction_id || null;
     const paymentUrl = notification.redirect_url || null;
+    const expiryTime = notification.expiry_time || null;
 
     switch (notification.transaction_status) {
       case 'capture':
       case 'settlement':
-        paymentStatus = 'paid';
-        console.log(`[WEBHOOK] Transaction settled/captured for payment #${paymentId}`);
+        // User role biasa mendapatkan status dp_paid, role lain mendapatkan status paid
+        if (payment.booking.user.role === 'user') {
+          paymentStatus = PaymentStatus.DP_PAID;
+          console.log(`[WEBHOOK] Transaction settled/captured for payment #${paymentId} as down payment (dp_paid)`);
+        } else {
+          paymentStatus = PaymentStatus.PAID;
+          console.log(`[WEBHOOK] Transaction settled/captured for payment #${paymentId} as fully paid`);
+        }
         break;
-      case 'pending':
-        paymentStatus = 'pending';
+      case PaymentStatus.PENDING:
+        paymentStatus = PaymentStatus.PENDING;
         console.log(`[WEBHOOK] Transaction pending for payment #${paymentId}`);
         break;
       case 'deny':
       case 'expire':
       case 'cancel':
-        paymentStatus = 'failed';
+        paymentStatus = PaymentStatus.FAILED;
         console.log(`[WEBHOOK] Transaction failed (${notification.transaction_status}) for payment #${paymentId}`);
         break;
       default:
-        paymentStatus = 'pending';
+        paymentStatus = PaymentStatus.PENDING;
         console.log(`[WEBHOOK] Unknown transaction status: ${notification.transaction_status}, defaulting to pending`);
     }
 
-    // Update payment record in database
+    // Coba konversi payment method dari Midtrans
+    const paymentMethodValue = mapMidtransPaymentTypeToEnum(notification.payment_type, notification.payment_code);
+    
+    // Siapkan data untuk update payment
+    const updateData: any = {
+      status: paymentStatus,
+      transactionId,
+      paymentUrl,
+      expiresDate: expiryTime ? new Date(expiryTime) : undefined,
+    };
+    
+    // Tambahkan payment method hanya jika berhasil dikonversi
+    if (paymentMethodValue) {
+      updateData.paymentMethod = paymentMethodValue;
+    }
+
+    // Update payment record in database with transaction info dan expiry time
     const _updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
-      data: {
-        status: paymentStatus,
-        transactionId,
-        paymentUrl,
-      },
+      data: updateData,
     });
 
     console.log(`[WEBHOOK] Updated payment #${paymentId} status to: ${paymentStatus}`);
@@ -246,20 +342,22 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
       paymentStatus
     );
 
-    // For paid status, add success activity log
-    if (paymentStatus === 'paid') {
+    // For paid or dp_paid status, add success activity log
+    if (paymentStatus === PaymentStatus.PAID || paymentStatus === PaymentStatus.DP_PAID) {
+      const paymentType = paymentStatus === PaymentStatus.DP_PAID ? 'uang muka' : 'lunas';
+      
       await prisma.activityLog.create({
         data: {
           userId: payment.booking.userId,
           action: 'PAYMENT_SUCCESS',
-          details: `Pembayaran booking #${payment.bookingId} untuk lapangan ${payment.booking.field.name} berhasil`,
+          details: `Pembayaran ${paymentType} booking #${payment.bookingId} untuk lapangan ${payment.booking.field.name} berhasil`,
           ipAddress: req.ip || undefined,
         },
       });
 
       // Reset failed booking counter for this user
       resetFailedBookingCounter(payment.booking.userId);
-    } else if (paymentStatus === 'failed') {
+    } else if (paymentStatus === PaymentStatus.FAILED) {
       // Track failed payment untuk keamanan
       trackFailedBooking(payment.booking.userId, payment.bookingId, req.ip || '0.0.0.0');
 

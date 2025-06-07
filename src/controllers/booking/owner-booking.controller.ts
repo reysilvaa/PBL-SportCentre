@@ -3,6 +3,7 @@ import { User } from '../../middlewares/auth.middleware';
 import * as RevenueService from '../../repositories/revenue/revenueReports.service';
 import * as UnifiedStatsService from '../../repositories/statistics/unifiedStats.service';
 import { validateDateRange } from '../../repositories/revenue/validation.utils';
+import { Role } from '../../types';
 
 /**
  * Owner Booking Controller
@@ -22,7 +23,7 @@ export const getRevenueReports = async (req: User, res: Response): Promise<void>
     // Owner hanya bisa melihat data cabang mereka sendiri
     // Super admin bisa melihat data semua cabang atau pilih specific branch
     const targetBranchId =
-      req.user?.role === 'super_admin' && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
+      req.user?.role === Role.SUPER_ADMIN && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
 
     const result = await RevenueService.generateRevenueReport(
       start,
@@ -58,7 +59,7 @@ export const getOccupancyReports = async (req: User, res: Response): Promise<voi
     // Owner hanya bisa melihat data cabang mereka sendiri
     // Super admin bisa melihat data semua cabang atau pilih specific branch
     const targetBranchId =
-      req.user?.role === 'super_admin' && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
+      req.user?.role === Role.SUPER_ADMIN && req.query.branchId ? parseInt(req.query.branchId as string) : branchId;
 
     const result = await RevenueService.generateOccupancyReport(
       start,

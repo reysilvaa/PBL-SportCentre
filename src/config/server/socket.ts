@@ -99,7 +99,7 @@ export function setupFieldsNamespace(namespace: Namespace): void {
         // Emit langsung ke client yang meminta
         socket.emit('fieldsAvailabilityUpdate', filteredData);
         
-        console.log(`Sent availability update to client ${socket.id} for date: ${date || 'all'}`);
+        // console.log(`Sent availability update to client ${socket.id} for date: ${date || 'all'}`);
       } catch (error) {
         console.error(`Error sending availability update to client ${socket.id}:`, error);
         socket.emit('error', { message: 'Failed to get availability data' });

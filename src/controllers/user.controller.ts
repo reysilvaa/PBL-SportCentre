@@ -85,7 +85,7 @@ export const updateUserProfile = async (req: AuthUser, res: Response): Promise<v
 
     // Super admin dapat mengupdate profil user manapun
     // User biasa hanya dapat mengupdate profil mereka sendiri
-    if (req.user?.role !== 'super_admin' && userId !== req.user?.id) {
+    if (req.user?.role !== Role.SUPER_ADMIN && userId !== req.user?.id) {
       res.status(403).json({
         status: false,
         message: 'Anda tidak memiliki akses untuk mengupdate profil user ini',
@@ -168,7 +168,7 @@ export const updateUserProfile = async (req: AuthUser, res: Response): Promise<v
 export const getUsers = async (req: AuthUser, res: Response): Promise<void> => {
   try {
     // Jika user adalah super admin, tampilkan semua user
-    if (req.user?.role === 'super_admin') {
+    if (req.user?.role === Role.SUPER_ADMIN) {
       const users = await prisma.user.findMany({
         select: {
           id: true,
@@ -268,12 +268,12 @@ export const createUser = async (req: AuthUser, res: Response): Promise<void> =>
     }
 
     // Validasi peran berdasarkan role pengguna yang membuat
-    let allowedRoles = ['user'];
+    let allowedRoles = [Role.USER];
 
-    if (req.user?.role === 'super_admin') {
-      allowedRoles = ['user', 'admin_cabang', 'owner_cabang', 'super_admin'];
-    } else if (req.user?.role === 'admin_cabang' || req.user?.role === 'owner_cabang') {
-      allowedRoles = ['user', 'admin_cabang'];
+    if (req.user?.role === Role.SUPER_ADMIN) {
+      allowedRoles = [Role.USER, Role.ADMIN_CABANG, Role.OWNER_CABANG, Role.SUPER_ADMIN];
+    } else if (req.user?.role === Role.ADMIN_CABANG || req.user?.role === Role.OWNER_CABANG) {
+      allowedRoles = [Role.USER, Role.ADMIN_CABANG];
     }
 
     if (role && !allowedRoles.includes(role)) {
@@ -293,7 +293,7 @@ export const createUser = async (req: AuthUser, res: Response): Promise<void> =>
         name,
         email,
         password: hashedPassword,
-        role: role || Role.USER, // Default ke role 'user'
+        role: role || Role.USER,
         phone,
       },
     });

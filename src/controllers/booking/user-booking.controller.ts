@@ -23,7 +23,7 @@ import { PaymentMethod, PaymentStatus } from '../../types';
 
 export const createBooking = async (req: User, res: Response): Promise<void> => {
   try {
-    console.log('📥 Request body:', req.body);
+    console.log('📥 Request body:', JSON.stringify(req.body, null, 2));
     
     // Timezone sudah diatur di config/app/env.ts
 
@@ -31,10 +31,18 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
     const result = createBookingSchema.safeParse(req.body);
 
     if (!result.success) {
+      console.error('❌ Validasi gagal:', result.error.format());
       return sendErrorResponse(res, 400, 'Validasi gagal', result.error.format());
     }
 
-    const { userId, fieldId, bookingDate, startTime, endTime } = result.data;
+    console.log('✅ Data validasi berhasil:', JSON.stringify(result.data, null, 2));
+
+    const { userId, fieldId, bookingDate, startTime, endTime, paymentMethod } = result.data;
+    // Jika tidak ada payment method yang dipilih atau bukan CASH, gunakan Midtrans
+    const isUsingMidtrans = paymentMethod !== PaymentMethod.CASH;
+    
+    console.log('💳 Payment Method:', paymentMethod);
+    console.log('🔍 Menggunakan Midtrans:', isUsingMidtrans);
 
     // Convert strings to Date objects
     const bookingDateTime = parseISO(bookingDate);
@@ -78,7 +86,7 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
     // Fetch user details for customer information
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true, email: true, phone: true },
+      select: { name: true, email: true, phone: true, role: true },
     });
 
     if (!user) {
@@ -99,57 +107,96 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
 
     console.log('💵 Total price:', totalPrice);
 
-    // Create booking with pending payment by default
+    let initialPaymentStatus = PaymentStatus.PENDING;
+    let paymentResult: any = null;
+
+    // Jika pembayaran tunai, status langsung jadi dp_paid untuk user biasa
+    if (paymentMethod === PaymentMethod.CASH && user.role === 'user') {
+      initialPaymentStatus = PaymentStatus.DP_PAID;
+      console.log('💰 Pembayaran tunai di tempat, status: DP_PAID');
+    }
+
+    // Create booking with payment status sesuai metode pembayaran
     const { booking, payment } = await createBookingWithPayment(
       userId,
       fieldId,
       bookingDateTime,
       startDateTime,
       endDateTime,
-      PaymentStatus.PENDING,
-      PaymentMethod.MIDTRANS,
+      initialPaymentStatus,
+      // Jangan kirim paymentMethod saat awal, kecuali jika cash payment
+      isUsingMidtrans ? undefined : paymentMethod,
       totalPrice
     );
 
     console.log('✅ Booking created:', booking.id);
     console.log('💳 Payment created:', payment.id);
+    console.log('💰 Payment method:', isUsingMidtrans ? 'akan ditentukan setelah pembayaran' : paymentMethod);
 
-    // Process payment via Midtrans API
-    const paymentResult = await processMidtransPayment(
-      booking,
-      payment,
-      field as any, // Type casting untuk mengatasi masalah tipe
-      user as any, // Type casting untuk mengatasi masalah tipe
-      totalPrice
-    );
+    // Proses payment gateway jika menggunakan Midtrans
+    if (isUsingMidtrans) {
+      // Process payment via Midtrans API
+      paymentResult = await processMidtransPayment(
+        booking,
+        payment,
+        field as any, // Type casting untuk mengatasi masalah tipe
+        user as any, // Type casting untuk mengatasi masalah tipe
+        totalPrice,
+        PaymentMethod.CREDIT_CARD // Gunakan CREDIT_CARD sebagai default
+      );
 
-    if (!paymentResult) {
-      // Jika gagal membuat pembayaran, lacak sebagai percobaan gagal
-      if (req.user?.id) {
-        const clientIP = req.ip || req.socket.remoteAddress || '127.0.0.1';
-        await trackFailedBooking(req.user.id, booking.id, clientIP);
+      if (!paymentResult) {
+        // Jika gagal membuat pembayaran, lacak sebagai percobaan gagal
+        if (req.user?.id) {
+          const clientIP = req.ip || req.socket.remoteAddress || '127.0.0.1';
+          await trackFailedBooking(req.user.id, booking.id, clientIP);
+        }
+
+        return sendErrorResponse(res, 500, 'Failed to create payment gateway');
       }
 
-      return sendErrorResponse(res, 500, 'Failed to create payment gateway');
+      // Update payment record with Midtrans transaction details
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          expiresDate: paymentResult.expiryDate,
+          status: PaymentStatus.PENDING,
+          transactionId: paymentResult.transaction.transaction_id,
+          paymentUrl: paymentResult.transaction.redirect_url,
+        },
+      });
+
+      console.log('💳 Payment updated with transaction details');
+    } else {
+      // Untuk metode pembayaran selain Midtrans (Cash/Tunai)
+      // Tambahkan data tambahan ke aktivitas untuk pembayaran tunai
+      if (paymentMethod === PaymentMethod.CASH) {
+        await prisma.activityLog.create({
+          data: {
+            userId,
+            action: 'CASH_PAYMENT_RESERVED',
+            details: `Booking #${booking.id} untuk lapangan ${field.name} dijadwalkan dengan pembayaran tunai di tempat`,
+            ipAddress: req.ip || undefined,
+          },
+        });
+
+        // Catat expiry date (24 jam dari sekarang) untuk pembayaran tunai
+        const expiryDate = new Date();
+        expiryDate.setHours(expiryDate.getHours() + 24);
+
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            expiresDate: expiryDate,
+          },
+        });
+      }
     }
 
     // Reset counter jika booking berhasil dibuat (status pending tetap dianggap berhasil)
     if (req.user?.id) {
       resetFailedBookingCounter(req.user.id);
     }
-
-    // Update payment record with Midtrans transaction details
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        expiresDate: paymentResult.expiryDate,
-        status: PaymentStatus.PENDING,
-        transactionId: paymentResult.transaction.transaction_id,
-        paymentUrl: paymentResult.transaction.redirect_url,
-      },
-    });
-
-    console.log('💳 Payment updated with transaction details');
 
     // Emit real-time events via Socket.IO
     emitBookingEvents('booking:created', { booking, payment });
@@ -164,8 +211,8 @@ export const createBooking = async (req: User, res: Response): Promise<void> => 
         field,
         payment: {
           ...payment,
-          paymentUrl: paymentResult.transaction.redirect_url,
-          status: PaymentStatus.PENDING,
+          paymentUrl: paymentResult?.transaction?.redirect_url || null,
+          status: payment.status,
         },
       },
     });
