@@ -39,6 +39,7 @@ export enum PaymentMethod {
   BNI_VA = 'bni_va',
   PERMATA_VA = 'permata_va',
   MANDIRI_BILL = 'mandiri_bill',
+  MANDIRI_VA = 'mandiri_va',
   CIMB_VA = 'cimb_va',
   DANAMON_VA = 'danamon_va',
   
@@ -58,6 +59,10 @@ export enum PaymentMethod {
   
   // Opsi pembayaran tunai di tempat (tidak melalui Midtrans)
   CASH = 'cash',
+  
+  // International Payment
+  PAYPAL = 'paypal',
+  GOOGLE_PAY = 'google_pay',
 }
 
 export enum PromotionStatus {
