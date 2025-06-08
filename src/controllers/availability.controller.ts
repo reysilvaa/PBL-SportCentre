@@ -18,7 +18,7 @@ export const checkAllFieldsAvailability = async (req: Request, res: Response) =>
     // Ambil parameter tanggal dari query string jika tersedia
     const selectedDate = req.query.date as string | undefined;
     
-    console.log('🔍 Checking availability with date parameter:', selectedDate || 'Not provided (using today)');
+    // console.log('🔍 Checking availability with date parameter:', selectedDate || 'Not provided (using today)');
     
     const results = await getAllFieldsAvailability(selectedDate);
     

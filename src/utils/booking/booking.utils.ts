@@ -233,13 +233,12 @@ export const processMidtransPayment = async (
     case 'cimb_va':
     case 'danamon_va':
       // Ekstrak nama bank dari metode pembayaran (mis. bca dari bca_va)
-      const bankName = safePaymentMethod.split('_')[0];
-      
+      { const bankName = safePaymentMethod.split('_')[0];
       // Konfigurasi VA sesuai bank
       transactionConfig.bank_transfer = {
         bank: bankName
       };
-      break;
+      break; }
       
     case 'indomaret':
     case 'alfamart':

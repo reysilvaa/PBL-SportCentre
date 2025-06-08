@@ -117,7 +117,7 @@ export const setupFieldSocketHandlers = (): void => {
 
   // Set up connection handler for the field namespace
   fieldNamespace.on('connection', (socket: Socket) => {
-    console.log(`🏟️ Client connected to fields namespace: ${socket.id}`);
+    // console.log(`🏟️ Client connected to fields namespace: ${socket.id}`);
 
     // Handle requests for all fields availability
     socket.on('checkAllFieldsAvailability', (data, callback) =>
@@ -136,7 +136,7 @@ export const setupFieldSocketHandlers = (): void => {
 
     // Handle request for availability update
     socket.on('request_availability_update', async (data) => {
-      console.log(`📅 Client ${socket.id} requested availability update:`, data);
+      // console.log(`📅 Client ${socket.id} requested availability update:`, data);
       try {
         const { date, branchId } = data;
         const results = await getAllFieldsAvailability(date);

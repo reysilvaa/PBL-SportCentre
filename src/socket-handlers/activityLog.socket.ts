@@ -80,7 +80,7 @@ export const setupActivityLogSocketHandlers = (): void => {
 
   // Set up a listener for client connections
   io.on('connection', (socket) => {
-    console.log(`📊 Client connected to activity logs: ${socket.id}`);
+    // console.log(`📊 Client connected to activity logs: ${socket.id}`);
 
     // Join the appropriate room
     socket.join(roomName);

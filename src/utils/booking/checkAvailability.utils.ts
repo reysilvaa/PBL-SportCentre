@@ -40,12 +40,12 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
 
-  console.log(
-    // 'Searching for bookings between:',
-    startOfDay.toISOString(),
-    'and',
-    endOfDay.toISOString()
-  );
+  // console.log(
+  //   // 'Searching for bookings between:',
+  //   startOfDay.toISOString(),
+  //   'and',
+  //   endOfDay.toISOString()
+  // );
 
   const whereClause: any = {
     fieldId,
@@ -151,7 +151,7 @@ export const isFieldAvailable = async (
   startTime: Date,
   endTime: Date
 ): Promise<boolean> => {
-  console.log('🔍 Checking availability for Field ID:', fieldId);
+  // console.log('🔍 Checking availability for Field ID:', fieldId);
   console.log('📆 Booking Date:', bookingDate.toISOString());
   console.log('⏰ Start Time:', startTime.toISOString());
   console.log('⏰ End Time:', endTime.toISOString());
@@ -184,7 +184,7 @@ export const getAllFieldsAvailability = async (selectedDate?: string): Promise<F
   // Set ke awal hari
   date.setHours(0, 0, 0, 0);
   
-  console.log('🔍 Checking availability for date:', date.toISOString().split('T')[0]);
+  // console.log('🔍 Checking availability for date:', date.toISOString().split('T')[0]);
 
   const hourlyTimeSlots = generateHourlyTimeSlots(date);
   const fields = await prisma.field.findMany({
