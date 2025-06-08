@@ -50,7 +50,7 @@ export function initializeSocketIO(server: HttpServer): SocketServer {
  */
 export function setupFieldsNamespace(namespace: Namespace): void {
   namespace.on('connection', (socket) => {
-    console.log(`Client connected to ${KEYS.SOCKET.FIELDS} namespace - ID: ${socket.id}`);
+    // console.log(`Client connected to ${KEYS.SOCKET.FIELDS} namespace - ID: ${socket.id}`);
 
     // Event untuk bergabung ke room
     socket.on('join_room', ({ room, branchId }) => {
@@ -78,7 +78,7 @@ export function setupFieldsNamespace(namespace: Namespace): void {
     // Event untuk meminta pembaruan ketersediaan lapangan
     socket.on('request_availability_update', async ({ date, branchId }) => {
       try {
-        console.log(`Client ${socket.id} requested availability update for date: ${date || 'all'}, branchId: ${branchId || 'all'}`);
+        // console.log(`Client ${socket.id} requested availability update for date: ${date || 'all'}, branchId: ${branchId || 'all'}`);
         
         // Import di sini untuk menghindari circular dependency
         const { getAllFieldsAvailability } = require('../../utils/booking/checkAvailability.utils');
@@ -121,7 +121,7 @@ export function setupNotificationNamespace(namespace: Namespace): void {
   applyAuthMiddleware(namespace, false); // Parameter false: koneksi tanpa auth masih diizinkan
   
   namespace.on('connection', (socket) => {
-    console.log(`Client connected to ${KEYS.SOCKET.NOTIFICATION} namespace - ID: ${socket.id}`);
+    // console.log(`Client connected to ${KEYS.SOCKET.NOTIFICATION} namespace - ID: ${socket.id}`);
     
     // Mengambil user dari socket data jika ada
     const userId = socket.data.user?.id;
@@ -298,7 +298,7 @@ export function applyAuthMiddleware(namespace: Namespace, requireAuth: boolean =
  */
 export function setupNamespaceEvents(namespace: Namespace): void {
   namespace.on('connection', (socket) => {
-    console.log(`Client connected to ${namespace.name || '/'} - ID: ${socket.id}`);
+    // console.log(`Client connected to ${namespace.name || '/'} - ID: ${socket.id}`);
 
     socket.on('disconnect', (reason) => {
       console.log(
