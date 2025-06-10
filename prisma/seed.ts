@@ -115,6 +115,15 @@ async function main() {
         role: Role.owner_cabang
       }
     });
+    await prisma.user.create({
+      data: {
+        name: 'Test Super Admin',
+        email: 'superadmin@example.com',
+        password: commonPassword,
+        phone: '081234567894',
+        role: Role.super_admin
+      }
+    });
     
     console.log('✅ Users created');
     
