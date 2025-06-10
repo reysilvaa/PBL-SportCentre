@@ -156,6 +156,7 @@ export const createBookingWithPayment = async (
  * Process Midtrans payment for booking
  * @param paymentMethod - Preferensi metode pembayaran dari pengguna, akan digunakan untuk konfigurasi Midtrans
  * Metode pembayaran sebenarnya akan ditentukan oleh webhook Midtrans setelah pengguna menyelesaikan pembayaran
+ * @param isCompletion - Menandakan apakah ini adalah pembayaran pelunasan (true) atau pembayaran awal (false)
  */
 export const processMidtransPayment = async (
   booking: Booking,
@@ -163,7 +164,8 @@ export const processMidtransPayment = async (
   field: Field,
   user: User,
   totalPrice: number,
-  paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD
+  paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD,
+  isCompletion: boolean = false
 ): Promise<{ transaction: any; expiryDate: Date }> => {
   const expiryMinutes = 5; //   
 
@@ -173,9 +175,10 @@ export const processMidtransPayment = async (
   console.log(`💳 Processing Midtrans payment for booking #${booking.id} with method: ${safePaymentMethod}`);
 
   // Tentukan apakah transaksi ini adalah DP atau pembayaran penuh
-  const isDownPayment = user.role === Role.USER;
+  // Jika isCompletion=true, gunakan totalPrice langsung (tidak perlu hitung DP lagi)
+  const isDownPayment = !isCompletion && user.role === Role.USER;
   const paymentAmount = isDownPayment ? Math.ceil(totalPrice * 0.5) : totalPrice; // DP 50% untuk user biasa
-  const paymentLabel = isDownPayment ? 'DP Booking' : 'Pembayaran';
+  const paymentLabel = isDownPayment ? 'DP Booking' : (isCompletion ? 'Pelunasan' : 'Pembayaran');
 
   // Config untuk transaksi Midtrans
   const transactionConfig: any = {

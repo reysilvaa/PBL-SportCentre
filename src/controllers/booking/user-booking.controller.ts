@@ -477,7 +477,8 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
           booking.field as any,
           booking.user as any,
           remainingAmount,
-          selectedPaymentMethod as PaymentMethod
+          selectedPaymentMethod as PaymentMethod,
+          true // isCompletion=true untuk menandakan ini adalah pelunasan
         );
 
         if (paymentResult) {
