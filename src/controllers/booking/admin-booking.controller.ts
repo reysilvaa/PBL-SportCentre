@@ -714,6 +714,21 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
       return sendErrorResponse(res, 400, 'Booking ini tidak memiliki pembayaran DP yang perlu dilunasi');
     }
 
+    // Cek apakah sudah ada pembayaran pelunasan yang pending
+    const pendingCompletionPayment = payments.find(p => 
+      p.status === PaymentStatus.PENDING && 
+      p.id !== dpPayment.id
+    );
+    
+    if (pendingCompletionPayment) {
+      return sendErrorResponse(
+        res, 
+        400, 
+        'Sudah ada pembayaran pelunasan yang sedang menunggu pembayaran. Silakan selesaikan pembayaran tersebut terlebih dahulu.',
+        { paymentUrl: pendingCompletionPayment.paymentUrl }
+      );
+    }
+    
     // Pastikan admin cabang hanya dapat memperbarui booking di cabang yang mereka kelola
     const branchId = req.userBranch?.id;
     if (branchId !== 0 && booking.field.branchId !== branchId) {

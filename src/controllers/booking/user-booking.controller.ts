@@ -410,6 +410,20 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
       return sendErrorResponse(res, 400, 'Booking ini tidak memiliki pembayaran DP yang perlu dilunasi');
     }
     
+    const pendingCompletionPayment = payments.find(p => 
+      p.status === PaymentStatus.PENDING && 
+      p.id !== dpPayment.id
+    );
+    
+    if (pendingCompletionPayment) {
+      return sendErrorResponse(
+        res, 
+        400, 
+        'Sudah ada pembayaran pelunasan yang sedang menunggu pembayaran. Silakan selesaikan pembayaran tersebut terlebih dahulu.',
+        { paymentUrl: pendingCompletionPayment.paymentUrl }
+      );
+    }
+    
     // Calculate total price
     const totalPrice = calculateTotalPrice(
       booking.startTime,
@@ -423,6 +437,7 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
     
     // Hitung sisa pembayaran
     const remainingAmount = totalPrice - totalPaid;
+    console.log(remainingAmount);
     
     if (remainingAmount <= 0) {
       return sendErrorResponse(res, 400, 'Pembayaran untuk booking ini sudah lunas');
