@@ -7,6 +7,8 @@ import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares
 import { createHmac } from 'crypto';
 import { config } from '../../config/app/env';
 import { invalidatePaymentCache } from '../../utils/cache/cacheInvalidation.utils';
+import { calculateTotalPayments } from '../../utils/booking/booking.utils';
+import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 
 // Definisi kelas error untuk bad request
 class BadRequestError extends Error {
@@ -86,8 +88,7 @@ const mapMidtransPaymentTypeToEnum = (
       return PaymentMethod.CASH;
       
     default:
-      // Jika tipe pembayaran tidak diketahui, kembalikan undefined
-      // dan biarkan status tetap saat ini
+     
       console.log(`[WEBHOOK] Unknown payment type: ${paymentType} with code: ${paymentCode}`);
       return undefined;
   }
@@ -161,6 +162,29 @@ const createPaymentNotification = async (
     console.error('[NOTIFICATION ERROR] Gagal membuat notifikasi pembayaran:', error);
     return null;
   }
+};
+
+/**
+ * Menghitung total harga booking berdasarkan waktu dan harga lapangan
+ */
+const calculateTotalBookingPrice = async (bookingId: number): Promise<number> => {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: {
+      field: true
+    }
+  });
+
+  if (!booking) {
+    return 0;
+  }
+
+  return calculateTotalPrice(
+    booking.startTime,
+    booking.endTime,
+    Number(booking.field.priceDay),
+    Number(booking.field.priceNight)
+  );
 };
 
 export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
@@ -284,6 +308,18 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
           if (completionPayment) {
             paymentStatus = PaymentStatus.PAID;
             console.log(`[WEBHOOK] Completion payment #${paymentId} settled/captured, marking as PAID`);
+            
+            // Cek apakah dengan pembayaran ini booking sudah lunas
+            const totalBookingPrice = await calculateTotalBookingPrice(payment.bookingId);
+            const totalPaidAmount = await calculateTotalPayments(payment.bookingId);
+            
+            console.log(`[WEBHOOK] Total booking price: ${totalBookingPrice}, Total paid: ${totalPaidAmount}`);
+            
+            // Jika sudah lunas, hanya update payment saat ini menjadi PAID
+            if (totalPaidAmount >= totalBookingPrice) {
+              console.log(`[WEBHOOK] Booking #${payment.bookingId} is now fully paid with this payment`);
+              paymentStatus = PaymentStatus.PAID;
+            }
           }
           // Jika bukan pelunasan, ikuti aturan role user
           else if (payment.booking.user.role === 'user') {
@@ -317,14 +353,20 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     const updateData: any = {
       status: paymentStatus,
       transactionId,
-      expiresDate: expiryTime ? new Date(expiryTime) : undefined,
     };
+    
+    // Tambahkan expiresDate hanya jika ada
+    if (expiryTime) {
+      updateData.expiresDate = new Date(expiryTime);
+    }
     
     // Tambahkan payment method hanya jika berhasil dikonversi
     if (paymentMethodValue) {
       updateData.paymentMethod = paymentMethodValue;
     }
-
+    
+    // JANGAN update paymentUrl untuk mempertahankan URL yang sudah ada
+    
     // Update payment record in database with transaction info dan expiry time
     const _updatedPayment = await prisma.payment.update({
       where: { id: paymentId },

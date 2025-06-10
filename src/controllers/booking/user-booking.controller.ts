@@ -404,12 +404,19 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
       where: { bookingId: bookingIdInt }
     });
     
+    // Periksa apakah ada pembayaran dengan status PAID (sudah lunas)
+    const paidPayment = payments.find(p => p.status === PaymentStatus.PAID);
+    if (paidPayment) {
+      return sendErrorResponse(res, 400, 'Booking ini sudah lunas dan tidak memerlukan pelunasan');
+    }
+    
     const dpPayment = payments.find(p => p.status === PaymentStatus.DP_PAID);
     
     if (!dpPayment) {
       return sendErrorResponse(res, 400, 'Booking ini tidak memiliki pembayaran DP yang perlu dilunasi');
     }
     
+    // Periksa apakah sudah ada pembayaran pelunasan yang pending
     const pendingCompletionPayment = payments.find(p => 
       p.status === PaymentStatus.PENDING && 
       p.id !== dpPayment.id
@@ -437,13 +444,12 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
     
     // Hitung sisa pembayaran
     const remainingAmount = totalPrice - totalPaid;
-    console.log(remainingAmount);
+    console.log(`💵 Total harga: ${totalPrice}, Total dibayar: ${totalPaid}, Sisa: ${remainingAmount}`);
     
+    // Pastikan masih ada sisa pembayaran
     if (remainingAmount <= 0) {
       return sendErrorResponse(res, 400, 'Pembayaran untuk booking ini sudah lunas');
     }
-    
-    console.log(`💵 Total harga: ${totalPrice}, Total dibayar: ${totalPaid}, Sisa: ${remainingAmount}`);
     
     // Buat payment baru untuk pelunasan
     let paymentResult: any = null;
