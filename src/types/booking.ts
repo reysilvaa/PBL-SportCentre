@@ -18,6 +18,6 @@ export type Booking = {
   // Relations
   user?: User;
   field?: Field;
-  payment?: Payment;
+  payments?: Payment[];
   PromoUsages?: PromotionUsage[];
 };

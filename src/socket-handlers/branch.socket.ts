@@ -8,7 +8,7 @@ import {
   getCompleteBooking,
   emitBookingEvents,
 } from '../utils/booking/booking.utils';
-import { PaymentMethod } from '../types/enums';
+import { PaymentMethod, PaymentStatus } from '../types/enums';
 
 /**
  * Handle booking search request
@@ -40,7 +40,7 @@ export const handleBookingSearch = async (socket: Socket, data: any) => {
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
         field: true,
-        payment: true,
+        payments: true,
       },
       take: 20,
     });
@@ -132,7 +132,7 @@ export const handleBookingStats = async (socket: Socket, data: any) => {
     const pendingPayments = await prisma.booking.count({
       where: {
         field: { branchId: parseInt(branchId) },
-        payment: { status: 'pending' },
+        payments: { some: { status: PaymentStatus.PENDING } },
       },
     });
 

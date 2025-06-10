@@ -156,6 +156,7 @@ export const createBookingWithPayment = async (
  * Process Midtrans payment for booking
  * @param paymentMethod - Preferensi metode pembayaran dari pengguna, akan digunakan untuk konfigurasi Midtrans
  * Metode pembayaran sebenarnya akan ditentukan oleh webhook Midtrans setelah pengguna menyelesaikan pembayaran
+ * @param isCompletion - Menandakan apakah ini adalah pembayaran pelunasan (true) atau pembayaran awal (false)
  */
 export const processMidtransPayment = async (
   booking: Booking,
@@ -163,7 +164,8 @@ export const processMidtransPayment = async (
   field: Field,
   user: User,
   totalPrice: number,
-  paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD
+  paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD,
+  isCompletion: boolean = false
 ): Promise<{ transaction: any; expiryDate: Date }> => {
   const expiryMinutes = 5; //   
 
@@ -173,9 +175,10 @@ export const processMidtransPayment = async (
   console.log(`💳 Processing Midtrans payment for booking #${booking.id} with method: ${safePaymentMethod}`);
 
   // Tentukan apakah transaksi ini adalah DP atau pembayaran penuh
-  const isDownPayment = user.role === Role.USER;
-  const paymentAmount = isDownPayment ? Math.ceil(totalPrice * 0.3) : totalPrice; // DP 30% untuk user biasa
-  const paymentLabel = isDownPayment ? 'DP Booking' : 'Pembayaran';
+  // Jika isCompletion=true, gunakan totalPrice langsung (tidak perlu hitung DP lagi)
+  const isDownPayment = !isCompletion && user.role === Role.USER;
+  const paymentAmount = isDownPayment ? Math.ceil(totalPrice * 0.5) : totalPrice; // DP 50% untuk user biasa
+  const paymentLabel = isDownPayment ? 'DP Booking' : (isCompletion ? 'Pelunasan' : 'Pembayaran');
 
   // Config untuk transaksi Midtrans
   const transactionConfig: any = {
@@ -431,6 +434,7 @@ export const stopBookingCleanupJob = async (): Promise<void> => {
 
 /**
  * Get complete booking with relations
+ * Updated to support multiple payments
  */
 export const getCompleteBooking = async (bookingId: number): Promise<Booking | null> => {
   const booking = await prisma.booking.findUnique({
@@ -438,11 +442,56 @@ export const getCompleteBooking = async (bookingId: number): Promise<Booking | n
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
       field: { include: { branch: true } },
-      payment: true,
+      payments: true, // Tetap gunakan payment untuk kompatibilitas dengan tipe saat ini
     },
   });
 
+  if (booking) {
+    const payments = await prisma.payment.findMany({
+      where: {
+        bookingId: booking.id,
+      },
+      orderBy: {
+        createdAt: 'desc', // Ambil yang terbaru terlebih dahulu
+      },
+    });
+
+    if (payments && payments.length > 0) {
+      (booking as any).payment = payments[0];
+    }
+    
+    // Tambahkan semua payment ke booking untuk penggunaan baru
+    (booking as any).payments = payments;
+  }
+
   return booking as Booking | null;
+};
+
+/**
+ * Menghitung total pembayaran yang sudah dilakukan untuk sebuah booking
+ * Hanya menghitung pembayaran dengan status PAID atau DP_PAID
+ */
+export const calculateTotalPayments = async (bookingId: number): Promise<number> => {
+  const payments = await prisma.payment.findMany({
+    where: {
+      bookingId: bookingId,
+      status: {
+        in: [PaymentStatus.PAID, PaymentStatus.DP_PAID]
+      }
+    },
+    select: {
+      amount: true
+    }
+  });
+  
+  let totalAmount = 0;
+  
+  // Sum up all payment amounts
+  payments.forEach(payment => {
+    totalAmount += Number(payment.amount);
+  });
+  
+  return totalAmount;
 };
 
 // Export emitBookingEvents for use elsewhere

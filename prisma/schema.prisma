@@ -104,8 +104,7 @@ model Booking {
   endTime     DateTime
   createdAt   DateTime @default(now())
 
-  // Payment relation - this booking has one payment
-  payment Payment? // No fields/references here because Payment holds the foreign key
+  payments Payment[]
 
   PromoUsages PromotionUsage[]
 }
@@ -122,8 +121,7 @@ model Payment {
   id            Int           @id @default(autoincrement())
   // Booking relation - this payment belongs to one booking
   booking       Booking       @relation(fields: [bookingId], references: [id])
-  bookingId     Int           @unique // This makes it a true one-to-one relationship
-  
+  bookingId     Int             
   user          User          @relation(fields: [userId], references: [id])
   userId        Int
   amount        Decimal       @db.Decimal(10, 2)

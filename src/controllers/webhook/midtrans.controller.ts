@@ -7,6 +7,8 @@ import { trackFailedBooking, resetFailedBookingCounter } from '../../middlewares
 import { createHmac } from 'crypto';
 import { config } from '../../config/app/env';
 import { invalidatePaymentCache } from '../../utils/cache/cacheInvalidation.utils';
+import { calculateTotalPayments } from '../../utils/booking/booking.utils';
+import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 
 // Definisi kelas error untuk bad request
 class BadRequestError extends Error {
@@ -86,8 +88,7 @@ const mapMidtransPaymentTypeToEnum = (
       return PaymentMethod.CASH;
       
     default:
-      // Jika tipe pembayaran tidak diketahui, kembalikan undefined
-      // dan biarkan status tetap saat ini
+     
       console.log(`[WEBHOOK] Unknown payment type: ${paymentType} with code: ${paymentCode}`);
       return undefined;
   }
@@ -161,6 +162,29 @@ const createPaymentNotification = async (
     console.error('[NOTIFICATION ERROR] Gagal membuat notifikasi pembayaran:', error);
     return null;
   }
+};
+
+/**
+ * Menghitung total harga booking berdasarkan waktu dan harga lapangan
+ */
+const calculateTotalBookingPrice = async (bookingId: number): Promise<number> => {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: {
+      field: true
+    }
+  });
+
+  if (!booking) {
+    return 0;
+  }
+
+  return calculateTotalPrice(
+    booking.startTime,
+    booking.endTime,
+    Number(booking.field.priceDay),
+    Number(booking.field.priceNight)
+  );
 };
 
 export const handleMidtransNotification = async (req: Request, res: Response): Promise<void> => {
@@ -256,34 +280,73 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     // Map Midtrans transaction status to our payment status
     let paymentStatus: PaymentStatus;
     const transactionId = notification.transaction_id || null;
-    const paymentUrl = notification.redirect_url || null;
     const expiryTime = notification.expiry_time || null;
 
-    switch (notification.transaction_status) {
-      case 'capture':
-      case 'settlement':
-        // User role biasa mendapatkan status dp_paid, role lain mendapatkan status paid
-        if (payment.booking.user.role === 'user') {
-          paymentStatus = PaymentStatus.DP_PAID;
-          console.log(`[WEBHOOK] Transaction settled/captured for payment #${paymentId} as down payment (dp_paid)`);
-        } else {
-          paymentStatus = PaymentStatus.PAID;
-          console.log(`[WEBHOOK] Transaction settled/captured for payment #${paymentId} as fully paid`);
-        }
-        break;
-      case PaymentStatus.PENDING:
-        paymentStatus = PaymentStatus.PENDING;
-        console.log(`[WEBHOOK] Transaction pending for payment #${paymentId}`);
-        break;
-      case 'deny':
-      case 'expire':
-      case 'cancel':
-        paymentStatus = PaymentStatus.FAILED;
-        console.log(`[WEBHOOK] Transaction failed (${notification.transaction_status}) for payment #${paymentId}`);
-        break;
-      default:
-        paymentStatus = PaymentStatus.PENDING;
-        console.log(`[WEBHOOK] Unknown transaction status: ${notification.transaction_status}, defaulting to pending`);
+    // Periksa apakah ini pembayaran pelunasan (payment kedua atau lebih untuk booking yang sama)
+    const isCompletionPayment = async (): Promise<boolean> => {
+      const paymentsCount = await prisma.payment.count({
+        where: { bookingId: payment.bookingId }
+      });
+      return paymentsCount > 1;
+    };
+    
+    // Periksa apakah payment telah expired berdasarkan expiresDate
+    const isExpired = payment.expiresDate && new Date() > new Date(payment.expiresDate);
+    
+    // Cek terlebih dahulu apakah ini pembayaran pelunasan
+    const completionPayment = await isCompletionPayment();
+    
+    // Jika payment sudah expired tapi status masih pending, ubah ke failed
+    if (isExpired && payment.status === PaymentStatus.PENDING) {
+      paymentStatus = PaymentStatus.FAILED;
+      console.log(`[WEBHOOK] Payment #${paymentId} has expired, marking as FAILED`);
+    } else {
+      switch (notification.transaction_status) {
+        case 'capture':
+        case 'settlement':
+          // Jika ini pembayaran pelunasan, selalu set ke PAID
+          if (completionPayment) {
+            paymentStatus = PaymentStatus.PAID;
+            console.log(`[WEBHOOK] Completion payment #${paymentId} settled/captured, marking as PAID`);
+            
+            // Cek apakah dengan pembayaran ini booking sudah lunas
+            const totalBookingPrice = await calculateTotalBookingPrice(payment.bookingId);
+            const totalPaidAmount = await calculateTotalPayments(payment.bookingId);
+            
+            console.log(`[WEBHOOK] Total booking price: ${totalBookingPrice}, Total paid: ${totalPaidAmount}`);
+            
+            // Jika sudah lunas, hanya update payment saat ini menjadi PAID
+            if (totalPaidAmount >= totalBookingPrice) {
+              console.log(`[WEBHOOK] Booking #${payment.bookingId} is now fully paid with this payment`);
+              
+              paymentStatus = PaymentStatus.PAID;
+              
+              console.log(`[WEBHOOK] Payment #${payment.id} has been marked as PAID`);
+            }
+          }
+          // Jika bukan pelunasan, ikuti aturan role user
+          else if (payment.booking.user.role === 'user') {
+            paymentStatus = PaymentStatus.DP_PAID;
+            console.log(`[WEBHOOK] Initial payment #${paymentId} settled/captured for user, marking as DP_PAID`);
+          } else {
+            paymentStatus = PaymentStatus.PAID;
+            console.log(`[WEBHOOK] Payment #${paymentId} settled/captured for non-user role, marking as PAID`);
+          }
+          break;
+        case PaymentStatus.PENDING:
+          paymentStatus = PaymentStatus.PENDING;
+          console.log(`[WEBHOOK] Transaction pending for payment #${paymentId}`);
+          break;
+        case 'deny':
+        case 'expire':
+        case 'cancel':
+          paymentStatus = PaymentStatus.FAILED;
+          console.log(`[WEBHOOK] Transaction failed (${notification.transaction_status}) for payment #${paymentId}`);
+          break;
+        default:
+          paymentStatus = PaymentStatus.PENDING;
+          console.log(`[WEBHOOK] Unknown transaction status: ${notification.transaction_status}, defaulting to pending`);
+      }
     }
 
     // Coba konversi payment method dari Midtrans
@@ -293,15 +356,20 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
     const updateData: any = {
       status: paymentStatus,
       transactionId,
-      paymentUrl,
-      expiresDate: expiryTime ? new Date(expiryTime) : undefined,
     };
+    
+    // Tambahkan expiresDate hanya jika ada
+    if (expiryTime) {
+      updateData.expiresDate = new Date(expiryTime);
+    }
     
     // Tambahkan payment method hanya jika berhasil dikonversi
     if (paymentMethodValue) {
       updateData.paymentMethod = paymentMethodValue;
     }
-
+    
+    // JANGAN update paymentUrl untuk mempertahankan URL yang sudah ada
+    
     // Update payment record in database with transaction info dan expiry time
     const _updatedPayment = await prisma.payment.update({
       where: { id: paymentId },

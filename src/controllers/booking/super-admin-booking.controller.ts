@@ -35,8 +35,10 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
     }
 
     if (status) {
-      where.payment = {
-        status: status as PaymentStatus,
+      where.payments = {
+        some: {
+          status: status as PaymentStatus
+        }
       };
     }
 
@@ -51,7 +53,7 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
       include: {
         user: { select: { id: true, name: true, email: true } },
         field: { include: { branch: true, type: true } },
-        payment: true,
+        payments: true,
       },
       orderBy: { bookingDate: 'desc' },
     });
@@ -98,7 +100,7 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
-        payment: true,
+        payments: true,
         field: { select: { id: true, branchId: true } },
       },
     });
@@ -111,7 +113,7 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
       return;
     }
 
-    if (!booking.payment) {
+    if (!booking.payments || booking.payments.length === 0) {
       res.status(404).json({
         status: false,
         message: 'Pembayaran tidak ditemukan',
@@ -119,9 +121,12 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
       return;
     }
 
+    // Gunakan payment pertama untuk diupdate
+    const payment = booking.payments[0];
+
     const updateData: any = {
-      status: (result.data.paymentStatus as PaymentStatus) || booking.payment.status,
-      amount: result.data.amount !== undefined ? result.data.amount : booking.payment.amount,
+      status: (result.data.paymentStatus as PaymentStatus) || payment.status,
+      amount: result.data.amount !== undefined ? result.data.amount : payment.amount,
     };
     
     if (result.data.paymentMethod) {
@@ -130,7 +135,7 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
     
     // Update payment details
     const updatedPayment = await prisma.payment.update({
-      where: { id: booking.payment.id },
+      where: { id: payment.id },
       data: updateData,
     });
 
@@ -144,9 +149,9 @@ export const updateBookingPayment = async (req: Request, res: Response): Promise
 
     // Invalidasi cache setelah update
     await invalidatePaymentCache(
-      booking.payment.id,
+      payment.id,
       bookingId,
-      booking.field.id,
+      booking.fieldId,
       booking.field.branchId,
       booking.userId
     );
@@ -177,7 +182,7 @@ export const deleteBooking = async (req: Request, res: Response): Promise<void> 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
-        payment: true,
+        payments: true,
         field: { select: { id: true, branchId: true } },
       },
     });
@@ -191,16 +196,18 @@ export const deleteBooking = async (req: Request, res: Response): Promise<void> 
     }
 
     // Save IDs for cache invalidation
-    const fieldId = booking.field.id;
+    const fieldId = booking.fieldId;
     const branchId = booking.field.branchId;
     const userId = booking.userId;
-    const paymentId = booking.payment?.id;
+    const paymentIds = booking.payments.map(p => p.id);
 
-    // If there's a payment, delete it first (transaction would be better)
-    if (booking.payment) {
-      await prisma.payment.delete({
-        where: { id: booking.payment.id },
-      });
+    // If there are payments, delete them first (transaction would be better)
+    if (booking.payments && booking.payments.length > 0) {
+      for (const payment of booking.payments) {
+        await prisma.payment.delete({
+          where: { id: payment.id },
+        });
+      }
     }
 
     // Then delete the booking
@@ -213,7 +220,7 @@ export const deleteBooking = async (req: Request, res: Response): Promise<void> 
 
     // Invalidasi cache setelah delete
     await invalidateBookingCache(bookingId, fieldId, branchId, userId);
-    if (paymentId) {
+    for (const paymentId of paymentIds) {
       await invalidatePaymentCache(paymentId);
     }
 

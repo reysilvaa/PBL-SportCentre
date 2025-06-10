@@ -27,7 +27,8 @@
     "test:e2e": "cross-env NODE_ENV=development jest --config tests/jest.config.ts \"tests/e2e/.*\\.test\\.ts$\"",
     "test:quiet": "cross-env NODE_ENV=development jest --silent",
     "prisma": "prisma",
-    "prisma:seed": "cross-env NODE_ENV=development node --max-old-space-size=4096 -r ts-node/register prisma/factories/index.ts",
+    "prisma:factory": "cross-env NODE_ENV=development node --max-old-space-size=4096 -r ts-node/register prisma/factories/index.ts",
+    "prisma:seed": "cross-env NODE_ENV=development node --max-old-space-size=4096 -r ts-node/register prisma/seed.ts",
     "prisma:migration": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "postinstall": "prisma generate"

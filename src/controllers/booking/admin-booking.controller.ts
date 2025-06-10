@@ -8,6 +8,7 @@ import {
   getCompleteBooking,
   verifyFieldBranch,
   processMidtransPayment,
+  calculateTotalPayments,
 } from '../../utils/booking/booking.utils';
 import { calculateTotalPrice } from '../../utils/booking/calculateBooking.utils';
 import { invalidateBookingCache } from '../../utils/cache/cacheInvalidation.utils';
@@ -90,8 +91,10 @@ export const getBranchBookings = async (req: User, res: Response): Promise<void>
     if (status) {
       whereCondition = {
         ...whereCondition,
-        payment: {
-          status: status as string
+        payments: {
+          some: {
+            status: status as string
+          }
         }
       };
     }
@@ -139,7 +142,7 @@ export const getBranchBookings = async (req: User, res: Response): Promise<void>
             }
           } 
         },
-        payment: true,
+        payments: true,
       },
       orderBy: { bookingDate: 'desc' },
     });
@@ -195,7 +198,7 @@ export const getBranchBookingById = async (req: User, res: Response): Promise<vo
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
         field: { include: { branch: true, type: true } },
-        payment: true,
+        payments: true,
       },
     });
 
@@ -228,7 +231,7 @@ export const updateBranchBookingStatus = async (req: User, res: Response): Promi
     const booking = await prisma.booking.findFirst({
       where: whereCondition,
       include: {
-        payment: true,
+        payments: true,
         user: { select: { id: true } },
         field: { include: { branch: true } },
       },
@@ -239,9 +242,9 @@ export const updateBranchBookingStatus = async (req: User, res: Response): Promi
     }
 
     // Update payment status
-    if (booking.payment && paymentStatus) {
+    if (booking.payments && booking.payments.length > 0 && paymentStatus) {
       await prisma.payment.update({
-        where: { id: booking.payment.id },
+        where: { id: booking.payments[0].id },
         data: { status: paymentStatus },
       });
     }
@@ -671,5 +674,191 @@ export const createManualBooking = async (req: User, res: Response): Promise<voi
   } catch (error) {
     console.error('Error in createManualBooking:', error);
     sendErrorResponse(res, 500, 'Internal Server Error');
+  }
+};
+
+/**
+ * Fungsi untuk membuat pelunasan dari pembayaran DP yang sudah ada
+ * Khusus untuk admin dengan pembayaran cash/tunai
+ */
+export const createPaymentCompletion = async (req: User, res: Response): Promise<void> => {
+  try {
+    const { bookingId } = req.params;
+    const { paymentMethod } = req.body;
+    // Default payment method untuk admin adalah CASH
+    const selectedPaymentMethod = paymentMethod || PaymentMethod.CASH;
+    
+    // Cari booking dan payment DP-nya
+    const booking = await prisma.booking.findUnique({
+      where: { id: parseInt(bookingId) },
+      include: {
+        field: {
+          include: { branch: true }
+        },
+        user: { select: { id: true, name: true, email: true, role: true } }
+      }
+    });
+
+    if (!booking) {
+      return sendErrorResponse(res, 404, 'Booking tidak ditemukan');
+    }
+
+    // Cari semua payment yang terkait dengan booking ini
+    const payments = await prisma.payment.findMany({
+      where: { bookingId: parseInt(bookingId) }
+    });
+    
+    // Periksa apakah ada pembayaran dengan status PAID (sudah lunas)
+    const paidPayment = payments.find(p => p.status === PaymentStatus.PAID);
+    
+    // Calculate total price
+    const totalPrice = calculateTotalPrice(
+      booking.startTime,
+      booking.endTime,
+      Number(booking.field.priceDay),
+      Number(booking.field.priceNight)
+    );
+
+    // Hitung total yang sudah dibayarkan
+    const totalPaid = await calculateTotalPayments(parseInt(bookingId));
+    
+    // Periksa apakah booking sudah lunas berdasarkan total pembayaran atau status PAID
+    if (totalPaid >= totalPrice || paidPayment) {
+      return sendErrorResponse(res, 400, 'Booking ini sudah lunas dan tidak memerlukan pelunasan');
+    }
+    
+    const dpPayment = payments.find(p => p.status === PaymentStatus.DP_PAID);
+    
+    if (!dpPayment) {
+      return sendErrorResponse(res, 400, 'Booking ini tidak memiliki pembayaran DP yang perlu dilunasi');
+    }
+
+    // Cek apakah sudah ada pembayaran pelunasan yang pending
+    const pendingCompletionPayment = payments.find(p => 
+      p.status === PaymentStatus.PENDING && 
+      p.id !== dpPayment.id
+    );
+    
+    if (pendingCompletionPayment) {
+      return sendErrorResponse(
+        res, 
+        400, 
+        'Sudah ada pembayaran pelunasan yang sedang menunggu pembayaran. Silakan selesaikan pembayaran tersebut terlebih dahulu.',
+        { paymentUrl: pendingCompletionPayment.paymentUrl }
+      );
+    }
+    
+    // Pastikan admin cabang hanya dapat memperbarui booking di cabang yang mereka kelola
+    const branchId = req.userBranch?.id;
+    if (branchId !== 0 && booking.field.branchId !== branchId) {
+      return sendErrorResponse(res, 403, 'Anda tidak memiliki akses untuk memperbarui pembayaran ini');
+    }
+    
+    // Hitung sisa pembayaran
+    const remainingAmount = totalPrice - totalPaid;
+    console.log(`💵 Total harga: ${totalPrice}, Total dibayar: ${totalPaid}, Sisa: ${remainingAmount}`);
+    
+    // Pastikan masih ada sisa pembayaran
+    if (remainingAmount <= 0) {
+      return sendErrorResponse(res, 400, 'Pembayaran untuk booking ini sudah lunas');
+    }
+    
+    // Buat payment baru untuk pelunasan
+    let paymentResult: any = null;
+    const isUsingMidtrans = selectedPaymentMethod !== PaymentMethod.CASH;
+    
+    // Buat payment baru untuk pelunasan
+    const completionPayment = await prisma.payment.create({
+      data: {
+        bookingId: parseInt(bookingId),
+        userId: booking.userId,
+        amount: remainingAmount,
+        status: isUsingMidtrans ? PaymentStatus.PENDING : PaymentStatus.PAID, // Admin dapat langsung tandai PAID jika cash
+        paymentMethod: selectedPaymentMethod,
+      }
+    });
+
+    // Jika menggunakan Midtrans (khusus admin yang pilih metode online), proses pembayaran via Midtrans API
+    if (isUsingMidtrans && booking.user) {
+      try {
+        // Process payment via Midtrans API
+        paymentResult = await processMidtransPayment(
+          booking as any,
+          completionPayment as any,
+          booking.field as any,
+          booking.user as any,
+          remainingAmount,
+          selectedPaymentMethod as PaymentMethod,
+          true // isCompletion=true untuk menandakan ini adalah pelunasan
+        );
+
+        if (paymentResult) {
+          // Update payment record with Midtrans transaction details
+          await prisma.payment.update({
+            where: { id: completionPayment.id },
+            data: {
+              expiresDate: paymentResult.expiryDate,
+              transactionId: paymentResult.transaction.transaction_id,
+              paymentUrl: paymentResult.transaction.redirect_url,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error processing Midtrans payment:', error);
+        // Hapus payment jika gagal membuat transaksi Midtrans
+        await prisma.payment.delete({
+          where: { id: completionPayment.id }
+        });
+        return sendErrorResponse(res, 500, 'Gagal membuat transaksi pembayaran');
+      }
+    } else if (!isUsingMidtrans) {
+      // Untuk pembayaran tunai, langsung tandai sebagai lunas
+      await prisma.payment.update({
+        where: { id: completionPayment.id },
+        data: {
+          // Pembayaran tunai tidak perlu expiry date karena sudah PAID
+          status: PaymentStatus.PAID
+        }
+      });
+    }
+
+    // Tambahkan log aktivitas
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user?.id || 0,
+        action: 'ADMIN_PAYMENT_COMPLETION_CREATED',
+        details: `Admin membuat pelunasan untuk booking #${bookingId} dengan metode ${selectedPaymentMethod}`,
+        ipAddress: req.ip || undefined,
+      }
+    });
+
+    // Emit WebSocket event untuk perubahan status pembayaran
+    emitBookingEvents('payment:completion', {
+      booking,
+      userId: booking.userId,
+      branchId: booking.field.branchId,
+      paymentId: completionPayment.id,
+      paymentMethod: selectedPaymentMethod,
+    });
+
+    // Hapus cache yang terkait booking
+    await invalidateBookingCache(
+      parseInt(bookingId),
+      booking.fieldId,
+      booking.field.branchId,
+      booking.userId
+    );
+
+    res.status(201).json({
+      status: true,
+      message: isUsingMidtrans ? 'Link pembayaran pelunasan berhasil dibuat' : 'Pelunasan berhasil dibuat dan ditandai sebagai lunas',
+      data: {
+        payment: completionPayment,
+        paymentUrl: paymentResult?.transaction?.redirect_url || null,
+      }
+    });
+  } catch (error) {
+    console.error('Error creating payment completion:', error);
+    sendErrorResponse(res, 500, 'Terjadi kesalahan saat membuat pelunasan');
   }
 };
