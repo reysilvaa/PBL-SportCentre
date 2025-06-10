@@ -99,6 +99,12 @@ router.post('/payments/:paymentId/mark-paid', branchAdminAuth(), bookingControll
 // Endpoint untuk update status pembayaran
 router.post('/payments/:paymentId/update-status', branchAdminAuth(), bookingController.updatePaymentStatus);
 
+// admin membuat pelunasan dari pembayaran DP
+router.post('/bookings/:bookingId/payment-completion', branchAdminAuth(), bookingController.createAdminPaymentCompletion);
+
+// user membuat pelunasan dari pembayaran DP
+router.post('/user/bookings/:bookingId/payment-completion', userAuth(), bookingController.createUserPaymentCompletion);
+
 // Laporan pendapatan untuk owner
 router.get(
   '/owner/reports/revenue',

@@ -54,11 +54,13 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
       gte: startOfDay,
       lte: endOfDay,
     },
-    payment: {
-      OR: [
-        { status: { in: ['paid', 'dp_paid'] } },
-        { status: 'pending', expiresDate: { gt: new Date() } },
-      ],
+    payments: {
+      some: {
+        OR: [
+          { status: { in: ['paid', 'dp_paid'] } },
+          { status: 'pending', expiresDate: { gt: new Date() } },
+        ],
+      }
     },
   };
 
@@ -82,7 +84,7 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
   return prisma.booking.findMany({
     where: whereClause,
     include: {
-      payment: true,
+      payments: true,
       field: {
         include: {
           branch: true,
@@ -165,7 +167,7 @@ export const isFieldAvailable = async (
     console.log('⚠️ Detail booking yang overlapping:');
     overlappingBookings.forEach((booking) => {
       console.log(
-        `  - Booking #${booking.id}, status: ${booking.payment?.status}, expires: ${booking.payment?.expiresDate ? booking.payment.expiresDate : 'No expiry'}`
+        `  - Booking #${booking.id}, status: ${booking.payments[0]?.status}, expires: ${booking.payments[0]?.expiresDate ? booking.payments[0].expiresDate : 'No expiry'}`
       );
       console.log(`    Time (UTC): ${booking.startTime.toISOString()} - ${booking.endTime.toISOString()}`);
     });

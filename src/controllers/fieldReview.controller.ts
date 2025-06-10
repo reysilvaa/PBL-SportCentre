@@ -3,7 +3,7 @@ import prisma from '../config/services/database';
 import { createFieldReviewSchema, updateFieldReviewSchema } from '../zod-schemas/fieldReview.schema';
 import { invalidateFieldReviewCache } from '../utils/cache/cacheInvalidation.utils';
 import { User } from '../middlewares/auth.middleware';
-import { Role } from '../types';
+import { Role, PaymentStatus } from '../types';
 
 /**
  * Unified Field Review Controller
@@ -107,8 +107,10 @@ export const createFieldReview = async (req: User, res: Response): Promise<void>
       where: {
         userId,
         fieldId: parsedFieldId,
-        payment: {
-          status: 'paid',
+        payments: {
+          some: {
+            status: PaymentStatus.PAID,
+          },
         },
       },
     });

@@ -171,7 +171,7 @@ export const getSuperAdminStatsWithCharts = async (timeRange: any): Promise<Dash
   // Dapatkan seluruh data booking untuk pembuatan grafik
   const bookings = await prisma.booking.findMany({
     include: {
-      payment: true,
+      payments: true,
     }
   });
   
@@ -191,8 +191,15 @@ export const getSuperAdminStatsWithCharts = async (timeRange: any): Promise<Dash
     if (bookingDate >= start && bookingDate <= end) {
       totalBookings++;
       
-      if (booking.payment && booking.payment.status === 'paid') {
-        totalIncome += Number(booking.payment.amount);
+      // Cek apakah ada payment dengan status PAID
+      if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+        // Hitung total pembayaran dari semua payment dengan status PAID
+        const paidPayments = booking.payments.filter(p => p.status === 'paid');
+        for (const payment of paidPayments) {
+          if (payment.amount) {
+            totalIncome += Number(payment.amount);
+          }
+        }
       }
     }
     
@@ -210,9 +217,14 @@ export const getSuperAdminStatsWithCharts = async (timeRange: any): Promise<Dash
         bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
 
         // Hitung pendapatan jika booking sudah dibayar
-        if (booking.payment && booking.payment.status === 'paid') {
-          const amount = Number(booking.payment.amount);
-          incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+        if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+          const paidPayments = booking.payments.filter(p => p.status === 'paid');
+          for (const payment of paidPayments) {
+            if (payment.amount) {
+              const amount = Number(payment.amount);
+              incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+            }
+          }
         }
       }
     } else if (interval === 'year') {
@@ -222,9 +234,14 @@ export const getSuperAdminStatsWithCharts = async (timeRange: any): Promise<Dash
       bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
 
       // Hitung pendapatan jika booking sudah dibayar
-      if (booking.payment && booking.payment.status === 'paid') {
-        const amount = Number(booking.payment.amount);
-        incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+      if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+        const paidPayments = booking.payments.filter(p => p.status === 'paid');
+        for (const payment of paidPayments) {
+          if (payment.amount) {
+            const amount = Number(payment.amount);
+            incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+          }
+        }
       }
     } else {
       // Format bulan: indeks 0-11
@@ -236,9 +253,14 @@ export const getSuperAdminStatsWithCharts = async (timeRange: any): Promise<Dash
         bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
 
         // Hitung pendapatan jika booking sudah dibayar
-        if (booking.payment && booking.payment.status === 'paid') {
-          const amount = Number(booking.payment.amount);
-          incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+        if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+          const paidPayments = booking.payments.filter(p => p.status === 'paid');
+          for (const payment of paidPayments) {
+            if (payment.amount) {
+              const amount = Number(payment.amount);
+              incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+            }
+          }
         }
       }
     }
@@ -340,7 +362,7 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
         include: {
           Bookings: {
             include: {
-              payment: true,
+              payments: true,
             },
           },
         },
@@ -391,9 +413,11 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
           totalBookings++;
           
           // Hitung pendapatan jika booking sudah dibayar
-          if (booking.payment && booking.payment.status === 'paid') {
-            const amount = Number(booking.payment.amount);
-            totalIncome = totalIncome.plus(amount);
+          if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+            const paidPayment = booking.payments.find(p => p.status === 'paid');
+            if (paidPayment && paidPayment.amount) {
+              totalIncome = totalIncome.plus(paidPayment.amount);
+            }
           }
         }
         
@@ -411,9 +435,12 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
             bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
 
             // Hitung pendapatan jika booking sudah dibayar
-            if (booking.payment && booking.payment.status === 'paid') {
-              const amount = Number(booking.payment.amount);
-              incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+            if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+              const paidPayment = booking.payments.find(p => p.status === 'paid');
+              if (paidPayment && paidPayment.amount) {
+                const amount = Number(paidPayment.amount);
+                incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+              }
             }
           }
         } else if (interval === 'year') {
@@ -423,9 +450,12 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
           bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
 
           // Hitung pendapatan jika booking sudah dibayar
-          if (booking.payment && booking.payment.status === 'paid') {
-            const amount = Number(booking.payment.amount);
-            incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+          if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+            const paidPayment = booking.payments.find(p => p.status === 'paid');
+            if (paidPayment && paidPayment.amount) {
+              const amount = Number(paidPayment.amount);
+              incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+            }
           }
         } else {
           // Format bulan: indeks 0-11
@@ -437,9 +467,12 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
             bookingsByDate[dateKey] = (bookingsByDate[dateKey] || 0) + 1;
 
             // Hitung pendapatan jika booking sudah dibayar
-            if (booking.payment && booking.payment.status === 'paid') {
-              const amount = Number(booking.payment.amount);
-              incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+            if (booking.payments && booking.payments.some(p => p.status === 'paid')) {
+              const paidPayment = booking.payments.find(p => p.status === 'paid');
+              if (paidPayment && paidPayment.amount) {
+                const amount = Number(paidPayment.amount);
+                incomeByDate[dateKey] = (incomeByDate[dateKey] || 0) + amount;
+              }
             }
           }
         }
@@ -620,7 +653,7 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
         include: {
           Bookings: {
             include: {
-              payment: true,
+              payments: true,
               user: true,
             },
           },
@@ -659,13 +692,16 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
         totalBookings++;
 
         // Menghitung pembayaran pending
-        if (booking.payment && booking.payment.status === PaymentStatus.PENDING) {
+        if (booking.payments && booking.payments.some(p => p.status === PaymentStatus.PENDING)) {
           pendingPayments++;
         }
 
         // Menghitung total pendapatan dari booking yang sudah dibayar
-        if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
-          totalIncome = totalIncome.plus(booking.payment.amount);
+        if (booking.payments && booking.payments.some(p => p.status === PaymentStatus.PAID)) {
+          const paidPayment = booking.payments.find(p => p.status === PaymentStatus.PAID);
+          if (paidPayment && paidPayment.amount) {
+            totalIncome = totalIncome.plus(paidPayment.amount);
+          }
         }
       }
 
@@ -683,8 +719,11 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
           bookingsPerDay[dateKey] = (bookingsPerDay[dateKey] || 0) + 1;
 
           // Mengelompokkan pendapatan berdasarkan jam
-          if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
-            incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(booking.payment.amount);
+          if (booking.payments && booking.payments.some(p => p.status === PaymentStatus.PAID)) {
+            const paidPayment = booking.payments.find(p => p.status === PaymentStatus.PAID);
+            if (paidPayment && paidPayment.amount) {
+              incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(paidPayment.amount);
+            }
           }
         }
       } else if (interval === 'year') {
@@ -694,8 +733,11 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
         bookingsPerDay[dateKey] = (bookingsPerDay[dateKey] || 0) + 1;
 
         // Mengelompokkan pendapatan berdasarkan tahun
-        if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
-          incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(booking.payment.amount);
+        if (booking.payments && booking.payments.some(p => p.status === PaymentStatus.PAID)) {
+          const paidPayment = booking.payments.find(p => p.status === PaymentStatus.PAID);
+          if (paidPayment && paidPayment.amount) {
+            incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(paidPayment.amount);
+          }
         }
       } else {
         // Format bulan: bulan 0-11 dari tahun ini
@@ -706,8 +748,11 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
           bookingsPerDay[dateKey] = (bookingsPerDay[dateKey] || 0) + 1;
 
           // Mengelompokkan pendapatan berdasarkan bulan di tahun ini
-          if (booking.payment && booking.payment.status === PaymentStatus.PAID) {
-            incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(booking.payment.amount);
+          if (booking.payments && booking.payments.some(p => p.status === PaymentStatus.PAID)) {
+            const paidPayment = booking.payments.find(p => p.status === PaymentStatus.PAID);
+            if (paidPayment && paidPayment.amount) {
+              incomePerDay[dateKey] = (incomePerDay[dateKey] || 0) + Number(paidPayment.amount);
+            }
           }
         }
       }
@@ -844,7 +889,7 @@ export const getUserStats = async (userId: number, timeRange: any): Promise<Dash
               branch: true,
             },
           },
-          payment: true,
+          payments: true,
         },
         orderBy: {
           bookingDate: 'desc',
@@ -917,7 +962,7 @@ export const getUserStats = async (userId: number, timeRange: any): Promise<Dash
     date: new Date(booking.bookingDate).toLocaleDateString('id-ID'),
     time: `${new Date(booking.startTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} - ${new Date(booking.endTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
     status: new Date(booking.bookingDate) >= today ? 'active' : 'completed',
-    paymentStatus: booking.payment?.status || 'pending',
+    paymentStatus: booking.payments && booking.payments.some(p => p.status === 'paid') ? 'paid' : 'pending',
   }));
 
   return {

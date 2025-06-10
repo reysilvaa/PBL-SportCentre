@@ -177,7 +177,7 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
               },
             },
             include: {
-              payment: true,
+              payments: true,
             },
           },
         },
@@ -199,8 +199,13 @@ export const getOwnerCabangStats = async (userId: number, timeRange: any): Promi
     branch.Fields.forEach((field: any) => {
       field.Bookings.forEach((booking: any) => {
         totalBookings++;
-        if (booking.payment && booking.payment.status === 'paid') {
-          totalIncome = totalIncome.plus(booking.payment.amount);
+        if (booking.payments && booking.payments.some((p: any) => p.status === 'paid')) {
+          // Hitung total dari semua payment yang paid
+          booking.payments.forEach((payment: any) => {
+            if (payment.status === 'paid') {
+              totalIncome = totalIncome.plus(payment.amount);
+            }
+          });
         }
       });
     });
@@ -379,7 +384,7 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
           },
         },
         include: {
-          payment: true,
+          payments: true,
         },
       },
     },
@@ -394,12 +399,18 @@ export const getAdminCabangStats = async (userId: number, timeRange: any): Promi
     totalBookings += field.Bookings.length;
 
     field.Bookings.forEach(booking => {
-      if (booking.payment) {
-        if (booking.payment.status === 'pending') {
+      if (booking.payments && booking.payments.length > 0) {
+        // Cek jika ada payment dengan status pending
+        if (booking.payments.some(p => p.status === 'pending')) {
           pendingPayments++;
-        } else if (booking.payment.status === 'paid') {
-          totalIncome = totalIncome.plus(booking.payment.amount);
         }
+        
+        // Hitung total dari semua payment yang paid
+        booking.payments.forEach(payment => {
+          if (payment.status === 'paid') {
+            totalIncome = totalIncome.plus(payment.amount);
+          }
+        });
       }
     });
   });
@@ -555,7 +566,7 @@ export const getUserStats = async (userId: number, _timeRange: any): Promise<Das
           branch: true,
         },
       },
-      payment: true,
+      payments: true,
     },
   });
 
@@ -563,7 +574,9 @@ export const getUserStats = async (userId: number, _timeRange: any): Promise<Das
   const recentBookings = bookings.map(booking => {
     const isActive = new Date(booking.bookingDate) >= now;
     const statusText = isActive ? 'Aktif' : 'Selesai';
-    const paymentStatus = booking.payment ? booking.payment.status : 'pending';
+    const paymentStatus = booking.payments && booking.payments.length > 0 
+      ? booking.payments[0].status 
+      : 'pending';
 
     return {
       id: booking.id.toString(),

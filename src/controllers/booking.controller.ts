@@ -15,6 +15,7 @@ export const createBooking = UserBookingController.createBooking;
 export const getUserBookings = UserBookingController.getUserBookings;
 export const getBookingById = UserBookingController.getBookingById;
 export const cancelBooking = UserBookingController.cancelBooking;
+export const createUserPaymentCompletion = UserBookingController.createPaymentCompletion;
 
 // Export Branch Admin Operations
 export const getBranchBookings = AdminBookingController.getBranchBookings;
@@ -23,6 +24,7 @@ export const updateBranchBookingStatus = AdminBookingController.updateBranchBook
 export const markPaymentAsPaid = AdminBookingController.markPaymentAsPaid;
 export const updatePaymentStatus = AdminBookingController.updatePaymentStatus;
 export const createAdminBooking = AdminBookingController.createAdminBooking;
+export const createAdminPaymentCompletion = AdminBookingController.createPaymentCompletion;
 
 // Export Super Admin Operations
 export const getAllBookings = SuperAdminBookingController.getAllBookings;

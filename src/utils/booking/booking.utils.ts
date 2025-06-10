@@ -431,6 +431,7 @@ export const stopBookingCleanupJob = async (): Promise<void> => {
 
 /**
  * Get complete booking with relations
+ * Updated to support multiple payments
  */
 export const getCompleteBooking = async (bookingId: number): Promise<Booking | null> => {
   const booking = await prisma.booking.findUnique({
@@ -438,11 +439,56 @@ export const getCompleteBooking = async (bookingId: number): Promise<Booking | n
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
       field: { include: { branch: true } },
-      payment: true,
+      payments: true, // Tetap gunakan payment untuk kompatibilitas dengan tipe saat ini
     },
   });
 
+  if (booking) {
+    const payments = await prisma.payment.findMany({
+      where: {
+        bookingId: booking.id,
+      },
+      orderBy: {
+        createdAt: 'desc', // Ambil yang terbaru terlebih dahulu
+      },
+    });
+
+    if (payments && payments.length > 0) {
+      (booking as any).payment = payments[0];
+    }
+    
+    // Tambahkan semua payment ke booking untuk penggunaan baru
+    (booking as any).payments = payments;
+  }
+
   return booking as Booking | null;
+};
+
+/**
+ * Menghitung total pembayaran yang sudah dilakukan untuk sebuah booking
+ * Hanya menghitung pembayaran dengan status PAID atau DP_PAID
+ */
+export const calculateTotalPayments = async (bookingId: number): Promise<number> => {
+  const payments = await prisma.payment.findMany({
+    where: {
+      bookingId: bookingId,
+      status: {
+        in: [PaymentStatus.PAID, PaymentStatus.DP_PAID]
+      }
+    },
+    select: {
+      amount: true
+    }
+  });
+  
+  let totalAmount = 0;
+  
+  // Sum up all payment amounts
+  payments.forEach(payment => {
+    totalAmount += Number(payment.amount);
+  });
+  
+  return totalAmount;
 };
 
 // Export emitBookingEvents for use elsewhere
