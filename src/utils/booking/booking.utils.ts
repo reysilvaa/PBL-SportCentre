@@ -174,7 +174,7 @@ export const processMidtransPayment = async (
 
   // Tentukan apakah transaksi ini adalah DP atau pembayaran penuh
   const isDownPayment = user.role === Role.USER;
-  const paymentAmount = isDownPayment ? Math.ceil(totalPrice * 0.3) : totalPrice; // DP 30% untuk user biasa
+  const paymentAmount = isDownPayment ? Math.ceil(totalPrice * 0.5) : totalPrice; // DP 50% untuk user biasa
   const paymentLabel = isDownPayment ? 'DP Booking' : 'Pembayaran';
 
   // Config untuk transaksi Midtrans
