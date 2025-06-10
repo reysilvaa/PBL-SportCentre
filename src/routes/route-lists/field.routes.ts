@@ -2,7 +2,7 @@ import express from 'express';
 import { parseIds } from '../../middlewares/parseId.middleware';
 import { cacheMiddleware } from '../../utils/cache.utils';
 import { fieldUpload } from '../../middlewares/multer.middleware';
-import { auth } from '../../middlewares/auth.middleware';
+import { auth, ownerAuth, userAuth } from '../../middlewares/auth.middleware';
 import {
   getAllFields,
   getBranchFields,
@@ -49,7 +49,7 @@ router.get(
 router.post(
   '/',
   auth({
-    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG],
     attachBranch: true,
   }),
   fieldUpload.single('imageUrl'),
@@ -61,7 +61,7 @@ router.post(
 router.put(
   '/:id',
   auth({
-    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG],
     attachBranch: true,
     ownerOnly: true,
     resourceName: 'field',
@@ -75,7 +75,7 @@ router.put(
 router.delete(
   '/:id',
   auth({
-    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG],
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_CABANG, Role.OWNER_CABANG],
     attachBranch: true,
     ownerOnly: true,
     resourceName: 'field',
