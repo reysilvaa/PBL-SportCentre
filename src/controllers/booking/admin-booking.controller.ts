@@ -710,7 +710,20 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
     
     // Periksa apakah ada pembayaran dengan status PAID (sudah lunas)
     const paidPayment = payments.find(p => p.status === PaymentStatus.PAID);
-    if (paidPayment) {
+    
+    // Calculate total price
+    const totalPrice = calculateTotalPrice(
+      booking.startTime,
+      booking.endTime,
+      Number(booking.field.priceDay),
+      Number(booking.field.priceNight)
+    );
+
+    // Hitung total yang sudah dibayarkan
+    const totalPaid = await calculateTotalPayments(parseInt(bookingId));
+    
+    // Periksa apakah booking sudah lunas berdasarkan total pembayaran atau status PAID
+    if (totalPaid >= totalPrice || paidPayment) {
       return sendErrorResponse(res, 400, 'Booking ini sudah lunas dan tidak memerlukan pelunasan');
     }
     
@@ -740,17 +753,6 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
     if (branchId !== 0 && booking.field.branchId !== branchId) {
       return sendErrorResponse(res, 403, 'Anda tidak memiliki akses untuk memperbarui pembayaran ini');
     }
-    
-    // Calculate total price
-    const totalPrice = calculateTotalPrice(
-      booking.startTime,
-      booking.endTime,
-      Number(booking.field.priceDay),
-      Number(booking.field.priceNight)
-    );
-
-    // Hitung total yang sudah dibayarkan
-    const totalPaid = await calculateTotalPayments(parseInt(bookingId));
     
     // Hitung sisa pembayaran
     const remainingAmount = totalPrice - totalPaid;

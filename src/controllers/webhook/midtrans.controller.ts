@@ -318,7 +318,10 @@ export const handleMidtransNotification = async (req: Request, res: Response): P
             // Jika sudah lunas, hanya update payment saat ini menjadi PAID
             if (totalPaidAmount >= totalBookingPrice) {
               console.log(`[WEBHOOK] Booking #${payment.bookingId} is now fully paid with this payment`);
+              
               paymentStatus = PaymentStatus.PAID;
+              
+              console.log(`[WEBHOOK] Payment #${payment.id} has been marked as PAID`);
             }
           }
           // Jika bukan pelunasan, ikuti aturan role user

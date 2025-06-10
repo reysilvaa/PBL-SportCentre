@@ -406,7 +406,20 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
     
     // Periksa apakah ada pembayaran dengan status PAID (sudah lunas)
     const paidPayment = payments.find(p => p.status === PaymentStatus.PAID);
-    if (paidPayment) {
+    
+    // Calculate total price
+    const totalPrice = calculateTotalPrice(
+      booking.startTime,
+      booking.endTime,
+      Number(booking.field.priceDay),
+      Number(booking.field.priceNight)
+    );
+
+    // Hitung total yang sudah dibayarkan
+    const totalPaid = await calculateTotalPayments(bookingIdInt);
+    
+    // Periksa apakah booking sudah lunas berdasarkan total pembayaran
+    if (totalPaid >= totalPrice || paidPayment) {
       return sendErrorResponse(res, 400, 'Booking ini sudah lunas dan tidak memerlukan pelunasan');
     }
     
@@ -430,17 +443,6 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
         { paymentUrl: pendingCompletionPayment.paymentUrl }
       );
     }
-    
-    // Calculate total price
-    const totalPrice = calculateTotalPrice(
-      booking.startTime,
-      booking.endTime,
-      Number(booking.field.priceDay),
-      Number(booking.field.priceNight)
-    );
-
-    // Hitung total yang sudah dibayarkan
-    const totalPaid = await calculateTotalPayments(bookingIdInt);
     
     // Hitung sisa pembayaran
     const remainingAmount = totalPrice - totalPaid;
@@ -488,6 +490,10 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
               paymentUrl: paymentResult.transaction.redirect_url,
             },
           });
+          if (totalPaid + remainingAmount >= totalPrice) {
+            console.log(`[PAYMENT] Payment completion will fully pay booking #${bookingId} when settled`);
+            console.log(`[PAYMENT] Total price: ${totalPrice}, Total paid: ${totalPaid}, Remaining: ${remainingAmount}`);
+          }
         }
       } catch (error) {
         console.error('Error processing Midtrans payment:', error);
