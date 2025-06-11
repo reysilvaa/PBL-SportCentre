@@ -16,7 +16,7 @@ import { User } from '../../middlewares/auth.middleware';
 import { PaymentMethod, PaymentStatus } from '../../types';
 import { parseISO } from 'date-fns';
 import { combineDateAndTime } from '../../utils/date.utils';
-import { createBookingSchema } from '../../zod-schemas/booking.schema';
+import { createBookingSchema, updateBookingStatusSchema } from '../../zod-schemas/booking.schema';
 import { resetFailedBookingCounter } from '../../middlewares/security.middleware';
 
 /**
@@ -871,7 +871,6 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
 export const updateBookingStatus = async (req: User, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
     const bookingId = parseInt(id);
     const branchId = req.userBranch?.id;
 
@@ -879,10 +878,14 @@ export const updateBookingStatus = async (req: User, res: Response): Promise<voi
       return sendErrorResponse(res, 400, 'ID booking tidak valid');
     }
 
-    // Validasi status
-    if (!status || !['active', 'completed', 'cancelled'].includes(status)) {
-      return sendErrorResponse(res, 400, 'Status tidak valid');
+    // Validasi input menggunakan Zod
+    const validationResult = updateBookingStatusSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors.map(err => `${err.path}: ${err.message}`).join(', ');
+      return sendErrorResponse(res, 400, `Data tidak valid: ${errorMessage}`);
     }
+
+    const { status } = validationResult.data;
 
     if (!branchId && branchId !== 0) {
       return sendErrorResponse(res, 400, 'Branch ID is required');
@@ -932,6 +935,19 @@ export const updateBookingStatus = async (req: User, res: Response): Promise<voi
         ipAddress: req.ip || undefined,
       }
     });
+
+    // Tambahkan notifikasi untuk pengguna
+    if (booking.userId) {
+      await prisma.notification.create({
+        data: {
+          userId: booking.userId,
+          title: `Status booking #${bookingId} diperbarui`,
+          message: `Status booking Anda untuk ${booking.field?.name || 'lapangan'} telah diubah menjadi ${status}`,
+          type: 'booking_status',
+          linkId: bookingId.toString(),
+        }
+      });
+    }
 
     // Invalidate cache
     await invalidateBookingCache(bookingId, booking.fieldId, booking.field?.branch?.id || 0, booking.userId);
