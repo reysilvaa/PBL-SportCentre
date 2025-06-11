@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `booking` ADD COLUMN `status` ENUM('active', 'completed', 'cancelled') NOT NULL DEFAULT 'active';
+ALTER TABLE `Booking` ADD COLUMN `status` ENUM('active', 'completed', 'cancelled') NOT NULL DEFAULT 'active';
