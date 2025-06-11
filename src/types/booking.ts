@@ -2,6 +2,7 @@ import { User } from './user';
 import { Field } from './field';
 import { Payment } from './payment';
 import { PromotionUsage } from './promotion';
+import { BookingStatus } from './enums';
 
 // Type untuk waktu booking
 export type BookingTime = Date;
@@ -13,6 +14,7 @@ export type Booking = {
   bookingDate: Date;
   startTime: Date;
   endTime: Date;
+  status: BookingStatus;
   createdAt: Date;
 
   // Relations

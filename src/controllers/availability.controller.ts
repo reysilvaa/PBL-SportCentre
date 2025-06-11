@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { emitFieldAvailabilityUpdate } from '../config/server/socket';
 import { getAllFieldsAvailability } from '../utils/booking/checkAvailability.utils';
-import { fieldAvailabilityQueue } from '../config/services/queue';
 
 /**
  * Unified Availability Controller
@@ -38,51 +37,16 @@ export const checkAllFieldsAvailability = async (req: Request, res: Response) =>
 };
 
 /**
- * Setup processor untuk field availability queue
+ * Handler untuk pembaruan ketersediaan lapangan
+ * Digunakan oleh queue processor
  */
-export const setupFieldAvailabilityProcessor = (): void => {
-  // Proses job
-  fieldAvailabilityQueue.process(async () => {
-    try {
-      const results = await getAllFieldsAvailability();
-      
-      // Emit update real-time melalui socket.io
-      emitFieldAvailabilityUpdate(results);
-      
-      console.log('🔄 Emitted real-time field availability update');
-      return { success: true, timestamp: new Date() };
-    } catch (error) {
-      console.error('Error in scheduled field availability update:', error);
-      throw error;
-    }
-  });
-
-  console.log('✅ Field availability processor didaftarkan');
-};
-
-/**
- * Start Bull Queue jobs untuk pembaruan ketersediaan lapangan
- */
-export const startFieldAvailabilityUpdates = (): void => {
-  // Jalankan pembaruan pertama segera
-  fieldAvailabilityQueue.add({}, { jobId: 'initial-update' });
-
-  // Tambahkan recurring job (setiap 1 menit)
-  fieldAvailabilityQueue.add(
-    {},
-    {
-      jobId: 'availability-recurring',
-      repeat: { cron: '*/1 * * * *' },
-    }
-  );
-
-  console.log('🚀 Field availability Bull Queue job started');
-};
-
-/**
- * Clean up resources when shutting down
- */
-export const cleanupFieldAvailabilityUpdates = async (): Promise<void> => {
-  await fieldAvailabilityQueue.close();
-  console.log('🛑 Field availability Bull Queue job stopped');
+export const handleFieldAvailabilityUpdate = async (): Promise<any> => {
+  const results = await getAllFieldsAvailability();
+  
+  // Emit update real-time melalui socket.io
+  if (results && results.length > 0) {
+    emitFieldAvailabilityUpdate(results);
+  }
+  
+  return results;
 };

@@ -862,3 +862,90 @@ export const createPaymentCompletion = async (req: User, res: Response): Promise
     sendErrorResponse(res, 500, 'Terjadi kesalahan saat membuat pelunasan');
   }
 };
+
+/**
+ * Memperbarui status booking
+ * @param req - Request dengan parameter id booking dan status baru
+ * @param res - Response
+ */
+export const updateBookingStatus = async (req: User, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const bookingId = parseInt(id);
+    const branchId = req.userBranch?.id;
+
+    if (isNaN(bookingId)) {
+      return sendErrorResponse(res, 400, 'ID booking tidak valid');
+    }
+
+    // Validasi status
+    if (!status || !['active', 'completed', 'cancelled'].includes(status)) {
+      return sendErrorResponse(res, 400, 'Status tidak valid');
+    }
+
+    if (!branchId && branchId !== 0) {
+      return sendErrorResponse(res, 400, 'Branch ID is required');
+    }
+
+    // Super admin dapat mengupdate booking dari semua cabang
+    // Admin cabang hanya dapat mengupdate booking dari cabangnya
+    const whereCondition = branchId === 0 
+      ? { id: bookingId } 
+      : { id: bookingId, field: { branchId } };
+
+    // Dapatkan booking yang akan diperbarui
+    const booking = await prisma.booking.findFirst({
+      where: whereCondition,
+      include: {
+        field: {
+          include: { branch: true }
+        },
+        user: true,
+        payments: true,
+      },
+    });
+
+    if (!booking) {
+      return sendErrorResponse(res, 404, 'Booking tidak ditemukan atau Anda tidak memiliki akses');
+    }
+
+    // Perbarui status booking
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status },
+      include: {
+        field: {
+          include: { branch: true }
+        },
+        user: true,
+        payments: true,
+      },
+    });
+
+    // Tambahkan log aktivitas
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user?.id || 0,
+        action: 'BOOKING_STATUS_UPDATED',
+        details: `Admin mengubah status booking #${bookingId} menjadi ${status}`,
+        ipAddress: req.ip || undefined,
+      }
+    });
+
+    // Invalidate cache
+    await invalidateBookingCache(bookingId, booking.fieldId, booking.field?.branch?.id || 0, booking.userId);
+
+    // Emit event untuk notifikasi real-time
+    emitBookingEvents('booking:status-updated', { booking: updatedBooking });
+
+    res.status(200).json({
+      status: true,
+      message: 'Status booking berhasil diperbarui',
+      data: updatedBooking,
+    });
+  } catch (error) {
+    console.error('Error updating booking status:', error);
+    sendErrorResponse(res, 500, 'Kesalahan Server Internal');
+  }
+};

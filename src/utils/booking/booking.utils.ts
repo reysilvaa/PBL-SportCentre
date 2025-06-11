@@ -1,8 +1,7 @@
 import { Response } from 'express';
 import prisma from '../../config/services/database';
-import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field, Role } from '../../types';
+import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field, Role, BookingStatus } from '../../types';
 import { isFieldAvailable } from './checkAvailability.utils';
-import { bookingCleanupQueue } from '../../config/services/queue';
 import { midtrans } from '../../config/services/midtrans';
 import { emitBookingEvents } from '../../socket-handlers/booking.socket';
 import { config } from '../../config/app/env';
@@ -167,7 +166,7 @@ export const processMidtransPayment = async (
   paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD,
   isCompletion: boolean = false
 ): Promise<{ transaction: any; expiryDate: Date }> => {
-  const expiryMinutes = 5; //   
+  const expiryMinutes = 4; //   
 
   // Pastikan paymentMethod selalu memiliki nilai valid
   const safePaymentMethod = paymentMethod || PaymentMethod.CREDIT_CARD;
@@ -313,17 +312,17 @@ export const processMidtransPayment = async (
 /**
  * Function to mark expired pending bookings as failed
  * Bookings that haven't been paid within 5 minutes after Midtrans confirmation will be marked as failed
+ * Also handles payments that don't have expiresDate set (no webhook received)
  */
 export const cleanupPendingBookings = async (): Promise<void> => {
   try {
     // Find payments with 'pending' status that have passed their expiration date
     const currentTime = new Date();
 
-    console.log('🧹 Processing expired pending bookings at:', currentTime);
+    console.log('🧹 Processing expired pending bookings at:', currentTime.toISOString());
 
-    // Find expired pending payments
-    // Only process ones that have an expiresDate set (meaning they've received Midtrans notification)
-    const expiredPayments = await prisma.payment.findMany({
+    // Cari pembayaran yang sudah expired berdasarkan expiresDate
+    const expiredWithDatePayments = await prisma.payment.findMany({
       where: {
         status: PaymentStatus.PENDING,
         expiresDate: {
@@ -341,7 +340,46 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       },
     });
 
-    console.log(`🔍 Found ${expiredPayments.length} expired pending payments`);
+    // Log detail pembayaran yang sudah expired
+    console.log(`🔍 Pembayaran dengan expiresDate yang sudah lewat: ${expiredWithDatePayments.length}`);
+    if (expiredWithDatePayments.length > 0) {
+      expiredWithDatePayments.forEach(payment => {
+        console.log(`📌 Payment #${payment.id}, Booking #${payment.bookingId}, Status: ${payment.status}, expiresDate: ${payment.expiresDate?.toISOString()}, currentTime: ${currentTime.toISOString()}`);
+      });
+    }
+
+    // Cari pembayaran yang tidak memiliki expiresDate tapi sudah dibuat lebih dari 30 menit yang lalu
+    const thirtyMinutesAgo = new Date(currentTime.getTime() - 30 * 60 * 1000);
+    const expiredWithoutDatePayments = await prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.PENDING,
+        expiresDate: null, // Pembayaran tanpa expiresDate
+        createdAt: {
+          lt: thirtyMinutesAgo, // Dibuat lebih dari 30 menit yang lalu
+        },
+      },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: true,
+          },
+        },
+      },
+    });
+
+    // Log detail pembayaran tanpa expiresDate yang sudah lama
+    console.log(`🔍 Pembayaran tanpa expiresDate yang sudah lama: ${expiredWithoutDatePayments.length}`);
+    if (expiredWithoutDatePayments.length > 0) {
+      expiredWithoutDatePayments.forEach(payment => {
+        console.log(`📌 Payment #${payment.id}, Booking #${payment.bookingId}, Status: ${payment.status}, createdAt: ${payment.createdAt.toISOString()}, thirtyMinutesAgo: ${thirtyMinutesAgo.toISOString()}`);
+      });
+    }
+
+    // Gabungkan kedua array pembayaran yang expired
+    const expiredPayments = [...expiredWithDatePayments, ...expiredWithoutDatePayments];
+
+    console.log(`🔍 Found ${expiredPayments.length} expired pending payments (${expiredWithDatePayments.length} with date, ${expiredWithoutDatePayments.length} without date)`);
 
     // Update the payment status to 'failed' instead of deleting
     for (const payment of expiredPayments) {
@@ -355,6 +393,20 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       console.log(
         `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`
       );
+
+      // Update booking status to 'cancelled' when payment status is 'failed'
+      if (payment.booking) {
+        await prisma.booking.update({
+          where: { id: payment.booking.id },
+          data: {
+            status: BookingStatus.CANCELLED,
+          },
+        });
+
+        console.log(
+          `🔄 Updated booking #${payment.booking.id} status to 'cancelled' due to failed payment`
+        );
+      }
 
       // Emit event for booking cancellation to update field availability
       if (payment.booking) {
@@ -377,6 +429,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
           userId: booking.userId,
           branchId: booking.field?.branchId,
           paymentStatus: 'failed',
+          bookingStatus: 'cancelled',
         });
 
         console.log(
@@ -385,51 +438,72 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       }
     }
 
+    // Cari pembayaran dengan status 'failed' yang booking-nya belum 'cancelled'
+    const failedPayments = await prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.FAILED,
+        booking: {
+          status: {
+            not: BookingStatus.CANCELLED
+          }
+        }
+      },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: true,
+          },
+        },
+      },
+    });
+
+    console.log(`🔍 Found ${failedPayments.length} failed payments with bookings not yet cancelled`);
+
+    // Update booking status to 'cancelled' for all bookings with failed payments
+    for (const payment of failedPayments) {
+      if (payment.booking) {
+        await prisma.booking.update({
+          where: { id: payment.booking.id },
+          data: {
+            status: BookingStatus.CANCELLED,
+          },
+        });
+
+        console.log(
+          `🔄 Updated booking #${payment.booking.id} status to 'cancelled' due to failed payment`
+        );
+
+        // Emit event to notify system that booking is canceled
+        emitBookingEvents('cancel-booking', {
+          bookingId: payment.booking.id,
+          fieldId: payment.booking.fieldId,
+          userId: payment.booking.userId,
+          branchId: payment.booking.field?.branchId,
+          bookingDate: payment.booking.bookingDate,
+          startTime: payment.booking.startTime,
+          endTime: payment.booking.endTime,
+        });
+
+        // Emit notification to user
+        emitBookingEvents('booking:updated', {
+          booking: payment.booking,
+          userId: payment.booking.userId,
+          branchId: payment.booking.field?.branchId,
+          paymentStatus: 'failed',
+          bookingStatus: 'cancelled',
+        });
+
+        console.log(
+          `🔔 Notified system about canceled booking #${payment.booking.id} due to failed payment`
+        );
+      }
+    }
+
     console.log('✅ Expired booking processing completed');
   } catch (error) {
     console.error('❌ Error in cleanupPendingBookings:', error);
   }
-};
-
-/**
- * Setup processor for booking cleanup job
- */
-export const setupBookingCleanupProcessor = (): void => {
-  // Proses job
-  bookingCleanupQueue.process(async () => {
-    console.log('⏰ Running automatic expired booking processing');
-    await cleanupPendingBookings();
-    return { success: true, timestamp: new Date() };
-  });
-
-  console.log('✅ Booking cleanup processor didaftarkan');
-};
-
-/**
- * Start booking cleanup job that runs every 1 minute
- */
-export const startBookingCleanupJob = (): void => {
-  // Menjalankan proses cleanup segera
-  bookingCleanupQueue.add({}, { jobId: 'initial-cleanup' });
-
-  // Tambahkan recurring job (setiap 1 menit)
-  bookingCleanupQueue.add(
-    {},
-    {
-      jobId: 'cleanup-recurring',
-      repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
-    }
-  );
-
-  console.log('🚀 Expired booking cleanup Bull Queue job started');
-};
-
-/**
- * Stop the booking cleanup job
- */
-export const stopBookingCleanupJob = async (): Promise<void> => {
-  await bookingCleanupQueue.close();
-  console.log('🛑 Expired booking cleanup Bull Queue job stopped');
 };
 
 /**
@@ -492,6 +566,144 @@ export const calculateTotalPayments = async (bookingId: number): Promise<number>
   });
   
   return totalAmount;
+};
+
+/**
+ * Function to mark completed bookings (past endtime) as completed
+ * Bookings that have passed their endtime will be marked with a completed status
+ */
+export const updateCompletedBookings = async (): Promise<void> => {
+  try {
+    // Find bookings with endtime that has passed
+    const currentTime = new Date();
+
+    console.log('🧹 Processing completed bookings at:', currentTime);
+
+    // Find bookings with endtime in the past, status still active, and payment status PAID or DP_PAID
+    const completedBookings = await prisma.booking.findMany({
+      where: {
+        endTime: {
+          lt: currentTime, // Only process bookings with endTime in the past
+        },
+        status: BookingStatus.ACTIVE, // Only process active bookings
+        payments: {
+          some: {
+            status: {
+              in: [PaymentStatus.PAID, PaymentStatus.DP_PAID]
+            }
+          }
+        },
+      },
+      include: {
+        field: {
+          include: {
+            branch: true
+          }
+        },
+        user: true,
+        payments: true,
+      },
+    });
+
+    console.log(`🔍 Found ${completedBookings.length} completed bookings`);
+
+    // Update the booking status to 'completed'
+    for (const booking of completedBookings) {
+      // Update booking status to completed
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: 'completed',
+        },
+      });
+
+      console.log(
+        `🔄 Updated booking #${booking.id} status to 'completed'`
+      );
+
+      // Emit event to notify system that booking is completed
+      emitBookingEvents('booking:updated', {
+        booking: booking,
+        userId: booking.userId,
+        branchId: booking.field?.branchId,
+        bookingStatus: 'completed',
+      });
+
+      console.log(
+        `🔔 Notified system about completed booking #${booking.id}`
+      );
+    }
+
+    console.log('✅ Completed booking processing completed');
+  } catch (error) {
+    console.error('❌ Error in updateCompletedBookings:', error);
+  }
+};
+
+/**
+ * Function to update booking status to active when starttime is reached
+ * Bookings that have reached their starttime will be marked with an active status
+ */
+export const updateActiveBookings = async (): Promise<void> => {
+  try {
+    // Find bookings with starttime that has been reached but not yet completed
+    const currentTime = new Date();
+
+    console.log('🔄 Processing active bookings at:', currentTime);
+
+    // Find bookings with startTime in the past, endTime in the future, and status not yet active
+    const bookingsToActivate = await prisma.booking.findMany({
+      where: {
+        startTime: {
+          lt: currentTime, // startTime in the past
+        },
+        endTime: {
+          gt: currentTime, // endTime in the future
+        },
+        status: {
+          not: BookingStatus.ACTIVE, // Exclude already active bookings
+        },
+        payments: {
+          some: {
+            status: {
+              in: [PaymentStatus.PAID, PaymentStatus.DP_PAID]
+            }
+          }
+        },
+      },
+      include: {
+        field: {
+          include: {
+            branch: true
+          }
+        },
+        payments: true,
+      },
+    });
+
+    console.log(`🔍 Found ${bookingsToActivate.length} bookings that should be activated`);
+
+    // Update the booking status to 'active'
+    for (const booking of bookingsToActivate) {
+      // Skip if booking is cancelled
+      if (booking.status === BookingStatus.CANCELLED) {
+        continue;
+      }
+      
+      // Update booking status to active
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: BookingStatus.ACTIVE },
+      });
+
+      console.log(`🔄 Updated booking #${booking.id} status to active`);
+      
+      // Emit event for real-time notifications
+      emitBookingEvents('booking:status-updated', { booking });
+    }
+  } catch (error) {
+    console.error('Error updating active bookings:', error);
+  }
 };
 
 // Export emitBookingEvents for use elsewhere

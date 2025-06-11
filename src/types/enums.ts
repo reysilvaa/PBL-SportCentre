@@ -18,6 +18,11 @@ export enum FieldStatus {
   CLOSED = 'closed',
 }
 
+export enum BookingStatus {
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+}
 
 export enum PaymentStatus {
   PENDING = 'pending',
