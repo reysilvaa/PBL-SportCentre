@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import prisma from '../../config/services/database';
-import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field, Role } from '../../types';
+import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field, Role, BookingStatus } from '../../types';
 import { isFieldAvailable } from './checkAvailability.utils';
 import { bookingCleanupQueue } from '../../config/services/queue';
 import { midtrans } from '../../config/services/midtrans';
@@ -492,6 +492,111 @@ export const calculateTotalPayments = async (bookingId: number): Promise<number>
   });
   
   return totalAmount;
+};
+
+/**
+ * Function to mark completed bookings (past endtime) as completed
+ * Bookings that have passed their endtime will be marked with a completed status
+ */
+export const updateCompletedBookings = async (): Promise<void> => {
+  try {
+    // Find bookings with endtime that has passed
+    const currentTime = new Date();
+
+    console.log('🧹 Processing completed bookings at:', currentTime);
+
+    // Find bookings with endtime in the past, status still active, and payment status PAID or DP_PAID
+    const completedBookings = await prisma.booking.findMany({
+      where: {
+        endTime: {
+          lt: currentTime, // Only process bookings with endTime in the past
+        },
+        status: BookingStatus.ACTIVE, // Only process active bookings
+        payments: {
+          some: {
+            status: {
+              in: [PaymentStatus.PAID, PaymentStatus.DP_PAID]
+            }
+          }
+        },
+      },
+      include: {
+        field: {
+          include: {
+            branch: true
+          }
+        },
+        user: true,
+        payments: true,
+      },
+    });
+
+    console.log(`🔍 Found ${completedBookings.length} completed bookings`);
+
+    // Update the booking status to 'completed'
+    for (const booking of completedBookings) {
+      // Update booking status to completed
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: 'completed',
+        },
+      });
+
+      console.log(
+        `🔄 Updated booking #${booking.id} status to 'completed'`
+      );
+
+      // Emit event to notify system that booking is completed
+      emitBookingEvents('booking:updated', {
+        booking: booking,
+        userId: booking.userId,
+        branchId: booking.field?.branchId,
+        bookingStatus: 'completed',
+      });
+
+      console.log(
+        `🔔 Notified system about completed booking #${booking.id}`
+      );
+    }
+
+    console.log('✅ Completed booking processing completed');
+  } catch (error) {
+    console.error('❌ Error in updateCompletedBookings:', error);
+  }
+};
+
+/**
+ * Setup processor for completed booking job
+ */
+export const setupCompletedBookingProcessor = (): void => {
+  // Proses job
+  bookingCleanupQueue.process('completed-booking', async () => {
+    console.log('⏰ Running automatic completed booking processing');
+    await updateCompletedBookings();
+    return { success: true, timestamp: new Date() };
+  });
+
+  console.log('✅ Completed booking processor didaftarkan');
+};
+
+/**
+ * Start completed booking job that runs every 1 minute
+ */
+export const startCompletedBookingJob = (): void => {
+  // Menjalankan proses completed booking segera
+  bookingCleanupQueue.add({}, { jobId: 'initial-completed-booking' });
+
+  // Tambahkan recurring job (setiap 1 menit)
+  bookingCleanupQueue.add(
+    {},
+    {
+      jobId: 'completed-booking-recurring',
+      repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
+    }
+  );
+
+  console.log('🚀 Completed booking Bull Queue job started');
 };
 
 // Export emitBookingEvents for use elsewhere

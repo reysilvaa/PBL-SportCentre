@@ -19,6 +19,8 @@ import { setupSwagger } from '../swagger/swagger.config';
 import {
   startBookingCleanupJob,
   setupBookingCleanupProcessor,
+  setupCompletedBookingProcessor,
+  startCompletedBookingJob,
 } from '../../utils/booking/booking.utils';
 import { initializeCloudinary } from '../services/cloudinary';
 import { ensureConnection } from '../services/redis';
@@ -98,6 +100,9 @@ export const setupQueueProcessors = (): void => {
 
     // Setup processor untuk Booking Cleanup queue
     setupBookingCleanupProcessor();
+    
+    // Setup processor untuk Completed Booking queue
+    setupCompletedBookingProcessor();
 
     console.log('✅ Bull Queue processors telah didaftarkan');
   } catch (error) {
@@ -115,6 +120,9 @@ export const startBackgroundJobs = (): void => {
 
     // Mulai job untuk membersihkan booking yang kedaluwarsa
     startBookingCleanupJob();
+    
+    // Mulai job untuk menandai booking yang sudah selesai
+    startCompletedBookingJob();
 
     console.log('🚀 Background jobs dimulai dengan Bull Queue');
   } catch (error) {

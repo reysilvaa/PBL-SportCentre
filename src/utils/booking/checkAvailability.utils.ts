@@ -1,5 +1,6 @@
 import prisma from '../../config/services/database';
 import { generateHourlyTimeSlots } from './generateHourlyTimeSlots.utils';
+import { BookingStatus } from '../../types/enums';
 
 // Types
 type TimeSlot = { start: Date; end: Date };
@@ -54,6 +55,8 @@ const getValidBookings = async (fieldId: number, date: Date, timeSlot?: TimeSlot
       gte: startOfDay,
       lte: endOfDay,
     },
+    // Hanya cek booking dengan status ACTIVE
+    status: BookingStatus.ACTIVE,
     payments: {
       some: {
         OR: [
@@ -167,7 +170,7 @@ export const isFieldAvailable = async (
     console.log('⚠️ Detail booking yang overlapping:');
     overlappingBookings.forEach((booking) => {
       console.log(
-        `  - Booking #${booking.id}, status: ${booking.payments[0]?.status}, expires: ${booking.payments[0]?.expiresDate ? booking.payments[0].expiresDate : 'No expiry'}`
+        `  - Booking #${booking.id}, status: ${booking.status}, payment: ${booking.payments[0]?.status}, expires: ${booking.payments[0]?.expiresDate ? booking.payments[0].expiresDate : 'No expiry'}`
       );
       console.log(`    Time (UTC): ${booking.startTime.toISOString()} - ${booking.endTime.toISOString()}`);
     });
@@ -185,9 +188,6 @@ export const getAllFieldsAvailability = async (selectedDate?: string): Promise<F
   
   // Set ke awal hari
   date.setHours(0, 0, 0, 0);
-  
-  // console.log('🔍 Checking availability for date:', date.toISOString().split('T')[0]);
-
   const hourlyTimeSlots = generateHourlyTimeSlots(date);
   const fields = await prisma.field.findMany({
     include: { branch: true },

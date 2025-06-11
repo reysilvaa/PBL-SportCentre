@@ -102,11 +102,18 @@ model Booking {
   bookingDate DateTime
   startTime   DateTime
   endTime     DateTime
+  status      BookingStatus @default(active)
   createdAt   DateTime @default(now())
 
   payments Payment[]
 
   PromoUsages PromotionUsage[]
+}
+
+enum BookingStatus {
+  active
+  completed
+  cancelled
 }
 
 enum PaymentStatus {
