@@ -108,15 +108,29 @@ export const checkRedisAndSetupQueues = async (): Promise<void> => {
   try {
     // Cek koneksi Redis dengan ping
     const isConnected = await ensureConnection.isConnected();
+    setupQueueProcessors();
     
     if (isConnected) {
       console.log(`✅ Redis terhubung ke ${config.redis.url}`);
       
       // Setup Bull Queue processors
-      setupQueueProcessors();
       
       // Mulai Bull Queue jobs
+      console.log('🚀 Memulai semua background jobs...');
       await startAllBackgroundJobs();
+      console.log('✅ Semua background jobs berhasil dimulai');
+      
+      // Periksa apakah jobs terdaftar
+      try {
+        const cleanupJobs = await bookingCleanupQueue.getJobs();
+        const completedJobs = await completedBookingQueue.getJobs();
+        const activeJobs = await activeBookingQueue.getJobs();
+        const fieldAvailJobs = await fieldAvailabilityQueue.getJobs();
+        
+        console.log(`📊 Job stats: Cleanup: ${cleanupJobs.length}, Completed: ${completedJobs.length}, Active: ${activeJobs.length}, Field: ${fieldAvailJobs.length}`);
+      } catch (error) {
+        console.error('❌ Error saat memeriksa jobs:', error);
+      }
     } else {
       console.warn('⚠️ Redis tidak terhubung, menonaktifkan background jobs');
       console.warn('⚠️ Beberapa fitur mungkin tidak berfungsi dengan baik tanpa background jobs');

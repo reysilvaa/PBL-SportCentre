@@ -25,7 +25,6 @@ export const corsConfig = (): CorsOptions => {
     origin: (origin, callback) => {
       // Izinkan request tanpa origin (seperti aplikasi mobile atau Postman)
       if (!origin) {
-        console.log('CORS: Request without origin allowed');
         return callback(null, true);
       }
 

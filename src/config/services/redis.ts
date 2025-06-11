@@ -15,7 +15,7 @@ export const NAMESPACE = {
   AVAILABILITY: 'field-availability-updates',
   ACTIVE: 'active-booking-queue',
   COMPLETED: 'completed-booking-queue',
-  BULL: 'bull' 
+  QUEUE: 'bull' 
 };
 
 export const KEYS = {
@@ -32,7 +32,7 @@ export const KEYS = {
     AVAILABILITY: `${NAMESPACE.PREFIX}:${NAMESPACE.AVAILABILITY}`,
     ACTIVE: `${NAMESPACE.PREFIX}:${NAMESPACE.ACTIVE}`,
     COMPLETED: `${NAMESPACE.PREFIX}:${NAMESPACE.COMPLETED}`,
-    BULL: `${NAMESPACE.PREFIX}:${NAMESPACE.BULL}` // Key khusus untuk Bull Queue
+    BULL: `${NAMESPACE.PREFIX}:${NAMESPACE.QUEUE}` // Key khusus untuk Bull Queue
   },
   
   CACHE: {

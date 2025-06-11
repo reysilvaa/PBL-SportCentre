@@ -4,7 +4,7 @@ import { KEYS, NAMESPACE, isRedissTLS } from './redis';
 
 // Log konfigurasi Redis untuk debugging
 console.log('Redis config for BullMQ Queue:', JSON.stringify(config.redis));
-console.log('Redis namespace for BullMQ:', NAMESPACE.BULL);
+console.log('Redis namespace for BullMQ:', NAMESPACE.QUEUE);
 console.log('Redis key for BullMQ:', KEYS.QUEUE.BULL);
 
 /**
@@ -59,25 +59,25 @@ export const connection = {
  */
 export const defaultQueueOptions = {
   connection,
-  prefix: 'bullmq',
+  prefix: NAMESPACE.QUEUE,
   defaultJobOptions: {
     attempts: 3,
-    removeOnComplete: true,
+    removeOnComplete: false,
     removeOnFail: false,
   }
 };
 
 // Queue untuk membersihkan booking yang kedaluwarsa
-export const bookingCleanupQueue = new Queue('cleanup-expired-bookings', defaultQueueOptions);
+export const bookingCleanupQueue = new Queue(NAMESPACE.CLEANUP, defaultQueueOptions);
 
 // Queue untuk memperbarui ketersediaan lapangan secara real-time
-export const fieldAvailabilityQueue = new Queue('field-availability-updates', defaultQueueOptions);
+export const fieldAvailabilityQueue = new Queue(NAMESPACE.AVAILABILITY, defaultQueueOptions);
 
 // Queue untuk menandai booking yang sudah selesai
-export const completedBookingQueue = new Queue('completed-booking-queue', defaultQueueOptions);
+export const completedBookingQueue = new Queue(NAMESPACE.COMPLETED, defaultQueueOptions);
 
 // Queue untuk menandai booking yang aktif
-export const activeBookingQueue = new Queue('active-booking-queue', defaultQueueOptions);
+export const activeBookingQueue = new Queue(NAMESPACE.ACTIVE, defaultQueueOptions);
 
 /**
  * Setup event listeners untuk monitoring queue
@@ -101,116 +101,55 @@ export const setupQueueEvents = (queueName: string) => {
 };
 
 // Setup event listeners untuk semua queue
-const bookingCleanupEvents = setupQueueEvents('cleanup-expired-bookings');
-const fieldAvailabilityEvents = setupQueueEvents('field-availability-updates');
-const completedBookingEvents = setupQueueEvents('completed-booking-queue');
-const activeBookingEvents = setupQueueEvents('active-booking-queue');
+const bookingCleanupEvents = setupQueueEvents(NAMESPACE.CLEANUP);
+const fieldAvailabilityEvents = setupQueueEvents(NAMESPACE.AVAILABILITY);
+const completedBookingEvents = setupQueueEvents(NAMESPACE.COMPLETED);
+const activeBookingEvents = setupQueueEvents(NAMESPACE.ACTIVE);
 
-/**
- * Setup processor untuk semua queue
- */
+
 export const setupAllProcessors = (
   cleanupHandler: () => Promise<void>,
   completedBookingHandler: () => Promise<void>,
   activeBookingHandler: () => Promise<void>,
   fieldAvailabilityHandler: () => Promise<any>
 ) => {
-  setupBookingCleanupProcessor(cleanupHandler);
-  setupCompletedBookingProcessor(completedBookingHandler);
-  setupActiveBookingProcessor(activeBookingHandler);
-  setupFieldAvailabilityProcessor(fieldAvailabilityHandler);
+  // Mapping nama queue dengan handler function
+  const queueHandlers = {
+    [NAMESPACE.CLEANUP]: cleanupHandler,
+    [NAMESPACE.COMPLETED]: completedBookingHandler,
+    [NAMESPACE.ACTIVE]: activeBookingHandler,
+    [NAMESPACE.AVAILABILITY]: fieldAvailabilityHandler
+  };
+  
+  Object.entries(queueHandlers).forEach(([queueName, handler]) => {
+    setupGenericProcessor(queueName, handler);
+  });
 };
 
 /**
- * Setup processor untuk booking cleanup queue
+ * Setup processor generik untuk semua queue
  */
-export const setupBookingCleanupProcessor = (handler: () => Promise<void>): void => {
+export const setupGenericProcessor = (queueName: string, handler: () => Promise<any>): void => {
   try {
     // Proses job dengan Worker
-    const worker = new Worker('cleanup-expired-bookings', async () => {
-      console.log('⏰ Running automatic expired booking processing');
+    const worker = new Worker(queueName, async (job) => {
+      console.log(`⏰ Running automatic job processing for ${queueName}, job ID: ${job.id}`);
       await handler();
+      console.log(`✅ Completed job processing for ${queueName}, job ID: ${job.id}`);
       return { success: true, timestamp: new Date() };
     }, { connection });
 
-    worker.on('error', (error) => {
-      console.error('❌ Error dalam booking cleanup worker:', error);
+    worker.on('completed', (job) => {
+      console.log(`✅ Job selesai di ${queueName} worker: ${job.id}`);
     });
 
-    console.log('✅ Booking cleanup processor didaftarkan');
-  } catch (error) {
-    console.error('❌ Error saat setup booking cleanup processor:', error);
-  }
-};
-
-/**
- * Setup processor untuk completed booking queue
- */
-export const setupCompletedBookingProcessor = (handler: () => Promise<void>): void => {
-  try {
-    // Proses job dengan Worker
-    const worker = new Worker('completed-booking-queue', async () => {
-      console.log('⏰ Running automatic completed booking processing');
-      await handler();
-      return { success: true, timestamp: new Date() };
-    }, { connection });
-
     worker.on('error', (error) => {
-      console.error('❌ Error dalam completed booking worker:', error);
+      console.error(`❌ Error dalam ${queueName} worker:`, error);
     });
 
-    console.log('✅ Completed booking processor didaftarkan');
+    console.log(`✅ ${queueName} processor didaftarkan`);
   } catch (error) {
-    console.error('❌ Error saat setup completed booking processor:', error);
-  }
-};
-
-/**
- * Setup processor untuk active booking queue
- */
-export const setupActiveBookingProcessor = (handler: () => Promise<void>): void => {
-  try {
-    // Proses job dengan Worker
-    const worker = new Worker('active-booking-queue', async () => {
-      console.log('⏰ Running automatic active booking processing');
-      await handler();
-      return { success: true };
-    }, { connection });
-
-    worker.on('error', (error) => {
-      console.error('❌ Error dalam active booking worker:', error);
-    });
-
-    console.log('✅ Active booking processor setup complete');
-  } catch (error) {
-    console.error('Error setting up active booking processor:', error);
-  }
-};
-
-/**
- * Setup processor untuk field availability queue
- */
-export const setupFieldAvailabilityProcessor = (handler: () => Promise<any>): void => {
-  try {
-    // Proses job dengan Worker
-    const worker = new Worker('field-availability-updates', async () => {
-      try {
-        await handler();
-        console.log('🔄 Field availability update processed');
-        return { success: true, timestamp: new Date() };
-      } catch (error) {
-        console.error('Error in scheduled field availability update:', error);
-        throw error;
-      }
-    }, { connection });
-
-    worker.on('error', (error) => {
-      console.error('❌ Error dalam field availability worker:', error);
-    });
-
-    console.log('✅ Field availability processor didaftarkan');
-  } catch (error) {
-    console.error('❌ Error saat setup field availability processor:', error);
+    console.error(`❌ Error saat setup ${queueName} processor:`, error);
   }
 };
 
@@ -221,7 +160,7 @@ export const startAllBackgroundJobs = async (): Promise<void> => {
   await startBookingCleanupJob();
   await startCompletedBookingJob();
   await startActiveBookingJob();
-  startFieldAvailabilityJob();
+  await startFieldAvailabilityJob();
 };
 
 /**
@@ -254,8 +193,12 @@ export const startBookingCleanupJob = async (): Promise<void> => {
     // Cek apakah job terdaftar di Redis
     const repeatableJobs = await bookingCleanupQueue.getRepeatableJobs();
     console.log(`Repeatable jobs in cleanup queue: ${JSON.stringify(repeatableJobs)}`);
+    
+    // Cek semua job yang terdaftar
+    const allJobs = await bookingCleanupQueue.getJobs();
+    console.log(`Total jobs in cleanup queue: ${allJobs.length}`);
 
-    console.log('🚀 Expired booking cleanup BullMQ Queue job started - runs every minute');
+    console.log(`🚀 ${NAMESPACE.CLEANUP} BullMQ Queue job started - runs every minute`);
   } catch (error) {
     console.error('❌ Error starting booking cleanup job:', error);
   }
@@ -292,7 +235,7 @@ export const startCompletedBookingJob = async (): Promise<void> => {
     const repeatableJobs = await completedBookingQueue.getRepeatableJobs();
     console.log(`Repeatable jobs in completed booking queue: ${JSON.stringify(repeatableJobs)}`);
 
-    console.log('🚀 Completed booking BullMQ Queue job started - runs every minute');
+    console.log(`🚀 ${NAMESPACE.COMPLETED} BullMQ Queue job started - runs every minute`);
   } catch (error) {
     console.error('❌ Error starting completed booking job:', error);
   }
@@ -329,7 +272,7 @@ export const startActiveBookingJob = async (): Promise<void> => {
     const repeatableJobs = await activeBookingQueue.getRepeatableJobs();
     console.log(`Repeatable jobs in active booking queue: ${JSON.stringify(repeatableJobs)}`);
 
-    console.log('🚀 Active booking BullMQ Queue job started - runs every minute');
+    console.log(`🚀 ${NAMESPACE.ACTIVE} BullMQ Queue job started - runs every minute`);
   } catch (error) {
     console.error('❌ Error starting active booking job:', error);
   }
@@ -356,7 +299,7 @@ export const startFieldAvailabilityJob = (): void => {
       }
     );
 
-    console.log('🚀 Field availability BullMQ Queue job started - runs every minute');
+    console.log(`🚀 ${NAMESPACE.AVAILABILITY} BullMQ Queue job started - runs every minute`);
   } catch (error) {
     console.error('❌ Error starting field availability job:', error);
   }
@@ -420,7 +363,7 @@ export const stopFieldAvailabilityJob = async (): Promise<void> => {
   }
 };
 
-console.info(`🚀 BullMQ Queue siap digunakan dengan Redis (${isRedissTLS() ? 'TLS' : 'non-TLS'}) - Prefix: bullmq`);
+console.info(`🚀 BullMQ Queue siap digunakan dengan Redis (${isRedissTLS() ? 'TLS' : 'non-TLS'}) - Prefix: ${NAMESPACE.QUEUE}`);
 
 // Export event listeners untuk digunakan di tempat lain jika diperlukan
 export const queueEvents = {
