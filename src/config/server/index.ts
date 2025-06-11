@@ -10,24 +10,28 @@ import { setupSecurityMiddlewares } from '../server/security';
 import { setupMiddlewares } from '../server/middleware';
 import { initializeSocketIO } from '../server/socket';
 import { initializeAllSocketHandlers } from '../../socket-handlers';
-import {
-  startFieldAvailabilityUpdates,
-  setupFieldAvailabilityProcessor,
-} from '../../controllers/availability.controller';
+import { handleFieldAvailabilityUpdate } from '../../controllers/availability.controller';
 import { logServerStartup, setupPeriodicHealthCheck } from './monitoring';
 import { setupSwagger } from '../swagger/swagger.config';
 import {
-  startBookingCleanupJob,
-  setupBookingCleanupProcessor,
-  setupCompletedBookingProcessor,
-  startCompletedBookingJob,
-  setupActiveBookingProcessor,
-  startActiveBookingJob,
+  handleBookingCleanup,
+  handleCompletedBooking,
+  handleActiveBooking
 } from '../../utils/booking/booking-scheduler.utils';
+import {
+  bookingCleanupQueue,
+  completedBookingQueue,
+  activeBookingQueue,
+  fieldAvailabilityQueue,
+  setupAllProcessors,
+  startAllBackgroundJobs
+} from '../services/queue';
 import { initializeCloudinary } from '../services/cloudinary';
 import { ensureConnection } from '../services/redis';
 import { config } from '../app/env';
-
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 
 /**
  * Inisialisasi semua komponen sebelum server dimulai
@@ -38,10 +42,13 @@ export const initializeApplication = (app: Application): http.Server => {
 
   // Inisialisasi optimasi memori
   setupMemoryOptimization();
-
+  
   // Buat HTTP server
   const server = http.createServer(app);
-
+  
+  checkRedisAndSetupQueues().catch(error => {
+    console.error('❌ Error saat inisialisasi Bull Queue:', error);
+  });
   // Setup security middlewares
   setupSecurityMiddlewares(app);
 
@@ -59,14 +66,39 @@ export const initializeApplication = (app: Application): http.Server => {
 
   // Initialize all socket handlers
   initializeAllSocketHandlers();
+  
+  // Setup Bull Board untuk monitoring queue
+  setupBullBoard(app);
 
   // Cek koneksi Redis sebelum setup Bull Queue
   // Jalankan secara async, tapi tidak perlu menunggu hasilnya
-  checkRedisAndSetupQueues().catch(error => {
-    console.error('❌ Error saat inisialisasi Bull Queue:', error);
-  });
 
   return server;
+};
+
+/**
+ * Setup Bull Board untuk monitoring queue
+ */
+export const setupBullBoard = (app: Application): void => {
+  try {
+    const serverAdapter = new ExpressAdapter();
+    serverAdapter.setBasePath('/admin/queues');
+
+    createBullBoard({
+      queues: [
+        new BullMQAdapter(completedBookingQueue),
+        new BullMQAdapter(activeBookingQueue),
+        new BullMQAdapter(bookingCleanupQueue),
+        new BullMQAdapter(fieldAvailabilityQueue)
+      ],
+      serverAdapter
+    });
+
+    app.use('/admin/queues', serverAdapter.getRouter());
+    console.log('✅ Bull Board monitoring UI tersedia di /admin/queues');
+  } catch (error) {
+    console.error('❌ Error saat setup Bull Board:', error);
+  }
 };
 
 /**
@@ -84,7 +116,7 @@ export const checkRedisAndSetupQueues = async (): Promise<void> => {
       setupQueueProcessors();
       
       // Mulai Bull Queue jobs
-      await startBackgroundJobs();
+      await startAllBackgroundJobs();
     } else {
       console.warn('⚠️ Redis tidak terhubung, menonaktifkan background jobs');
       console.warn('⚠️ Beberapa fitur mungkin tidak berfungsi dengan baik tanpa background jobs');
@@ -100,44 +132,17 @@ export const checkRedisAndSetupQueues = async (): Promise<void> => {
  */
 export const setupQueueProcessors = (): void => {
   try {
-    // Setup processor untuk Field Availability queue
-    setupFieldAvailabilityProcessor();
+    // Setup semua processor dengan handler functions
+    setupAllProcessors(
+      handleBookingCleanup,
+      handleCompletedBooking,
+      handleActiveBooking,
+      handleFieldAvailabilityUpdate
+    );
 
-    // Setup processor untuk Booking Cleanup queue
-    setupBookingCleanupProcessor();
-    
-    // Setup processor untuk Completed Booking queue
-    setupCompletedBookingProcessor();
-
-    // Setup processor untuk Active Booking queue
-    setupActiveBookingProcessor();
-
-    console.log('✅ Bull Queue processors telah didaftarkan');
+    console.log('✅ BullMQ processors telah didaftarkan');
   } catch (error) {
-    console.error('❌ Error saat setup Bull Queue processors:', error);
-  }
-};
-
-/**
- * Memulai background jobs dengan Bull Queue
- */
-export const startBackgroundJobs = async (): Promise<void> => {
-  try {
-    // Mulai job untuk memperbarui ketersediaan lapangan
-    startFieldAvailabilityUpdates();
-
-    // Mulai job untuk membersihkan booking yang kedaluwarsa
-    await startBookingCleanupJob();
-    
-    // Mulai job untuk menandai booking yang sudah selesai
-    await startCompletedBookingJob();
-
-    // Mulai job untuk menandai booking yang aktif
-    await startActiveBookingJob();
-
-    console.log('🚀 Background jobs dimulai dengan Bull Queue');
-  } catch (error) {
-    console.error('❌ Error saat memulai background jobs:', error);
+    console.error('❌ Error saat setup BullMQ processors:', error);
   }
 };
 

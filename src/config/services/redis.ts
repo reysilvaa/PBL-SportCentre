@@ -47,14 +47,16 @@ export const KEYS = {
 console.info(`🔄 Mencoba koneksi Redis ke ${config.redis.url}`);
 
 // Determine if we're using TLS based on URL
-const isRedissTLS = config.redis.url.startsWith('rediss://');
+export function isRedissTLS(url: string = config.redis.url): boolean {
+  return url.startsWith('rediss://');
+}
 
 // Define types for our Redis client
 type RedisClient = Redis;
 let redisClient: RedisClient;
 
 // Konfigurasi Redis dengan IoRedis untuk semua jenis koneksi
-console.info(`🔒 Menggunakan IoRedis untuk koneksi ${isRedissTLS ? 'TLS (rediss://)' : 'non-TLS (redis://)'}`);
+console.info(`🔒 Menggunakan IoRedis untuk koneksi ${isRedissTLS() ? 'TLS (rediss://)' : 'non-TLS (redis://)'}`);
 redisClient = new Redis(config.redis.url, {
   maxRetriesPerRequest: null, // Penting untuk kompatibilitas dengan Bull
   retryStrategy: (times) => {
@@ -68,7 +70,7 @@ redisClient = new Redis(config.redis.url, {
   },
   connectTimeout: 10000,
   enableOfflineQueue: false,
-  tls: isRedissTLS ? { rejectUnauthorized: false } : undefined
+  tls: isRedissTLS() ? { rejectUnauthorized: false } : undefined
 });
 
 // IoRedis event handlers

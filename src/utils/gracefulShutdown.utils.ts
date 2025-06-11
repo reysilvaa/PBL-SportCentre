@@ -1,6 +1,5 @@
 import http from 'http';
-import { cleanupFieldAvailabilityUpdates } from '../controllers/availability.controller';
-import { stopBookingCleanupJob, stopActiveBookingJob, stopCompletedBookingJob } from './booking/booking-scheduler.utils';
+import { stopAllBackgroundJobs } from '../config/services/queue';
 import redisClient from '../config/services/redis';
 import prisma from '../config/services/database';
 
@@ -29,7 +28,7 @@ const handleShutdown = async (server: http.Server, signal: string): Promise<void
 
     // Hentikan Bull Queue jobs
     console.log('🔄 Menutup Bull Queue jobs...');
-    await Promise.all([stopBookingCleanupJob(), stopActiveBookingJob(), stopCompletedBookingJob(), cleanupFieldAvailabilityUpdates(),]);
+    await stopAllBackgroundJobs();
     console.log('✅ Bull Queue jobs dihentikan');
 
     // Tutup koneksi Redis
