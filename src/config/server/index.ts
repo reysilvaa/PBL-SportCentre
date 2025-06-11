@@ -61,7 +61,10 @@ export const initializeApplication = (app: Application): http.Server => {
   initializeAllSocketHandlers();
 
   // Cek koneksi Redis sebelum setup Bull Queue
-  checkRedisAndSetupQueues();
+  // Jalankan secara async, tapi tidak perlu menunggu hasilnya
+  checkRedisAndSetupQueues().catch(error => {
+    console.error('❌ Error saat inisialisasi Bull Queue:', error);
+  });
 
   return server;
 };
@@ -81,7 +84,7 @@ export const checkRedisAndSetupQueues = async (): Promise<void> => {
       setupQueueProcessors();
       
       // Mulai Bull Queue jobs
-      startBackgroundJobs();
+      await startBackgroundJobs();
     } else {
       console.warn('⚠️ Redis tidak terhubung, menonaktifkan background jobs');
       console.warn('⚠️ Beberapa fitur mungkin tidak berfungsi dengan baik tanpa background jobs');
@@ -118,19 +121,19 @@ export const setupQueueProcessors = (): void => {
 /**
  * Memulai background jobs dengan Bull Queue
  */
-export const startBackgroundJobs = (): void => {
+export const startBackgroundJobs = async (): Promise<void> => {
   try {
     // Mulai job untuk memperbarui ketersediaan lapangan
     startFieldAvailabilityUpdates();
 
     // Mulai job untuk membersihkan booking yang kedaluwarsa
-    startBookingCleanupJob();
+    await startBookingCleanupJob();
     
     // Mulai job untuk menandai booking yang sudah selesai
-    startCompletedBookingJob();
+    await startCompletedBookingJob();
 
     // Mulai job untuk menandai booking yang aktif
-    startActiveBookingJob();
+    await startActiveBookingJob();
 
     console.log('🚀 Background jobs dimulai dengan Bull Queue');
   } catch (error) {

@@ -12,7 +12,10 @@ export const NAMESPACE = {
   AUTH: 'auth',
   NOTIFICATION: 'notification',
   CLEANUP: 'cleanup-expired-bookings',
-  AVAILABILITY: 'field-availability-updates'
+  AVAILABILITY: 'field-availability-updates',
+  ACTIVE: 'active-booking-queue',
+  COMPLETED: 'completed-booking-queue',
+  BULL: 'bull' 
 };
 
 export const KEYS = {
@@ -26,7 +29,10 @@ export const KEYS = {
   
   QUEUE: {
     CLEANUP: `${NAMESPACE.PREFIX}:${NAMESPACE.CLEANUP}`,
-    AVAILABILITY: `${NAMESPACE.PREFIX}:${NAMESPACE.AVAILABILITY}`
+    AVAILABILITY: `${NAMESPACE.PREFIX}:${NAMESPACE.AVAILABILITY}`,
+    ACTIVE: `${NAMESPACE.PREFIX}:${NAMESPACE.ACTIVE}`,
+    COMPLETED: `${NAMESPACE.PREFIX}:${NAMESPACE.COMPLETED}`,
+    BULL: `${NAMESPACE.PREFIX}:${NAMESPACE.BULL}` // Key khusus untuk Bull Queue
   },
   
   CACHE: {

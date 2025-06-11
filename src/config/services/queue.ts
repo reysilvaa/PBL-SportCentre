@@ -5,6 +5,11 @@ import redisClient, { KEYS, NAMESPACE } from './redis';
 // Cek apakah menggunakan Redis TLS (rediss://)
 const isRedissTLS = config.redis.url.startsWith('rediss://');
 
+// Log konfigurasi Redis untuk debugging
+console.log('Redis config for Bull Queue:', JSON.stringify(config.redis));
+console.log('Redis namespace for Bull:', NAMESPACE.BULL);
+console.log('Redis key for Bull:', KEYS.QUEUE.BULL);
+
 // Konfigurasi Redis untuk Bull Queue menggunakan instance Redis yang sudah ada
 const redisConfig = {
   createClient: (type: string) => {
@@ -12,7 +17,7 @@ const redisConfig = {
     // Gunakan instance Redis yang sudah dibuat di redis.ts
     return redisClient;
   },
-  prefix: NAMESPACE.PREFIX || 'sportcenter',
+  prefix: KEYS.QUEUE.BULL || `${NAMESPACE.PREFIX}:${NAMESPACE.BULL}`,
   defaultJobOptions: {
     attempts: 3,
     removeOnComplete: true,
@@ -21,18 +26,10 @@ const redisConfig = {
 };
 
 // Queue untuk membersihkan booking yang kedaluwarsa
-export const bookingCleanupQueue = new Queue(NAMESPACE.CLEANUP || 'cleanup-expired-bookings', {
-  ...redisConfig,
-  // Gunakan key yang lengkap dengan namespace dan prefix
-  prefix: KEYS?.QUEUE?.CLEANUP?.replace(`:${NAMESPACE.CLEANUP || 'cleanup-expired-bookings'}`, '') || 'sportcenter'
-});
+export const bookingCleanupQueue = new Queue(NAMESPACE.CLEANUP || 'cleanup-expired-bookings', redisConfig);
 
 // Queue untuk memperbarui ketersediaan lapangan secara real-time
-export const fieldAvailabilityQueue = new Queue(NAMESPACE.AVAILABILITY || 'field-availability-updates', {
-  ...redisConfig,
-  // Gunakan key yang lengkap dengan namespace dan prefix
-  prefix: KEYS?.QUEUE?.AVAILABILITY?.replace(`:${NAMESPACE.AVAILABILITY || 'field-availability-updates'}`, '') || 'sportcenter'
-});
+export const fieldAvailabilityQueue = new Queue(NAMESPACE.AVAILABILITY || 'field-availability-updates', redisConfig);
 
 // Event listeners untuk error handling
 bookingCleanupQueue.on('error', (error) => {
