@@ -166,7 +166,7 @@ export const processMidtransPayment = async (
   paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD,
   isCompletion: boolean = false
 ): Promise<{ transaction: any; expiryDate: Date }> => {
-  const expiryMinutes = 5; //   
+  const expiryMinutes = 4; //   
 
   // Pastikan paymentMethod selalu memiliki nilai valid
   const safePaymentMethod = paymentMethod || PaymentMethod.CREDIT_CARD;
