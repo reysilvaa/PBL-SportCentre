@@ -394,6 +394,20 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         `🔄 Updated payment #${payment.id} status to 'failed' for booking #${payment.booking?.id}`
       );
 
+      // Update booking status to 'cancelled' when payment status is 'failed'
+      if (payment.booking) {
+        await prisma.booking.update({
+          where: { id: payment.booking.id },
+          data: {
+            status: BookingStatus.CANCELLED,
+          },
+        });
+
+        console.log(
+          `🔄 Updated booking #${payment.booking.id} status to 'cancelled' due to failed payment`
+        );
+      }
+
       // Emit event for booking cancellation to update field availability
       if (payment.booking) {
         const booking = payment.booking;
@@ -415,10 +429,73 @@ export const cleanupPendingBookings = async (): Promise<void> => {
           userId: booking.userId,
           branchId: booking.field?.branchId,
           paymentStatus: 'failed',
+          bookingStatus: 'cancelled',
         });
 
         console.log(
           `🔔 Notified system about canceled booking #${booking.id} due to payment expiry`
+        );
+      }
+    }
+
+    // Cari pembayaran dengan status 'failed' yang booking-nya belum 'cancelled'
+    const failedPayments = await prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.FAILED,
+        booking: {
+          status: {
+            not: BookingStatus.CANCELLED
+          }
+        }
+      },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: true,
+          },
+        },
+      },
+    });
+
+    console.log(`🔍 Found ${failedPayments.length} failed payments with bookings not yet cancelled`);
+
+    // Update booking status to 'cancelled' for all bookings with failed payments
+    for (const payment of failedPayments) {
+      if (payment.booking) {
+        await prisma.booking.update({
+          where: { id: payment.booking.id },
+          data: {
+            status: BookingStatus.CANCELLED,
+          },
+        });
+
+        console.log(
+          `🔄 Updated booking #${payment.booking.id} status to 'cancelled' due to failed payment`
+        );
+
+        // Emit event to notify system that booking is canceled
+        emitBookingEvents('cancel-booking', {
+          bookingId: payment.booking.id,
+          fieldId: payment.booking.fieldId,
+          userId: payment.booking.userId,
+          branchId: payment.booking.field?.branchId,
+          bookingDate: payment.booking.bookingDate,
+          startTime: payment.booking.startTime,
+          endTime: payment.booking.endTime,
+        });
+
+        // Emit notification to user
+        emitBookingEvents('booking:updated', {
+          booking: payment.booking,
+          userId: payment.booking.userId,
+          branchId: payment.booking.field?.branchId,
+          paymentStatus: 'failed',
+          bookingStatus: 'cancelled',
+        });
+
+        console.log(
+          `🔔 Notified system about canceled booking #${payment.booking.id} due to failed payment`
         );
       }
     }
