@@ -21,7 +21,9 @@ import {
   setupBookingCleanupProcessor,
   setupCompletedBookingProcessor,
   startCompletedBookingJob,
-} from '../../utils/booking/booking.utils';
+  setupActiveBookingProcessor,
+  startActiveBookingJob,
+} from '../../utils/booking/booking-scheduler.utils';
 import { initializeCloudinary } from '../services/cloudinary';
 import { ensureConnection } from '../services/redis';
 import { config } from '../app/env';
@@ -104,6 +106,9 @@ export const setupQueueProcessors = (): void => {
     // Setup processor untuk Completed Booking queue
     setupCompletedBookingProcessor();
 
+    // Setup processor untuk Active Booking queue
+    setupActiveBookingProcessor();
+
     console.log('✅ Bull Queue processors telah didaftarkan');
   } catch (error) {
     console.error('❌ Error saat setup Bull Queue processors:', error);
@@ -123,6 +128,9 @@ export const startBackgroundJobs = (): void => {
     
     // Mulai job untuk menandai booking yang sudah selesai
     startCompletedBookingJob();
+
+    // Mulai job untuk menandai booking yang aktif
+    startActiveBookingJob();
 
     console.log('🚀 Background jobs dimulai dengan Bull Queue');
   } catch (error) {

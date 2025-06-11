@@ -25,6 +25,7 @@ export const markPaymentAsPaid = AdminBookingController.markPaymentAsPaid;
 export const updatePaymentStatus = AdminBookingController.updatePaymentStatus;
 export const createAdminBooking = AdminBookingController.createAdminBooking;
 export const createAdminPaymentCompletion = AdminBookingController.createPaymentCompletion;
+export const updateBookingStatus = AdminBookingController.updateBookingStatus;
 
 // Export Super Admin Operations
 export const getAllBookings = SuperAdminBookingController.getAllBookings;

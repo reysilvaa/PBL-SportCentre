@@ -2,7 +2,6 @@ import { Response } from 'express';
 import prisma from '../../config/services/database';
 import { PaymentStatus, PaymentMethod, User, Booking, Payment, Field, Role, BookingStatus } from '../../types';
 import { isFieldAvailable } from './checkAvailability.utils';
-import { bookingCleanupQueue } from '../../config/services/queue';
 import { midtrans } from '../../config/services/midtrans';
 import { emitBookingEvents } from '../../socket-handlers/booking.socket';
 import { config } from '../../config/app/env';
@@ -313,6 +312,7 @@ export const processMidtransPayment = async (
 /**
  * Function to mark expired pending bookings as failed
  * Bookings that haven't been paid within 5 minutes after Midtrans confirmation will be marked as failed
+ * Also handles payments that don't have expiresDate set (no webhook received)
  */
 export const cleanupPendingBookings = async (): Promise<void> => {
   try {
@@ -321,9 +321,8 @@ export const cleanupPendingBookings = async (): Promise<void> => {
 
     console.log('🧹 Processing expired pending bookings at:', currentTime);
 
-    // Find expired pending payments
-    // Only process ones that have an expiresDate set (meaning they've received Midtrans notification)
-    const expiredPayments = await prisma.payment.findMany({
+    // Cari pembayaran yang sudah expired berdasarkan expiresDate
+    const expiredWithDatePayments = await prisma.payment.findMany({
       where: {
         status: PaymentStatus.PENDING,
         expiresDate: {
@@ -341,7 +340,30 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       },
     });
 
-    console.log(`🔍 Found ${expiredPayments.length} expired pending payments`);
+    // Cari pembayaran yang tidak memiliki expiresDate tapi sudah dibuat lebih dari 30 menit yang lalu
+    const thirtyMinutesAgo = new Date(currentTime.getTime() - 30 * 60 * 1000);
+    const expiredWithoutDatePayments = await prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.PENDING,
+        expiresDate: null, // Pembayaran tanpa expiresDate
+        createdAt: {
+          lt: thirtyMinutesAgo, // Dibuat lebih dari 30 menit yang lalu
+        },
+      },
+      include: {
+        booking: {
+          include: {
+            field: true,
+            user: true,
+          },
+        },
+      },
+    });
+
+    // Gabungkan kedua array pembayaran yang expired
+    const expiredPayments = [...expiredWithDatePayments, ...expiredWithoutDatePayments];
+
+    console.log(`🔍 Found ${expiredPayments.length} expired pending payments (${expiredWithDatePayments.length} with date, ${expiredWithoutDatePayments.length} without date)`);
 
     // Update the payment status to 'failed' instead of deleting
     for (const payment of expiredPayments) {
@@ -389,47 +411,6 @@ export const cleanupPendingBookings = async (): Promise<void> => {
   } catch (error) {
     console.error('❌ Error in cleanupPendingBookings:', error);
   }
-};
-
-/**
- * Setup processor for booking cleanup job
- */
-export const setupBookingCleanupProcessor = (): void => {
-  // Proses job
-  bookingCleanupQueue.process(async () => {
-    console.log('⏰ Running automatic expired booking processing');
-    await cleanupPendingBookings();
-    return { success: true, timestamp: new Date() };
-  });
-
-  console.log('✅ Booking cleanup processor didaftarkan');
-};
-
-/**
- * Start booking cleanup job that runs every 1 minute
- */
-export const startBookingCleanupJob = (): void => {
-  // Menjalankan proses cleanup segera
-  bookingCleanupQueue.add({}, { jobId: 'initial-cleanup' });
-
-  // Tambahkan recurring job (setiap 1 menit)
-  bookingCleanupQueue.add(
-    {},
-    {
-      jobId: 'cleanup-recurring',
-      repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
-    }
-  );
-
-  console.log('🚀 Expired booking cleanup Bull Queue job started');
-};
-
-/**
- * Stop the booking cleanup job
- */
-export const stopBookingCleanupJob = async (): Promise<void> => {
-  await bookingCleanupQueue.close();
-  console.log('🛑 Expired booking cleanup Bull Queue job stopped');
 };
 
 /**
@@ -567,36 +548,69 @@ export const updateCompletedBookings = async (): Promise<void> => {
 };
 
 /**
- * Setup processor for completed booking job
+ * Function to update booking status to active when starttime is reached
+ * Bookings that have reached their starttime will be marked with an active status
  */
-export const setupCompletedBookingProcessor = (): void => {
-  // Proses job
-  bookingCleanupQueue.process('completed-booking', async () => {
-    console.log('⏰ Running automatic completed booking processing');
-    await updateCompletedBookings();
-    return { success: true, timestamp: new Date() };
-  });
+export const updateActiveBookings = async (): Promise<void> => {
+  try {
+    // Find bookings with starttime that has been reached but not yet completed
+    const currentTime = new Date();
 
-  console.log('✅ Completed booking processor didaftarkan');
-};
+    console.log('🔄 Processing active bookings at:', currentTime);
 
-/**
- * Start completed booking job that runs every 1 minute
- */
-export const startCompletedBookingJob = (): void => {
-  // Menjalankan proses completed booking segera
-  bookingCleanupQueue.add({}, { jobId: 'initial-completed-booking' });
+    // Find bookings with startTime in the past, endTime in the future, and status not yet active
+    const bookingsToActivate = await prisma.booking.findMany({
+      where: {
+        startTime: {
+          lt: currentTime, // startTime in the past
+        },
+        endTime: {
+          gt: currentTime, // endTime in the future
+        },
+        status: {
+          not: BookingStatus.ACTIVE, // Exclude already active bookings
+        },
+        payments: {
+          some: {
+            status: {
+              in: [PaymentStatus.PAID, PaymentStatus.DP_PAID]
+            }
+          }
+        },
+      },
+      include: {
+        field: {
+          include: {
+            branch: true
+          }
+        },
+        payments: true,
+      },
+    });
 
-  // Tambahkan recurring job (setiap 1 menit)
-  bookingCleanupQueue.add(
-    {},
-    {
-      jobId: 'completed-booking-recurring',
-      repeat: { cron: '*/1 * * * *' }, // Sama dengan cron: setiap 1 menit
+    console.log(`🔍 Found ${bookingsToActivate.length} bookings that should be activated`);
+
+    // Update the booking status to 'active'
+    for (const booking of bookingsToActivate) {
+      // Skip if booking is cancelled
+      if (booking.status === BookingStatus.CANCELLED) {
+        continue;
+      }
+      
+      // Update booking status to active
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: BookingStatus.ACTIVE },
+      });
+
+      console.log(`🔄 Updated booking #${booking.id} status to active`);
+      
+      // Emit event for real-time notifications
+      emitBookingEvents('booking:status-updated', { booking });
     }
-  );
-
-  console.log('🚀 Completed booking Bull Queue job started');
+  } catch (error) {
+    console.error('Error updating active bookings:', error);
+  }
 };
 
 // Export emitBookingEvents for use elsewhere
