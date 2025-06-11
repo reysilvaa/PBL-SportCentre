@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PaymentMethod, PaymentStatus } from '../types/enums';
+import { PaymentMethod, PaymentStatus, BookingStatus } from '../types/enums';
 
 // Skema validasi Zod untuk pembuatan booking
 export const createBookingSchema = z.object({
@@ -85,5 +85,17 @@ export const createBookingSchema = z.object({
 // Skema untuk update booking (semua field opsional)
 export const updateBookingSchema = createBookingSchema.partial();
 
+// Skema untuk update status booking
+export const updateBookingStatusSchema = z.object({
+  status: z.enum([
+    BookingStatus.ACTIVE,
+    BookingStatus.COMPLETED,
+    BookingStatus.CANCELLED
+  ] as const, {
+    message: 'Status harus salah satu dari: active, completed, cancelled'
+  }).describe('Status booking: aktif, selesai, atau dibatalkan')
+});
+
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
+export type UpdateBookingStatusInput = z.infer<typeof updateBookingStatusSchema>;

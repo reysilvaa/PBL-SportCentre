@@ -137,7 +137,10 @@ router.get(
   bookingController.getBookingForecast
 );
 
-// Endpoint untuk update status booking
+// Endpoint untuk update status booking (POST)
 router.post('/:id/status', branchAdminAuth(), bookingController.updateBookingStatus);
+
+// Endpoint untuk update status booking (PATCH - RESTful)
+router.patch('/:id/status', branchAdminAuth(), bookingController.updateBookingStatus);
 
 export default router;
