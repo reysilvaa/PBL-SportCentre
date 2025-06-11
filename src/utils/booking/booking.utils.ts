@@ -319,7 +319,7 @@ export const cleanupPendingBookings = async (): Promise<void> => {
     // Find payments with 'pending' status that have passed their expiration date
     const currentTime = new Date();
 
-    console.log('🧹 Processing expired pending bookings at:', currentTime);
+    console.log('🧹 Processing expired pending bookings at:', currentTime.toISOString());
 
     // Cari pembayaran yang sudah expired berdasarkan expiresDate
     const expiredWithDatePayments = await prisma.payment.findMany({
@@ -340,6 +340,14 @@ export const cleanupPendingBookings = async (): Promise<void> => {
       },
     });
 
+    // Log detail pembayaran yang sudah expired
+    console.log(`🔍 Pembayaran dengan expiresDate yang sudah lewat: ${expiredWithDatePayments.length}`);
+    if (expiredWithDatePayments.length > 0) {
+      expiredWithDatePayments.forEach(payment => {
+        console.log(`📌 Payment #${payment.id}, Booking #${payment.bookingId}, Status: ${payment.status}, expiresDate: ${payment.expiresDate?.toISOString()}, currentTime: ${currentTime.toISOString()}`);
+      });
+    }
+
     // Cari pembayaran yang tidak memiliki expiresDate tapi sudah dibuat lebih dari 30 menit yang lalu
     const thirtyMinutesAgo = new Date(currentTime.getTime() - 30 * 60 * 1000);
     const expiredWithoutDatePayments = await prisma.payment.findMany({
@@ -359,6 +367,14 @@ export const cleanupPendingBookings = async (): Promise<void> => {
         },
       },
     });
+
+    // Log detail pembayaran tanpa expiresDate yang sudah lama
+    console.log(`🔍 Pembayaran tanpa expiresDate yang sudah lama: ${expiredWithoutDatePayments.length}`);
+    if (expiredWithoutDatePayments.length > 0) {
+      expiredWithoutDatePayments.forEach(payment => {
+        console.log(`📌 Payment #${payment.id}, Booking #${payment.bookingId}, Status: ${payment.status}, createdAt: ${payment.createdAt.toISOString()}, thirtyMinutesAgo: ${thirtyMinutesAgo.toISOString()}`);
+      });
+    }
 
     // Gabungkan kedua array pembayaran yang expired
     const expiredPayments = [...expiredWithDatePayments, ...expiredWithoutDatePayments];
