@@ -8,52 +8,13 @@ console.log('Redis namespace for BullMQ:', NAMESPACE.QUEUE);
 console.log('Redis key for BullMQ:', KEYS.QUEUE.BULL);
 
 /**
- * Parse URL Redis dengan benar untuk mendapatkan host dan port
- */
-export const parseRedisUrl = (url: string) => {
-  // Hapus protokol jika ada
-  let cleanUrl = url;
-  if (url.startsWith('redis://')) {
-    cleanUrl = url.substring(8);
-  } else if (url.startsWith('rediss://')) {
-    cleanUrl = url.substring(9);
-  }
-  
-  // Pisahkan host:port
-  if (cleanUrl.includes(':')) {
-    const [host, portStr] = cleanUrl.split(':');
-    const port = parseInt(portStr);
-    
-    // Pastikan port valid
-    if (isNaN(port)) {
-      console.error('❌ Port tidak valid dalam URL Redis:', portStr);
-      return { host, port: 6379 };
-    }
-    
-    return { host, port };
-  }
-  
-  // Default jika format tidak sesuai
-  return { host: cleanUrl, port: 6379 };
-};
-
-// Parse konfigurasi Redis
-const redisUrlParsed = parseRedisUrl(config.redis.url);
-console.log('Parsed Redis URL:', JSON.stringify({
-  host: redisUrlParsed.host,
-  port: redisUrlParsed.port
-}));
-
-/**
  * Konfigurasi koneksi Redis untuk BullMQ yang bisa digunakan di seluruh aplikasi
+ * Gunakan URL langsung tanpa parsing untuk menghindari masalah
  */
 export const connection = {
-  host: redisUrlParsed.host,
-  port: redisUrlParsed.port,
-  tls: isRedissTLS() ? { rejectUnauthorized: false } : undefined,
-  db: 0
+  url: config.redis.url,
+  tls: isRedissTLS() ? { rejectUnauthorized: false } : undefined
 };
-
 /**
  * Konfigurasi default untuk semua queue
  */
@@ -169,8 +130,7 @@ export const startAllBackgroundJobs = async (): Promise<void> => {
 export const startBookingCleanupJob = async (): Promise<void> => {
   try {
     console.log('🔄 Starting booking cleanup job with Redis config:', JSON.stringify({
-      host: connection.host,
-      port: connection.port
+      url: connection.url
     }));
     
     // Menjalankan proses cleanup segera
@@ -210,8 +170,7 @@ export const startBookingCleanupJob = async (): Promise<void> => {
 export const startCompletedBookingJob = async (): Promise<void> => {
   try {
     console.log('🔄 Starting completed booking job with Redis config:', JSON.stringify({
-      host: connection.host,
-      port: connection.port
+      url: connection.url
     }));
     
     // Menjalankan proses completed booking segera
@@ -247,8 +206,7 @@ export const startCompletedBookingJob = async (): Promise<void> => {
 export const startActiveBookingJob = async (): Promise<void> => {
   try {
     console.log('🔄 Starting active booking job with Redis config:', JSON.stringify({
-      host: connection.host,
-      port: connection.port
+      url: connection.url
     }));
     
     // Menjalankan proses active booking segera
