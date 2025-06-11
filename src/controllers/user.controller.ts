@@ -833,9 +833,20 @@ export const getUsersByRole = async (req: AuthUser, res: Response): Promise<void
       return;
     }
     
-    // Authorization check
-    if (req.user?.role !== Role.SUPER_ADMIN) {
-      // Non-super admin hanya bisa melihat admin_cabang dan user
+    // Authorization check yang diperbaiki
+    if (req.user?.role === Role.SUPER_ADMIN) {
+      // Super admin bisa melihat semua role
+    } else if (req.user?.role === Role.OWNER_CABANG) {
+      // Owner cabang hanya bisa melihat sesama owner cabang (untuk dropdown pemilik)
+      if (role !== Role.OWNER_CABANG) {
+        res.status(403).json({
+          status: false,
+          message: 'Anda tidak memiliki akses untuk melihat daftar pengguna dengan role ini',
+        });
+        return;
+      }
+    } else {
+      // Role lain hanya bisa melihat admin_cabang dan user
       if (![Role.ADMIN_CABANG, Role.USER].includes(role as Role)) {
         res.status(403).json({
           status: false,
@@ -856,6 +867,9 @@ export const getUsersByRole = async (req: AuthUser, res: Response): Promise<void
         role: true,
         createdAt: true,
       },
+      orderBy: {
+        name: 'asc' // Urutkan berdasarkan nama
+      }
     });
     
     res.status(200).json({
