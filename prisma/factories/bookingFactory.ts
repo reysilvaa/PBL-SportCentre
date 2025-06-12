@@ -107,7 +107,7 @@ export const generateBooking = (
     startTime: overrides.startTime || startTime,
     endTime: overrides.endTime || endTime,
     createdAt: overrides.createdAt || createdAt,
-    status: overrides.status || BookingStatus.ACTIVE,
+    status: overrides.status || BookingStatus.active,
   };
 };
 
