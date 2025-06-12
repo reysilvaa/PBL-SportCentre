@@ -14,7 +14,7 @@ export const generateBranch = (ownerId: number, overrides: Partial<Branch> = {})
   return {
     name: overrides.name || sportCenterName,
     location: overrides.location || `${faker.location.streetAddress()}, ${randomCity}, ${faker.location.state()}`,
-    imageUrl: overrides.imageUrl || faker.image.urlLoremFlickr({ category: 'sports' }),
+    imageUrl: overrides.imageUrl || 'https://unggulsportscenter.com/assets/img/facilities/lapangan_badminton.JPG',
     ownerId: ownerId,
     status: overrides.status || BranchStatus.active,
     createdAt: overrides.createdAt || faker.date.past(),

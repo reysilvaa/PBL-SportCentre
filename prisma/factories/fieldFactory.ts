@@ -54,7 +54,7 @@ export const generateField = (
     priceDay: overrides.priceDay || new Decimal(basePriceDay),
     priceNight: overrides.priceNight || new Decimal(priceNight),
     status: overrides.status || FieldStatus.available,
-    imageUrl: overrides.imageUrl || faker.image.urlLoremFlickr({ category: 'sports' }),
+    imageUrl: overrides.imageUrl || 'https://unggulsportscenter.com/assets/img/facilities/lapangan_badminton.JPG',
     createdAt: overrides.createdAt || faker.date.past(),
   };
 };
