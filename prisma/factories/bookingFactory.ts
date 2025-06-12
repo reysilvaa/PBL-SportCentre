@@ -1,4 +1,4 @@
-import { PrismaClient, Booking } from '@prisma/client';
+import { PrismaClient, Booking, BookingStatus } from '@prisma/client';
 import { faker } from '@faker-js/faker/locale/id_ID';
 
 // Fungsi untuk menghasilkan booking tunggal
@@ -107,6 +107,7 @@ export const generateBooking = (
     startTime: overrides.startTime || startTime,
     endTime: overrides.endTime || endTime,
     createdAt: overrides.createdAt || createdAt,
+    status: overrides.status || BookingStatus.ACTIVE,
   };
 };
 
@@ -125,7 +126,7 @@ export const createBookings = async (
   const bookings: any[] = [];
   
   // Jumlah booking yang lebih besar - 1000 booking
-  const bookingCount = 1000;
+  const bookingCount = 50;
   
   // Pastikan distribusi yang relatif merata dari 2023-2025
   const years = [2023, 2024, 2025];
